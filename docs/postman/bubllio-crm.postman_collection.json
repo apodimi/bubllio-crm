@@ -1,0 +1,544 @@
+{
+  "info": {
+    "_postman_id": "56ff07e9-f299-4b34-a767-ecbf4515c235",
+    "name": "Bubllio CRM API",
+    "description": "Postman collection for the local Bubllio CRM Django REST API.\n\nImport this collection together with `bubllio-crm.local.postman_environment.json` and select the `Bubllio CRM Local` environment.\n\nRecommended flow:\n1. List Organizations\n2. Create Organization\n3. List Organizations\n4. List Companies\n5. Create Company\n6. List Companies\n7. Search Companies\n8. List Contacts\n9. Create Contact\n10. List Contacts\n11. Search Contacts\n12. Create Company Created Email Automation\n13. Test Automation\n14. List Automations\n15. Create Company\n16. List Automation Runs\n17. Delete Organization",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Organizations",
+      "description": "Organization endpoints. An organization represents the workspace/tenant that owns CRM data.",
+      "item": [
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/organizations/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "organizations",
+                ""
+              ]
+            },
+            "description": "Returns all organizations.\n\nDjango route:\n`GET /api/v1/organizations/`\n\nDjango view method:\n`OrganizationListCreateAPIView.get`"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has organization id\", function () {",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "});",
+                  "",
+                  "if (data.id) {",
+                  "    pm.environment.set(\"organization_id\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nerds Lab\",\n  \"slug\": \"nerds-lab\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/organizations/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "organizations",
+                ""
+              ]
+            },
+            "description": "Creates an organization.\n\nDjango route:\n`POST /api/v1/organizations/`\n\nDjango view method:\n`OrganizationListCreateAPIView.post`\n\nThe test script stores the returned `id` into the Postman environment variable `organization_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Organization",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "organizations",
+                "{{organization_id}}",
+                ""
+              ]
+            },
+            "description": "Deletes one organization by UUID.\n\nDjango route:\n`DELETE /api/v1/organizations/<organization_id>/`\n\nDjango view method:\n`OrganizationDetailAPIView.delete`\n\nExpected success status: `204 No Content`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "description": "Company endpoints. A company belongs to an organization through the `organization` foreign key.",
+      "item": [
+        {
+          "name": "List Companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/companies/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "companies",
+                ""
+              ]
+            },
+            "description": "Returns all companies.\n\nDjango route:\n`GET /api/v1/companies/`\n\nDjango view method:\n`CompanyListCreateAPIView.get`"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/companies/?search={{company_search}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "companies",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{company_search}}",
+                  "description": "Searches companies by name, email, phone number, or website when implemented in CompanyListCreateAPIView.get."
+                }
+              ]
+            },
+            "description": "Searches companies using the `search` query parameter.\n\nDjango route:\n`GET /api/v1/companies/?search=<term>`\n\nDjango view method:\n`CompanyListCreateAPIView.get`\n\nRecommended implementation: filter the queryset before serialization and use `Q(...) | Q(...)` for OR search across `name`, `email`, `phone_number`, and `website`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has company id\", function () {",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "});",
+                  "",
+                  "if (data.id) {",
+                  "    pm.environment.set(\"company_id\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Inc\",\n  \"email\": \"hello@acme.test\",\n  \"phone_number\": \"+306900000000\",\n  \"website\": \"https://acme.test\",\n  \"lifecycle_stage\": \"lead\",\n  \"organization\": \"{{organization_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/companies/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "companies",
+                ""
+              ]
+            },
+            "description": "Creates a company that belongs to an organization.\n\nDjango route:\n`POST /api/v1/companies/`\n\nDjango view method:\n`CompanyListCreateAPIView.post`\n\nRequires `organization_id` to contain an existing organization UUID. Run `Create Organization` first."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "description": "Contact endpoints. A contact is a person inside a company.",
+      "item": [
+        {
+          "name": "List Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/contacts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "contacts",
+                ""
+              ]
+            },
+            "description": "Returns all contacts.\n\nDjango route:\n`GET /api/v1/contacts/`\n\nDjango view method:\n`ContactListCreateAPIView.get`"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/contacts/?search={{contact_search}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "contacts",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{contact_search}}",
+                  "description": "Searches contacts by first name, last name, email, phone number, department, or job title."
+                }
+              ]
+            },
+            "description": "Searches contacts using the `search` query parameter.\n\nDjango route:\n`GET /api/v1/contacts/?search=<term>`\n\nDjango view method:\n`ContactListCreateAPIView.get`"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Contact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has contact id\", function () {",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "});",
+                  "",
+                  "if (data.id) {",
+                  "    pm.environment.set(\"contact_id\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization\": \"{{organization_id}}\",\n  \"company\": \"{{company_id}}\",\n  \"first_name\": \"Maria\",\n  \"last_name\": \"Papadopoulou\",\n  \"email\": \"maria@acme.test\",\n  \"phone_number\": \"+306911111111\",\n  \"department\": \"Accounting\",\n  \"job_title\": \"Accounting Manager\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/contacts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "contacts",
+                ""
+              ]
+            },
+            "description": "Creates a contact inside a company.\n\nDjango route:\n`POST /api/v1/contacts/`\n\nDjango view method:\n`ContactListCreateAPIView.post`\n\nRequires `organization_id` and `company_id`. Run `Create Organization` and `Create Company` first."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Automations",
+      "description": "Automation endpoints. Automations run actions when events happen, such as `company.created`.",
+      "item": [
+        {
+          "name": "List Automations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/automations/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "automations",
+                ""
+              ]
+            },
+            "description": "Returns all automations.\n\nDjango route:\n`GET /api/v1/automations/`\n\nDjango view method:\n`AutomationListCreateAPIView.get`"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Company Created Email Automation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const data = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has automation id\", function () {",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "});",
+                  "",
+                  "if (data.id) {",
+                  "    pm.environment.set(\"automation_id\", data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization\": \"{{organization_id}}\",\n  \"name\": \"Notify accounting when a company is created\",\n  \"trigger\": \"company.created\",\n  \"action_type\": \"send_email\",\n  \"action_config\": {\n    \"to\": [\"accounting@example.com\"],\n    \"subject\": \"New company created\",\n    \"body\": \"A new company was added to Bubllio CRM.\"\n  },\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/automations/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "automations",
+                ""
+              ]
+            },
+            "description": "Creates an active automation for `company.created`.\n\nWhen a company is created through the API, this automation sends an email using Django's configured email backend. In local development, emails are printed in the runserver terminal."
+          },
+          "response": []
+        },
+        {
+          "name": "Test Automation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"test\": true,\n    \"source\": \"postman\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/automations/{{automation_id}}/test/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "automations",
+                "{{automation_id}}",
+                "test",
+                ""
+              ]
+            },
+            "description": "Runs one automation immediately with a test payload.\n\nDjango route:\n`POST /api/v1/automations/<automation_id>/test/`\n\nDjango view method:\n`AutomationTestAPIView.post`\n\nIn local development, send_email uses Django's console email backend, so the email is printed in the runserver terminal."
+          },
+          "response": []
+        },
+        {
+          "name": "List Automation Runs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/automations/runs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "{{api_version}}",
+                "automations",
+                "runs",
+                ""
+              ]
+            },
+            "description": "Returns automation run history.\n\nDjango route:\n`GET /api/v1/automations/runs/`\n\nDjango view method:\n`AutomationRunListAPIView.get`"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "api_version",
+      "value": "v1"
+    },
+    {
+      "key": "company_search",
+      "value": "acme"
+    },
+    {
+      "key": "contact_search",
+      "value": "maria"
+    },
+    {
+      "key": "automation_id",
+      "value": ""
+    }
+  ]
+}

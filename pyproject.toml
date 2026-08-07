@@ -1,0 +1,20 @@
+[project]
+name = "bubllio-crm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Apostolis Dimitriou", email = "aposdimit@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.0.7",
+    "djangorestframework>=3.17.1",
+]
+
+[project.scripts]
+bubllio-crm = "bubllio_crm:main"
+
+[build-system]
+requires = ["uv_build>=0.11.25,<0.12.0"]
+build-backend = "uv_build"
