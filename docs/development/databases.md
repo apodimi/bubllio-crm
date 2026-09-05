@@ -81,6 +81,10 @@ without relying on a file.
 
 Never commit `.env` or real credentials. `.env.example` contains safe examples.
 
+Email account encryption is separate from database configuration. If the UI is
+used to create SMTP accounts, set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in `.env` as
+described in `docs/architecture/email-adapters.md`.
+
 ## How configuration works
 
 `src/bubllio_crm/database.py` converts `DATABASE_URL` into Django's `DATABASES`

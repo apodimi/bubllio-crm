@@ -88,6 +88,37 @@ BUBLLIO_DEFAULT_FROM_EMAIL=no-reply@example.com
 
 This is good for self-hosted installations that want one global provider.
 
+## UI-managed email accounts
+
+The current implementation adds organization-owned SMTP accounts so an owner or
+administrator can configure email from the UI instead of editing deployment
+settings. Endpoints are:
+
+```text
+GET    /api/v1/organizations/<organization_id>/email-accounts/
+POST   /api/v1/organizations/<organization_id>/email-accounts/
+GET    /api/v1/organizations/<organization_id>/email-accounts/<account_id>/
+PATCH  /api/v1/organizations/<organization_id>/email-accounts/<account_id>/
+DELETE /api/v1/organizations/<organization_id>/email-accounts/<account_id>/
+POST   /api/v1/organizations/<organization_id>/email-accounts/<account_id>/test/
+```
+
+The test endpoint expects `{ "recipient": "person@example.com" }` and attempts
+to send one explicit test message. It records `last_tested_at` on success and a
+sanitized `last_test_error` on failure. It does not return the SMTP password.
+
+Passwords are encrypted with Fernet before storage. Each deployment must set
+`BUBLLIO_EMAIL_ENCRYPTION_KEY`; generate one with:
+
+```bash
+uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Keep this key in a secret manager or ignored `.env` file. Losing or rotating it
+without decrypting/re-encrypting existing accounts makes those accounts unusable.
+Only owners and administrators may create, update, test, or delete email accounts;
+the list endpoint exposes metadata only.
+
 ## Phase 3
 
 Add provider-specific adapters.

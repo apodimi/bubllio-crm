@@ -49,6 +49,10 @@ user can access that organization. Do not guess ownership during migration.
 | Transfer ownership | Yes | No | No | No |
 | Delete organization | Yes | No | No | No |
 
+Managing organization settings and email accounts is also restricted to owners
+and administrators. All email account credentials are encrypted at rest and are
+write-only through the API.
+
 Authorization is expressed as capabilities in
 `src/organizations/permissions.py`. This avoids scattering role comparisons
 through every view.
@@ -133,3 +137,17 @@ always have an `OrganizationMembership`.
 - inactive/suspended memberships;
 - audit log for membership and ownership changes;
 - rate limiting and production HTTPS/security settings.
+
+## Django Admin fallback
+
+The Django admin is the operational dashboard for installations that do not have
+a custom frontend yet. Owners/operators can inspect organizations, memberships,
+organization settings, and email accounts at `/admin/`. The email account admin
+form accepts a password only when creating or changing an account, encrypts it
+before saving, and never displays the encrypted value as an editable field.
+
+The explicit test-email API remains available for Postman or a future frontend:
+
+```text
+POST /api/v1/organizations/<organization_id>/email-accounts/<account_id>/test/
+```

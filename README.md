@@ -86,6 +86,13 @@ POST /api/v1/organizations/<id>/members/
 PATCH /api/v1/organizations/<id>/members/<membership-id>/
 DELETE /api/v1/organizations/<id>/members/<membership-id>/
 
+GET  /api/v1/organizations/<id>/settings/
+PATCH /api/v1/organizations/<id>/settings/
+GET  /api/v1/organizations/settings/options/
+GET  /api/v1/organizations/<id>/email-accounts/
+POST /api/v1/organizations/<id>/email-accounts/
+POST /api/v1/organizations/<id>/email-accounts/<account-id>/test/
+
 GET  /api/v1/organizations/<id>/companies/
 POST /api/v1/organizations/<id>/companies/
 
@@ -97,6 +104,11 @@ POST /api/v1/organizations/<id>/automations/
 GET  /api/v1/organizations/<id>/automations/runs/
 POST /api/v1/organizations/<id>/automations/<automation-id>/test/
 ```
+
+The settings options endpoint returns `{value, label}` pairs for every IANA
+timezone available to the Python runtime and every locale configured in Django's
+`LANGUAGES` setting. The frontend can use these directly for dropdowns; only the
+selected values are stored in `OrganizationSettings`.
 
 ## Documentation
 
@@ -161,6 +173,7 @@ Done:
 - automated authorization and tenant-isolation tests
 - zero-config SQLite and `DATABASE_URL`-based PostgreSQL support
 - local PostgreSQL Compose service
+- UI-managed encrypted SMTP accounts and test-email endpoint
 
 Next likely steps:
 
