@@ -47,7 +47,7 @@ That means the automation runs during the same request that creates the company.
 ## Business Flow
 
 ```text
-POST /api/v1/companies/
+POST /api/v1/organizations/<organization_id>/companies/
   |
   v
 Company is saved
@@ -273,7 +273,7 @@ Emails are printed in the terminal where `runserver` is running.
 Endpoint:
 
 ```text
-POST /api/v1/automations/<id>/test/
+POST /api/v1/organizations/<organization_id>/automations/<id>/test/
 ```
 
 Why it exists:
@@ -282,6 +282,11 @@ Why it exists:
 - You can verify an automation is configured correctly.
 - You get a direct API response with the `AutomationRun`.
 - For local email, the response reminds you that the email is printed to the runserver terminal.
+
+Creating and testing automations requires the `manage_automations` capability,
+which is currently granted to organization owners and administrators. Automation
+lists and run history are filtered by organization and may be viewed by any
+organization member.
 
 ## Design Notes
 

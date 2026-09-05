@@ -128,3 +128,11 @@ integer id -> UUID id
 If rows already exist, this can break local data unless handled carefully.
 
 For local learning data, it is sometimes okay to reset the local database. For production data, never delete the database; write a careful migration plan.
+
+## Membership Migration Note
+
+Migration `organizations.0002_organizationmembership` introduces access control.
+It deliberately does not assign owners to organizations that existed beforehand,
+because the old schema contains no reliable user-to-organization relationship.
+After applying it to an existing development database, use a Django superuser in
+`/admin/` to create one owner membership for each existing organization.

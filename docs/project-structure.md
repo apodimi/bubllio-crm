@@ -8,10 +8,12 @@ This document explains what each important file and folder does.
 bubllio-crm-api/
   .gitignore
   .python-version
+  AGENTS.md
   README.md
   pyproject.toml
   uv.lock
   docs/
+  skills/
   src/
 ```
 
@@ -57,6 +59,7 @@ __pycache__/
 src/db.sqlite3
 .env
 .DS_Store
+.idea/
 ```
 
 ## `src/manage.py`
@@ -86,6 +89,7 @@ This file controls:
 - static files
 - email backend
 - Django REST Framework activation
+- global API authentication and permission requirements
 
 When we create a new app, we add it to `INSTALLED_APPS`.
 
@@ -98,12 +102,8 @@ This is where we define top-level routes such as:
 ```python
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/v1/", include([
-        path("organizations/", include("organizations.urls")),
-        path("companies/", include("companies.urls")),
-        path("contacts/", include("contacts.urls")),
-        path("automations/", include("automations.urls")),
-    ])),
+    path("api-auth/", include("rest_framework.urls")),
+    path("api/v1/organizations/", include("organizations.urls")),
 ]
 ```
 
@@ -113,7 +113,8 @@ The global API prefix is:
 /api/v1/
 ```
 
-Each app adds its own paths under that prefix.
+Organization-owned apps are nested below an organization route so tenant context
+comes from the URL and authenticated membership.
 
 ## `src/bubllio_crm/asgi.py` and `src/bubllio_crm/wsgi.py`
 
@@ -149,10 +150,24 @@ tests.py        -> tests
 
 ## Current App Responsibilities
 
-`organizations` represents the CRM workspace or tenant.
+`organizations` represents the CRM workspace or tenant. It also owns membership,
+role, and capability-based access rules in `permissions.py`.
 
 `companies` represents external businesses stored inside an organization.
 
 `contacts` represents people who belong to companies.
 
 `automations` represents workflow rules, actions, and execution history.
+
+Current route ownership:
+
+```text
+organizations/urls.py
+  -> organization and membership endpoints
+  -> includes company, contact, and automation routes below <organization_id>
+```
+
+## Agent Files
+
+`AGENTS.md` gives contributors and AI agents repository-wide context and
+conventions. `skills/` contains focused, reusable workflows for common changes.

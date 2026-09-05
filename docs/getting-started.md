@@ -54,6 +54,17 @@ uv run python src/manage.py createsuperuser
 
 Use this account to log in to Django admin.
 
+All CRM API endpoints require authentication. For browser-based API testing, log
+in at:
+
+```text
+http://127.0.0.1:8000/api-auth/login/
+```
+
+For Postman, use HTTP Basic authentication with the same local Django username
+and password. Basic authentication must only be used over HTTPS outside local
+development.
+
 ## Run Server
 
 ```bash
@@ -64,6 +75,7 @@ Open:
 
 ```text
 http://127.0.0.1:8000/admin/
+http://127.0.0.1:8000/api-auth/login/
 http://127.0.0.1:8000/api/v1/organizations/
 ```
 
