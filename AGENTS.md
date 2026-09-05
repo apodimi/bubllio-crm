@@ -12,10 +12,14 @@ Read the relevant architecture document before changing a domain:
 - `docs/architecture/automations.md`
 - `docs/architecture/email-adapters.md`
 - `docs/api/rest-patterns.md`
+- `docs/development/databases.md` for database configuration or backend changes.
 
 ## Repository Conventions
 
 - Use Python 3.13 and `uv`.
+- Keep model and query behavior portable across SQLite and PostgreSQL. Use
+  `DATABASE_URL`; do not add application-level database adapters around Django's
+  ORM.
 - Run Django commands from the repository root with
   `uv run python src/manage.py ...`.
 - Keep HTTP coordination in views, API validation in serializers, reusable
@@ -42,4 +46,3 @@ Load the matching skill before performing one of these workflows:
 
 Use only the skills relevant to the requested work. They guide implementation but
 do not broaden the user's requested scope or authorize unrelated changes.
-

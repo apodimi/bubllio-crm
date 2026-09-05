@@ -10,7 +10,7 @@ The project is intentionally documented as a learning project too: the code shou
 - Django
 - Django REST Framework
 - uv for dependency and virtualenv management
-- SQLite for local development
+- zero-config SQLite or `DATABASE_URL`-configured PostgreSQL
 - organization-scoped authentication and role-based access control
 
 ## Quick Start
@@ -19,6 +19,15 @@ Install dependencies:
 
 ```bash
 uv sync
+```
+
+This uses SQLite without additional configuration. For local PostgreSQL:
+
+```bash
+docker compose up -d postgres
+cp .env.example .env
+# Uncomment DATABASE_URL in .env
+uv sync --extra postgres
 ```
 
 Run Django checks:
@@ -96,6 +105,7 @@ Start here:
 - [Getting Started](docs/getting-started.md)
 - [Project Structure](docs/project-structure.md)
 - [Django Workflow](docs/development/django-workflow.md)
+- [Database Setup](docs/development/databases.md)
 - [Migrations](docs/development/migrations.md)
 - [REST API Patterns](docs/api/rest-patterns.md)
 - [Postman Guide](docs/api-postman.md)
@@ -118,9 +128,10 @@ uv run python src/manage.py check
 uv run python src/manage.py makemigrations
 uv run python src/manage.py migrate
 uv run python src/manage.py showmigrations
-uv run python src/manage.py test organizations companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations companies contacts automations
 uv run python src/manage.py runserver
 uv run python src/manage.py createsuperuser
+docker compose up -d postgres
 ```
 
 ## Current Status
@@ -148,6 +159,8 @@ Done:
 - organization memberships with owner, admin, member, and viewer roles
 - tenant-scoped CRM and automation endpoints
 - automated authorization and tenant-isolation tests
+- zero-config SQLite and `DATABASE_URL`-based PostgreSQL support
+- local PostgreSQL Compose service
 
 Next likely steps:
 
@@ -156,3 +169,4 @@ Next likely steps:
 - email adapter abstraction
 - real SMTP provider support
 - per-organization email settings
+- MySQL database support and a multi-database CI matrix

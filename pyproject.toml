@@ -8,13 +8,20 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "dj-database-url>=3.1.2",
     "django>=6.0.7",
     "djangorestframework>=3.17.1",
+    "python-dotenv>=1.2.3",
 ]
 
 [project.scripts]
 bubllio-crm = "bubllio_crm:main"
 
+[project.optional-dependencies]
+postgres = [
+    "psycopg[binary]>=3.3.5",
+]
+
 [build-system]
-requires = ["uv_build>=0.11.25,<0.12.0"]
+requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
