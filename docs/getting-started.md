@@ -8,6 +8,8 @@ This guide explains how to run Bubllio CRM API locally.
 - uv
 - Git
 
+Docker is optional and is needed only for the provided local PostgreSQL service.
+
 ## Install Dependencies
 
 From the project root:
@@ -17,6 +19,10 @@ uv sync
 ```
 
 `uv sync` reads `pyproject.toml` and `uv.lock`, creates the virtual environment if needed, and installs the locked dependencies.
+
+Without database configuration, the project uses SQLite. To use PostgreSQL, read
+the [Database Setup](development/databases.md) guide and install its optional
+driver with `uv sync --extra postgres`.
 
 ## Run Checks
 
@@ -38,7 +44,8 @@ This verifies that Django can load the project, settings, apps, models, and URL 
 uv run python src/manage.py migrate
 ```
 
-This creates or updates the local SQLite database.
+This creates or updates whichever database is selected by `DATABASE_URL`, or the
+default local SQLite database when the variable is unset.
 
 The local database file is ignored by git:
 

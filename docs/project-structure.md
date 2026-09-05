@@ -8,8 +8,10 @@ This document explains what each important file and folder does.
 bubllio-crm-api/
   .gitignore
   .python-version
+  .env.example
   AGENTS.md
   README.md
+  compose.yaml
   pyproject.toml
   uv.lock
   docs/
@@ -92,6 +94,20 @@ This file controls:
 - global API authentication and permission requirements
 
 When we create a new app, we add it to `INSTALLED_APPS`.
+
+Database URL parsing lives separately in `src/bubllio_crm/database.py`. With no
+`DATABASE_URL` it selects SQLite; with a PostgreSQL URL it selects Django's
+PostgreSQL backend. See `docs/development/databases.md`.
+
+## `compose.yaml`
+
+Provides the optional local PostgreSQL service. The Django application still runs
+directly through `uv`, so SQLite users do not need Docker.
+
+## `.env.example`
+
+Documents safe local environment values. Copy it to the ignored `.env` file when
+using PostgreSQL or other local overrides. Never put real secrets in the example.
 
 ## `src/bubllio_crm/urls.py`
 

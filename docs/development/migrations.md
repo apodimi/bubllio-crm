@@ -129,6 +129,11 @@ If rows already exist, this can break local data unless handled carefully.
 
 For local learning data, it is sometimes okay to reset the local database. For production data, never delete the database; write a careful migration plan.
 
+Migrations must remain portable across every database backend the project claims
+to support. Run them against SQLite and PostgreSQL when a change depends on
+database behavior. Changing `DATABASE_URL` selects another database; it does not
+move existing records between databases.
+
 ## Membership Migration Note
 
 Migration `organizations.0002_organizationmembership` introduces access control.
