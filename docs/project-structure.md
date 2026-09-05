@@ -169,6 +169,9 @@ tests.py        -> tests
 `organizations` represents the CRM workspace or tenant. It also owns membership,
 role, and capability-based access rules in `permissions.py`.
 
+It also contains the general organization settings and SMTP email account
+configuration used by the Django admin fallback dashboard.
+
 `companies` represents external businesses stored inside an organization.
 
 `contacts` represents people who belong to companies.

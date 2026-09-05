@@ -93,6 +93,43 @@
       ]
     },
     {
+      "name": "Email Accounts",
+      "item": [
+        {
+          "name": "List Email Accounts",
+          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/email-accounts/"}
+        },
+        {
+          "name": "Create SMTP Account",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+              "const data = pm.response.json();",
+              "if (data.id) pm.environment.set(\"email_account_id\", data.id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Company SMTP\",\n  \"provider\": \"smtp\",\n  \"host\": \"smtp.example.com\",\n  \"port\": 587,\n  \"username\": \"mailer@example.com\",\n  \"password\": \"provider-password\",\n  \"use_tls\": true,\n  \"use_ssl\": false,\n  \"from_email\": \"mailer@example.com\",\n  \"from_name\": \"Bubllio CRM\",\n  \"is_default\": true\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/email-accounts/",
+            "description": "Owner/admin only. The password is encrypted and never returned. Set BUBLLIO_EMAIL_ENCRYPTION_KEY on the server first."
+          }
+        },
+        {
+          "name": "Test Email Account",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"recipient\": \"you@example.com\"\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/email-accounts/{{email_account_id}}/test/",
+            "description": "Attempts one explicit test email and records success/failure metadata."
+          }
+        }
+      ]
+    },
+    {
       "name": "Companies",
       "item": [
         {

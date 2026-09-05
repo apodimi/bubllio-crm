@@ -37,6 +37,9 @@ local development here; use it only over HTTPS outside localhost.
 | `membership_id` | Membership to update or remove |
 | `company_id` | Created company UUID |
 | `automation_id` | Created automation UUID |
+
+For UI-managed SMTP testing, also set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in the
+server's ignored `.env` file. Postman never stores that encryption key.
 | `company_search`, `contact_search` | Search values |
 
 Organization, company, membership, and automation creation requests save returned
@@ -81,6 +84,53 @@ POST   /api/v1/organizations/<organization_id>/members/
 PATCH  /api/v1/organizations/<organization_id>/members/<membership_id>/
 DELETE /api/v1/organizations/<organization_id>/members/<membership_id>/
 ```
+
+Settings and email accounts:
+
+```text
+GET   /api/v1/organizations/<organization_id>/settings/
+PATCH /api/v1/organizations/<organization_id>/settings/
+GET   /api/v1/organizations/settings/options/
+
+GET    /api/v1/organizations/<organization_id>/email-accounts/
+POST   /api/v1/organizations/<organization_id>/email-accounts/
+GET    /api/v1/organizations/<organization_id>/email-accounts/<account_id>/
+PATCH  /api/v1/organizations/<organization_id>/email-accounts/<account_id>/
+DELETE /api/v1/organizations/<organization_id>/email-accounts/<account_id>/
+POST   /api/v1/organizations/<organization_id>/email-accounts/<account_id>/test/
+```
+
+`GET /api/v1/organizations/settings/options/` returns the timezone and locale
+dropdown choices as `{value, label}` pairs. Timezones come from the runtime's
+IANA database, while locales come from Django's `LANGUAGES` configuration.
+These are code/configuration choices rather than database rows, so every client
+can build the same dropdown without synchronizing reference data.
+
+Create an SMTP account with:
+
+```json
+{
+  "name": "Company SMTP",
+  "provider": "smtp",
+  "host": "smtp.example.com",
+  "port": 587,
+  "username": "mailer@example.com",
+  "password": "provider-password",
+  "use_tls": true,
+  "use_ssl": false,
+  "from_email": "mailer@example.com",
+  "from_name": "Bubllio CRM",
+  "is_default": true
+}
+```
+
+Send a test email with:
+
+```json
+{ "recipient": "you@example.com" }
+```
+
+The password is accepted only on create or update and is never returned.
 
 Companies and contacts:
 

@@ -9,6 +9,7 @@ class Capability:
     MANAGE_AUTOMATIONS = "manage_automations"
     MANAGE_MEMBERS = "manage_members"
     DELETE_ORGANIZATION = "delete_organization"
+    MANAGE_SETTINGS = "manage_settings"
 
 
 ROLE_CAPABILITIES = {
@@ -18,12 +19,14 @@ ROLE_CAPABILITIES = {
         Capability.MANAGE_AUTOMATIONS,
         Capability.MANAGE_MEMBERS,
         Capability.DELETE_ORGANIZATION,
+        Capability.MANAGE_SETTINGS,
     },
     OrganizationMembership.Role.ADMIN: {
         Capability.VIEW_CRM,
         Capability.MANAGE_CRM,
         Capability.MANAGE_AUTOMATIONS,
         Capability.MANAGE_MEMBERS,
+        Capability.MANAGE_SETTINGS,
     },
     OrganizationMembership.Role.MEMBER: {
         Capability.VIEW_CRM,

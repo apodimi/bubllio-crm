@@ -5,10 +5,16 @@ from .views import (
     OrganizationListCreateAPIView,
     OrganizationMembershipDetailAPIView,
     OrganizationMembershipListCreateAPIView,
+    EmailAccountListCreateAPIView,
+    EmailAccountDetailAPIView,
+    EmailAccountTestAPIView,
+    OrganizationSettingsAPIView,
+    OrganizationSettingsOptionsAPIView,
 )
 
 urlpatterns = [
     path("", OrganizationListCreateAPIView.as_view(), name="organization-list"),
+    path("settings/options/", OrganizationSettingsOptionsAPIView.as_view(), name="organization-settings-options"),
     path("<uuid:organization_id>/", OrganizationDetailAPIView.as_view(), name="organization-detail"),
     path(
         "<uuid:organization_id>/members/",
@@ -20,6 +26,10 @@ urlpatterns = [
         OrganizationMembershipDetailAPIView.as_view(),
         name="organization-membership-detail",
     ),
+    path("<uuid:organization_id>/settings/", OrganizationSettingsAPIView.as_view(), name="organization-settings"),
+    path("<uuid:organization_id>/email-accounts/", EmailAccountListCreateAPIView.as_view(), name="email-account-list"),
+    path("<uuid:organization_id>/email-accounts/<uuid:account_id>/", EmailAccountDetailAPIView.as_view(), name="email-account-detail"),
+    path("<uuid:organization_id>/email-accounts/<uuid:account_id>/test/", EmailAccountTestAPIView.as_view(), name="email-account-test"),
     path("<uuid:organization_id>/companies/", include("companies.urls")),
     path("<uuid:organization_id>/contacts/", include("contacts.urls")),
     path("<uuid:organization_id>/automations/", include("automations.urls")),
