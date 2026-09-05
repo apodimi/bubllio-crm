@@ -8,6 +8,7 @@ Current model hierarchy:
 
 ```text
 Organization
+  -> OrganizationMembership -> User
   -> Company
        -> Contact
   -> Automation
@@ -30,7 +31,7 @@ An organization owns its CRM data:
 - companies
 - contacts
 - automations
-- future users and permissions
+- users and role-based permissions through memberships
 - future email settings
 
 ## Company
@@ -102,6 +103,8 @@ Later, if the product needs more advanced account management, we can introduce a
 ```text
 Organization 1 -> many Companies
 Organization 1 -> many Contacts
+Organization 1 -> many OrganizationMemberships
+User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
 Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
@@ -117,6 +120,11 @@ Examples:
 - A company creation can trigger automations.
 - An automation only runs inside its own organization.
 - A future email account may only be used by its organization.
+- An authenticated user may access an organization only through a membership and
+  the capabilities granted by its role.
+
+See `docs/architecture/authentication-and-roles.md` for the complete tenant and
+role rules.
 
 Where business logic should live:
 

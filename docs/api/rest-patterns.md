@@ -4,10 +4,12 @@ This document explains how we structure API endpoints, serializers, views, and U
 
 ## Request Flow
 
-The API request flow is:
+The authenticated API request flow is:
 
 ```text
 URL
+  -> Authentication
+  -> Organization membership and capability
   -> View
   -> Serializer
   -> Model
@@ -42,9 +44,18 @@ from .models import Organization
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
+    current_user_role = serializers.SerializerMethodField()
+
     class Meta:
         model = Organization
-        fields = ["id", "name", "slug", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "current_user_role",
+            "created_at",
+            "updated_at",
+        ]
 ```
 
 Why:
@@ -63,29 +74,40 @@ Example file:
 src/organizations/views.py
 ```
 
-Example list/create view:
+Organization-owned collection views first resolve the organization through the
+authenticated user's membership. A simplified example is:
 
 ```python
-class OrganizationListCreateAPIView(APIView):
-    def get(self, request):
-        organizations = Organization.objects.all()
-        serializer = OrganizationSerializer(organizations, many=True)
+class CompanyListCreateAPIView(APIView):
+    def get(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.VIEW_CRM,
+        )
+        companies = Company.objects.filter(organization=organization)
+        serializer = CompanySerializer(companies, many=True)
         return Response(serializer.data)
 
-    def post(self, request):
-        serializer = OrganizationSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=201)
-
-        return Response(serializer.errors, status=400)
+    def post(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        serializer = CompanySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(organization=organization)
+        return Response(serializer.data, status=201)
 ```
 
 Why:
 
-- `get` handles `GET /api/v1/organizations/`.
-- `post` handles `POST /api/v1/organizations/`.
+- The URL supplies the tenant identifier.
+- The membership lookup both authorizes and resolves the organization.
+- The queryset is filtered by that resolved organization.
+- The server supplies `organization` during save; clients cannot select a
+  different tenant in JSON.
 - `many=True` means the serializer receives many objects, not one.
 - `serializer.is_valid()` validates request data.
 - `serializer.save()` creates the database row.
@@ -132,12 +154,8 @@ Example:
 ```python
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/v1/", include([
-        path("organizations/", include("organizations.urls")),
-        path("companies/", include("companies.urls")),
-        path("contacts/", include("contacts.urls")),
-        path("automations/", include("automations.urls")),
-    ])),
+    path("api-auth/", include("rest_framework.urls")),
+    path("api/v1/organizations/", include("organizations.urls")),
 ]
 ```
 
@@ -145,9 +163,9 @@ This creates:
 
 ```text
 /api/v1/organizations/
-/api/v1/companies/
-/api/v1/contacts/
-/api/v1/automations/
+/api/v1/organizations/<organization_id>/companies/
+/api/v1/organizations/<organization_id>/contacts/
+/api/v1/organizations/<organization_id>/automations/
 ```
 
 ## Class Splitting Logic
@@ -157,23 +175,22 @@ Split view classes by resource and responsibility.
 Collection endpoint:
 
 ```text
-GET  /api/v1/organizations/
-POST /api/v1/organizations/
+GET  /api/v1/organizations/<organization_id>/companies/
+POST /api/v1/organizations/<organization_id>/companies/
 ```
 
 Use one class:
 
 ```python
-class OrganizationListCreateAPIView(APIView):
+class CompanyListCreateAPIView(APIView):
     ...
 ```
 
 Detail endpoint:
 
 ```text
-GET    /api/v1/organizations/<id>/
-PATCH  /api/v1/organizations/<id>/
-DELETE /api/v1/organizations/<id>/
+GET    /api/v1/organizations/<organization_id>/
+DELETE /api/v1/organizations/<organization_id>/
 ```
 
 Use another class:
@@ -186,7 +203,7 @@ class OrganizationDetailAPIView(APIView):
 Custom action endpoint:
 
 ```text
-POST /api/v1/automations/<id>/test/
+POST /api/v1/organizations/<organization_id>/automations/<id>/test/
 ```
 
 Use another class:
@@ -213,8 +230,13 @@ Example:
 from django.db.models import Q
 
 
-def get(self, request):
-    companies = Company.objects.all()
+def get(self, request, organization_id):
+    organization = get_organization_for_user(
+        user=request.user,
+        organization_id=organization_id,
+        capability=Capability.VIEW_CRM,
+    )
+    companies = Company.objects.filter(organization=organization)
     search = request.query_params.get("search")
 
     if search:

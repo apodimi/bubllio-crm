@@ -2,13 +2,20 @@ from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from organizations.permissions import Capability, get_organization_for_user
+
 from .models import Contact
 from .serializers import ContactSerializer
 
 
 class ContactListCreateAPIView(APIView):
-    def get(self, request):
-        contacts = Contact.objects.all()
+    def get(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.VIEW_CRM,
+        )
+        contacts = Contact.objects.filter(organization=organization)
         search = request.query_params.get("search")
 
         if search:
@@ -24,11 +31,19 @@ class ContactListCreateAPIView(APIView):
         serializer = ContactSerializer(contacts, many=True)
         return Response(serializer.data)
 
-    def post(self, request):
-        serializer = ContactSerializer(data=request.data)
+    def post(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        serializer = ContactSerializer(
+            data=request.data,
+            context={"organization": organization},
+        )
 
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(organization=organization)
             return Response(serializer.data, status=201)
 
         return Response(serializer.errors, status=400)

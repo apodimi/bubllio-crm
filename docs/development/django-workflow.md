@@ -124,6 +124,10 @@ Run:
 ```bash
 uv run python src/manage.py check
 uv run python src/manage.py makemigrations --check --dry-run
+uv run python src/manage.py test organizations companies contacts automations
 ```
 
 Use `makemigrations --check --dry-run` when you want to verify there are no model changes missing migrations.
+
+The explicit app labels are important with this repository's `src/` layout. A
+bare `manage.py test` currently discovers zero tests.

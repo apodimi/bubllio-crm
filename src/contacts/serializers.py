@@ -19,9 +19,10 @@ class ContactSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        read_only_fields = ("id", "organization", "created_at", "updated_at")
 
     def validate(self, attrs):
-        organization = attrs.get("organization")
+        organization = self.context.get("organization")
         company = attrs.get("company")
 
         if organization and company and company.organization_id != organization.id:

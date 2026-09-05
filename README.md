@@ -11,6 +11,7 @@ The project is intentionally documented as a learning project too: the code shou
 - Django REST Framework
 - uv for dependency and virtualenv management
 - SQLite for local development
+- organization-scoped authentication and role-based access control
 
 ## Quick Start
 
@@ -41,7 +42,8 @@ uv run python src/manage.py runserver
 Open:
 
 ```text
-http://127.0.0.1:8000/api/v1/
+http://127.0.0.1:8000/api-auth/login/
+http://127.0.0.1:8000/api/v1/organizations/
 http://127.0.0.1:8000/admin/
 ```
 
@@ -70,18 +72,21 @@ GET  /api/v1/organizations/
 POST /api/v1/organizations/
 DELETE /api/v1/organizations/<id>/
 
-GET  /api/v1/companies/
-GET  /api/v1/companies/?search=<term>
-POST /api/v1/companies/
+GET  /api/v1/organizations/<id>/members/
+POST /api/v1/organizations/<id>/members/
+PATCH /api/v1/organizations/<id>/members/<membership-id>/
+DELETE /api/v1/organizations/<id>/members/<membership-id>/
 
-GET  /api/v1/contacts/
-GET  /api/v1/contacts/?search=<term>
-POST /api/v1/contacts/
+GET  /api/v1/organizations/<id>/companies/
+POST /api/v1/organizations/<id>/companies/
 
-GET  /api/v1/automations/
-POST /api/v1/automations/
-GET  /api/v1/automations/runs/
-POST /api/v1/automations/<id>/test/
+GET  /api/v1/organizations/<id>/contacts/
+POST /api/v1/organizations/<id>/contacts/
+
+GET  /api/v1/organizations/<id>/automations/
+POST /api/v1/organizations/<id>/automations/
+GET  /api/v1/organizations/<id>/automations/runs/
+POST /api/v1/organizations/<id>/automations/<automation-id>/test/
 ```
 
 ## Documentation
@@ -95,6 +100,7 @@ Start here:
 - [REST API Patterns](docs/api/rest-patterns.md)
 - [Postman Guide](docs/api-postman.md)
 - [CRM Domain Model](docs/architecture/crm-domain.md)
+- [Authentication and Roles](docs/architecture/authentication-and-roles.md)
 - [Automations Architecture](docs/architecture/automations.md)
 - [Email Adapters Plan](docs/architecture/email-adapters.md)
 - [AI Agent Guide](AGENTS.md)
@@ -112,6 +118,7 @@ uv run python src/manage.py check
 uv run python src/manage.py makemigrations
 uv run python src/manage.py migrate
 uv run python src/manage.py showmigrations
+uv run python src/manage.py test organizations companies contacts automations
 uv run python src/manage.py runserver
 uv run python src/manage.py createsuperuser
 ```
@@ -137,11 +144,15 @@ Done:
 - `company.created` automation trigger
 - `send_email` automation action
 - Postman collection and local environment
+- authenticated API access
+- organization memberships with owner, admin, member, and viewer roles
+- tenant-scoped CRM and automation endpoints
+- automated authorization and tenant-isolation tests
 
 Next likely steps:
 
+- user invitation flow
+- production token authentication
 - email adapter abstraction
 - real SMTP provider support
 - per-organization email settings
-- API tests
-- authentication and permissions
