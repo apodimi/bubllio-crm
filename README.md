@@ -97,6 +97,11 @@ Start here:
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Automations Architecture](docs/architecture/automations.md)
 - [Email Adapters Plan](docs/architecture/email-adapters.md)
+- [AI Agent Guide](AGENTS.md)
+
+Reusable workflows for AI-assisted contributions live in [`skills/`](skills/).
+They cover CRM resources, automation triggers and actions, API tests, and project
+verification.
 
 ## Common Commands
 
