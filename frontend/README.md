@@ -69,6 +69,9 @@ Do not put secrets in VITE_* variables: they are public browser configuration.
 
 ## Structure and extension
 
+For the full contributor workflow, including state ownership and how to add a
+page or create form, read [Frontend Workflow](../docs/development/frontend-workflow.md).
+
 ```text
 src/
   api/          HTTP boundary, resource types, tenant-scoped query definitions

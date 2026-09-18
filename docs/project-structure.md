@@ -213,7 +213,15 @@ organizations/urls.py
 
 ## Documentation Map
 
+- [Contributing Guide](contributing.md): repository mental model, change flow,
+  testing, and pull request checklist.
+- [System Overview](architecture/system-overview.md): request flow, domain
+  ownership, and where to investigate behavior.
 - [Getting Started](getting-started.md): install and run the application.
+- [Frontend Workflow](development/frontend-workflow.md): React, Axios, Zustand,
+  TanStack Query, and page/form conventions.
+- [REST Authentication](api/authentication.md): JWT endpoints, curl examples,
+  token rotation, and browser behavior.
 - [First Automation](guides/first-automation.md): reproduce a complete event flow.
 - [Automations](architecture/automations.md): implemented behavior and limitations.
 - [Workflow Roadmap](architecture/automation-roadmap.md): future visual workflows.

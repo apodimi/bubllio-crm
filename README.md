@@ -140,11 +140,15 @@ selected values are stored in `OrganizationSettings`.
 Start here:
 
 - [Getting Started](docs/getting-started.md)
+- [Contributing Guide](docs/contributing.md)
+- [System Overview](docs/architecture/system-overview.md)
 - [Project Structure](docs/project-structure.md)
 - [Django Workflow](docs/development/django-workflow.md)
+- [Frontend Workflow](docs/development/frontend-workflow.md)
 - [Database Setup](docs/development/databases.md)
 - [Migrations](docs/development/migrations.md)
 - [REST API Patterns](docs/api/rest-patterns.md)
+- [REST Authentication](docs/api/authentication.md)
 - [Postman Guide](docs/api-postman.md)
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Authentication and Roles](docs/architecture/authentication-and-roles.md)
