@@ -22,8 +22,8 @@ docs/postman/bubllio-crm.local.postman_environment.json
 ```
 
 Set `username` and `password` in the selected environment to the local Django
-credentials. The collection inherits HTTP Basic authentication. Basic auth is for
-local development here; use it only over HTTPS outside localhost.
+credentials. The collection obtains a JWT pair and sends the access token as a
+Bearer token. Use HTTPS outside localhost.
 
 ## Environment variables
 
@@ -32,15 +32,17 @@ local development here; use it only over HTTPS outside localhost.
 | `base_url` | Local Django origin |
 | `api_version` | API version, currently `v1` |
 | `username`, `password` | Local authenticated Django user |
+| `access_token`, `refresh_token` | Tokens populated by the Authentication/Login request |
 | `organization_id` | Created organization UUID |
 | `user_id` | Existing Django user to add as a member |
 | `membership_id` | Membership to update or remove |
 | `company_id` | Created company UUID |
 | `automation_id` | Created automation UUID |
+| `email_account_id` | Created SMTP account UUID |
+| `company_search`, `contact_search` | Search values |
 
 For UI-managed SMTP testing, also set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in the
 server's ignored `.env` file. Postman never stores that encryption key.
-| `company_search`, `contact_search` | Search values |
 
 Organization, company, membership, and automation creation requests save returned
 IDs into the environment automatically.
@@ -55,13 +57,25 @@ IDs into the environment automatically.
 5. Create and search contacts. A contact's company must belong to the same
    organization.
 6. Create a `company.created` email automation as an owner or administrator.
-7. Test the automation and inspect its run history.
-8. Optionally delete the organization as its owner.
+7. Create another company to exercise the automatic event path, then inspect
+   console email output and run history. Earlier companies are not replayed.
+8. Optionally run Test Automation to execute the action directly again. This
+   does not create a company or verify event dispatch.
+9. Optionally delete the organization as its owner; this also deletes its rules
+   and run history.
+
+For expected results at each step, follow [Your First Automation](guides/first-automation.md).
+
+## Authentication
+
+Obtain tokens with `POST /api/v1/auth/token/` and JSON username/password. Use the
+returned `access` value in `Authorization: Bearer <access>` headers. Refresh with
+`POST /api/v1/auth/token/refresh/` and logout with `POST /api/v1/auth/logout/`.
 
 ## Authentication responses
 
-Every API route requires authentication. With the current session-first DRF
-configuration, an anonymous request commonly returns `403 Forbidden`. A user who
+Every API route requires authentication. With the JWT DRF configuration, an anonymous
+request returns `401 Unauthorized`. A user who
 is authenticated but lacks membership or the required capability normally sees
 `404 Not Found`, preventing disclosure of inaccessible organizations.
 
@@ -214,8 +228,18 @@ Create automation:
 }
 ```
 
-Local email uses Django's console backend, so messages appear in the terminal
-running `runserver` rather than reaching a real inbox.
+Automation email uses Django's console backend, so messages appear in the terminal
+running `runserver`. The separate SMTP account test endpoint attempts real delivery;
+setting an account as default does not connect it to automations.
+
+Only `company.created` is automatically emitted. Other accepted trigger choices
+are currently unwired. There is no automation update/delete endpoint yet.
+
+Test Automation performs the configured action even for inactive rules and
+returns HTTP 201 even for a recorded failure. Inspect `status` and
+`run.error_message`. Its payload is stored in history, not rendered into email.
+See [Automations](architecture/automations.md) for the complete behavior and
+limitations.
 
 For the complete authorization rules, read
 `docs/architecture/authentication-and-roles.md`.

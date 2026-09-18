@@ -9,6 +9,8 @@ Current model hierarchy:
 ```text
 Organization
   -> OrganizationMembership -> User
+  -> OrganizationSettings
+  -> EmailAccount
   -> Company
        -> Contact
   -> Automation
@@ -32,7 +34,7 @@ An organization owns its CRM data:
 - contacts
 - automations
 - users and role-based permissions through memberships
-- future email settings
+- organization settings and encrypted SMTP email accounts
 
 ## Company
 
@@ -108,6 +110,8 @@ User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
 Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
+Organization 1 -> 1 OrganizationSettings
+Organization 1 -> many EmailAccounts
 ```
 
 ## Business Logic
@@ -119,7 +123,8 @@ Examples:
 - A contact's company must belong to the same organization.
 - A company creation can trigger automations.
 - An automation only runs inside its own organization.
-- A future email account may only be used by its organization.
+- An email account may only be accessed through its organization's authorized
+  settings endpoints; automation sending is not connected to these accounts yet.
 - An authenticated user may access an organization only through a membership and
   the capabilities granted by its role.
 
@@ -136,3 +141,8 @@ views.py       -> HTTP request/response coordination
 ```
 
 Views should not become the place where all product rules live.
+
+For the event-to-action path, read [Automations](automations.md). A future
+`Create contact` action would create a CRM record; a `Contact created` trigger
+would react to one. Neither is currently implemented in the automation system.
+The [workflow roadmap](automation-roadmap.md) explains this distinction.

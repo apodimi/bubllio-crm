@@ -15,9 +15,24 @@ bubllio-crm-api/
   pyproject.toml
   uv.lock
   docs/
+  frontend/
   skills/
   src/
 ```
+
+## `frontend/`
+
+The official, replaceable React client for the Django REST API. It is part of
+this repository so backend and frontend changes can be reviewed together, while
+remaining independently buildable and deployable.
+
+It uses React, TypeScript, Vite, TanStack Query, TanStack Router, and Material UI.
+The frontend owns navigation, presentation, forms, and server-state caching.
+The API remains the source of truth for authentication, organization membership,
+validation, capabilities, and business behavior.
+
+Start with [Frontend Guide](../frontend/README.md). A developer who wants a
+different UI can use the API directly; no frontend module is imported by Django.
 
 ## `pyproject.toml`
 
@@ -176,7 +191,17 @@ configuration used by the Django admin fallback dashboard.
 
 `contacts` represents people who belong to companies.
 
-`automations` represents workflow rules, actions, and execution history.
+`automations` stores single-trigger, single-action rules and execution history.
+It currently executes synchronously in Django; it is not yet a multi-step engine.
+
+The entry point lives in `companies/signals.py`, registered by
+`companies/apps.py`. It emits company creation to `automations/services.py`,
+which selects same-organization active rules, executes the email action, and
+records results. Views provide authorized list/create, run history, and manual
+execution endpoints. See the [file-by-file map](architecture/automations.md).
+
+Organization SMTP tests use `organizations/email_service.py`; automation emails
+still use Django's global backend. The two paths are not connected yet.
 
 Current route ownership:
 
@@ -185,6 +210,18 @@ organizations/urls.py
   -> organization and membership endpoints
   -> includes company, contact, and automation routes below <organization_id>
 ```
+
+## Documentation Map
+
+- [Getting Started](getting-started.md): install and run the application.
+- [First Automation](guides/first-automation.md): reproduce a complete event flow.
+- [Automations](architecture/automations.md): implemented behavior and limitations.
+- [Workflow Roadmap](architecture/automation-roadmap.md): future visual workflows.
+- [Email Sending](architecture/email-adapters.md): console versus SMTP behavior.
+- [Postman Guide](api-postman.md): authenticated requests and examples.
+
+Architecture pages describe current code unless a section explicitly says
+planned. A roadmap item is not a supported feature.
 
 ## Agent Files
 

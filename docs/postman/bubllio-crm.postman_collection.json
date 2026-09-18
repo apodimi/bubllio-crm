@@ -2,17 +2,55 @@
   "info": {
     "_postman_id": "56ff07e9-f299-4b34-a767-ecbf4515c235",
     "name": "Bubllio CRM API",
-    "description": "Authenticated, organization-scoped local API collection. Set username and password in the Bubllio CRM Local environment.",
+    "description": "Authenticated, organization-scoped local API collection. Run the JWT login request first, then use the stored access token.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
-    "type": "basic",
-    "basic": [
-      {"key": "username", "value": "{{username}}", "type": "string"},
-      {"key": "password", "value": "{{password}}", "type": "string"}
-    ]
+    "type": "bearer",
+    "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
   },
   "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "pm.environment.set(\"access_token\", data.access);",
+            "pm.environment.set(\"refresh_token\", data.refresh);"
+          ]}}],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/auth/token/"
+          }
+        },
+        {
+          "name": "Refresh access token",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "pm.environment.set(\"access_token\", data.access);",
+            "if (data.refresh) pm.environment.set(\"refresh_token\", data.refresh);"
+          ]}}],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/auth/token/refresh/"
+          }
+        },
+        {
+          "name": "Current user",
+          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/auth/me/"}
+        }
+      ]
+    },
     {
       "name": "Organizations",
       "item": [
@@ -183,6 +221,7 @@
     },
     {
       "name": "Automations",
+      "description": "Current Django implementation: one company.created trigger and one fixed send_email action per rule. No worker required. Create a NEW company after saving a rule to exercise dispatch; existing companies are not replayed. Other declared triggers are unwired. SMTP accounts are not yet used by automations.",
       "item": [
         {
           "name": "List Automations",
@@ -211,7 +250,8 @@
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {"mode": "raw", "raw": "{\n  \"payload\": {\n    \"test\": true,\n    \"source\": \"postman\"\n  }\n}"},
-            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/automations/{{automation_id}}/test/"
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/automations/{{automation_id}}/test/",
+            "description": "Executes the real action and records a run, even for inactive rules. Does not create a company or verify event dispatch. HTTP 201 can contain status=failed: inspect status and run.error_message. Payload is logged, not interpolated into email. Checked-in transport is console output."
           }
         },
         {

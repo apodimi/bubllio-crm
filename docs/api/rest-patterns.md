@@ -220,7 +220,20 @@ same path + same resource level -> same class, different methods
 different path or custom action -> different class
 ```
 
-## Search Pattern
+## Automation Response Semantics
+
+Creating an automation saves a rule; it does not execute it. The manual test
+endpoint executes the action and returns HTTP 201 with a run, including when that
+run has `status: failed`. Clients must inspect the body's `status` and
+`run.error_message`. This test is not a dry run and bypasses the active-rule
+filter used by normal event dispatch.
+
+There is no automation PATCH/DELETE or multi-step definition endpoint yet.
+See [current automation behavior](../architecture/automations.md) and the
+[walkthrough](../guides/first-automation.md). Future workflow definitions in the
+[roadmap](../architecture/automation-roadmap.md) are not a current API contract.
+
+## Collection Search
 
 For simple search, filter the queryset before creating the serializer.
 

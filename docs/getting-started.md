@@ -61,16 +61,17 @@ uv run python src/manage.py createsuperuser
 
 Use this account to log in to Django admin.
 
-All CRM API endpoints require authentication. For browser-based API testing, log
-in at:
+All CRM API endpoints require authentication. The REST API uses JWT access and
+refresh tokens. For browser-based API testing, Django's admin/session login is
+still available at:
 
 ```text
 http://127.0.0.1:8000/api-auth/login/
 ```
 
-For Postman, use HTTP Basic authentication with the same local Django username
-and password. Basic authentication must only be used over HTTPS outside local
-development.
+For Postman, obtain a JWT pair from `POST /api/v1/auth/token/` with the same
+local Django username and password, then send the access token as a Bearer
+token. Use HTTPS outside local development.
 
 ## Run Server
 
@@ -88,7 +89,7 @@ http://127.0.0.1:8000/api/v1/organizations/
 
 ## Local Email
 
-Local email does not go to a real inbox yet.
+Automation email uses console output by default.
 
 The project uses:
 
@@ -98,12 +99,27 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 That means emails are printed in the terminal where `runserver` is running.
 
+Organization SMTP accounts have a separate test endpoint that attempts real
+delivery. Creating one does not change automation email behavior. See
+[Email Sending](architecture/email-adapters.md) for that distinction and the
+encryption key required when storing SMTP passwords.
+
+## Try an Automation
+
+Follow [Your First Automation](guides/first-automation.md) to create an active
+rule, create a new company, and inspect the email output and run history.
+Only `company.created` is automatically emitted today. No queue, worker, or
+workflow server is needed. The future visual builder is described separately in
+the [workflow roadmap](architecture/automation-roadmap.md).
+
 ## Environment Variables
 
-The important environment variable right now is:
+Production must set:
 
 ```text
 DJANGO_SECRET_KEY
 ```
 
-Production must set it. Local development has a non-production fallback so the project can run without extra setup.
+Local development has a non-production fallback. Optional `DATABASE_URL` selects
+the database; `BUBLLIO_EMAIL_ENCRYPTION_KEY` is needed for stored SMTP passwords.
+See [Database Setup](development/databases.md) and [Email Sending](architecture/email-adapters.md).

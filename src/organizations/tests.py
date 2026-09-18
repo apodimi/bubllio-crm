@@ -27,7 +27,7 @@ class OrganizationAccessTests(APITestCase):
 
     def test_anonymous_requests_are_rejected(self):
         response = self.client.get(reverse("organization-list"))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_creating_organization_makes_request_user_owner(self):
         self.client.force_authenticate(self.other_user)
@@ -351,3 +351,54 @@ class OrganizationSettingsAndEmailTests(APITestCase):
             self.assertTrue(form.is_valid(), form.errors)
             account = form.save()
         self.assertNotEqual(account.encrypted_password, "admin-secret")
+
+
+class RestAuthenticationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rest-user",
+            password="strong-test-password",
+            email="rest@example.com",
+        )
+        self.organization = Organization.objects.create(name="REST Org", slug="rest-org")
+        OrganizationMembership.objects.create(
+            organization=self.organization,
+            user=self.user,
+            role=OrganizationMembership.Role.OWNER,
+        )
+
+    def test_token_login_and_me_are_json_endpoints(self):
+        token_response = self.client.post(
+            reverse("token-obtain-pair"),
+            {"username": "rest-user", "password": "strong-test-password"},
+            format="json",
+        )
+        self.assertEqual(token_response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", token_response.data)
+        self.assertIn("refresh", token_response.data)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token_response.data['access']}")
+        me_response = self.client.get(reverse("current-user"))
+        self.assertEqual(me_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(me_response.data["username"], "rest-user")
+        self.assertEqual(me_response.data["organizations"][0]["id"], str(self.organization.id))
+
+    def test_logout_blacklists_refresh_token(self):
+        token_response = self.client.post(
+            reverse("token-obtain-pair"),
+            {"username": "rest-user", "password": "strong-test-password"},
+            format="json",
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token_response.data['access']}")
+        logout_response = self.client.post(
+            reverse("logout"),
+            {"refresh": token_response.data["refresh"]},
+            format="json",
+        )
+        self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
+        refresh_response = self.client.post(
+            reverse("token-refresh"),
+            {"refresh": token_response.data["refresh"]},
+            format="json",
+        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)

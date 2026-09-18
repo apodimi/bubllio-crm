@@ -11,7 +11,9 @@ The project is intentionally documented as a learning project too: the code shou
 - Django REST Framework
 - uv for dependency and virtualenv management
 - zero-config SQLite or `DATABASE_URL`-configured PostgreSQL
-- organization-scoped authentication and role-based access control
+- REST JWT authentication with organization-scoped role-based access control
+- React, TypeScript, Vite, TanStack Query/Router, and Material UI frontend
+  in `frontend/`
 
 ## Quick Start
 
@@ -20,6 +22,20 @@ Install dependencies:
 ```bash
 uv sync
 ```
+
+The backend and official frontend live in this repository as a monorepo. To run
+the frontend, use Node 22.12+ in a second terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. Vite proxies `/api/` to the Django server at
+`http://127.0.0.1:8000`. The frontend is an official client of the REST API;
+contributors may replace its UI without changing backend ownership or rules.
+See [Frontend Guide](frontend/README.md).
 
 This uses SQLite without additional configuration. For local PostgreSQL:
 
@@ -54,6 +70,15 @@ Open:
 http://127.0.0.1:8000/api-auth/login/
 http://127.0.0.1:8000/api/v1/organizations/
 http://127.0.0.1:8000/admin/
+```
+
+REST authentication endpoints:
+
+```text
+POST /api/v1/auth/token/
+POST /api/v1/auth/token/refresh/
+GET  /api/v1/auth/me/
+POST /api/v1/auth/logout/
 ```
 
 ## Environment Variables
@@ -124,12 +149,33 @@ Start here:
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Authentication and Roles](docs/architecture/authentication-and-roles.md)
 - [Automations Architecture](docs/architecture/automations.md)
-- [Email Adapters Plan](docs/architecture/email-adapters.md)
+- [Try Your First Automation](docs/guides/first-automation.md)
+- [Workflow Roadmap — Planned, Not Implemented](docs/architecture/automation-roadmap.md)
+- [Email Sending: Current Behavior and Direction](docs/architecture/email-adapters.md)
 - [AI Agent Guide](AGENTS.md)
 
 Reusable workflows for AI-assisted contributions live in [`skills/`](skills/).
 They cover CRM resources, automation triggers and actions, API tests, and project
 verification.
+
+## Understanding Automations
+
+Today an active rule means: when a company is created in this organization,
+send one fixed email and record its result. It runs synchronously in Django;
+no additional service is required. The checked-in backend prints automation
+messages to the console.
+
+Only `company.created` is automatically dispatched, although the API currently
+accepts additional, unwired trigger choices. Organization SMTP accounts can send
+real test emails through their own endpoint, but are not yet used by automations.
+The automation test endpoint performs the action; it is not a dry run.
+
+Our direction is a future visual builder with one trigger and ordered actions,
+built incrementally on the existing Django stack. Multi-step execution, contact
+creation actions, waiting, and the visual UI are not implemented. Start with the
+[walkthrough](docs/guides/first-automation.md), then read the
+[current architecture](docs/architecture/automations.md) and the separate
+[roadmap](docs/architecture/automation-roadmap.md).
 
 ## Common Commands
 
@@ -167,19 +213,21 @@ Done:
 - `company.created` automation trigger
 - `send_email` automation action
 - Postman collection and local environment
-- authenticated API access
+- authenticated API access with short-lived JWT access tokens and refresh-token logout
 - organization memberships with owner, admin, member, and viewer roles
 - tenant-scoped CRM and automation endpoints
 - automated authorization and tenant-isolation tests
 - zero-config SQLite and `DATABASE_URL`-based PostgreSQL support
 - local PostgreSQL Compose service
-- UI-managed encrypted SMTP accounts and test-email endpoint
+- organization settings and encrypted SMTP account APIs, Django admin forms,
+  and a real SMTP test-email endpoint
 
 Next likely steps:
 
 - user invitation flow
-- production token authentication
-- email adapter abstraction
-- real SMTP provider support
-- per-organization email settings
+- an optional HttpOnly-cookie refresh transport for production browser deployments
+- automation validation and event-path test coverage
+- connect automation email actions to existing organization SMTP accounts
+- ordered workflow steps and, later, a visual builder (see the workflow roadmap)
+- additional email providers if required
 - MySQL database support and a multi-database CI matrix

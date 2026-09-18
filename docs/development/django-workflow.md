@@ -117,7 +117,23 @@ urlpatterns = [
 ]
 ```
 
-## Checks Before Moving On
+## Contributing to Automations
+
+Read [current automation behavior](../architecture/automations.md) before making
+changes. The [workflow roadmap](../architecture/automation-roadmap.md) records
+future direction; its blocks and API concepts are not implemented yet.
+
+Use the existing Django services and tenant permissions for the next iteration.
+Wire a trigger from a real event before presenting it as supported. Tests should
+exercise the actual signal path, same-tenant selection, inactive rules, action
+failure, and the recorded result, not just a successful manual test request.
+Existing automation tests primarily cover API authorization and tenant isolation.
+
+Update architecture docs, the walkthrough, and Postman examples together when
+behavior changes. Separate working behavior from planned improvements, including
+email transport and test endpoint side effects.
+
+## Verification
 
 Run:
 

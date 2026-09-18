@@ -8,13 +8,14 @@ Authentication answers “who is making this request?”. Authorization answers
 “what may this user do inside this organization?”. They are separate checks and
 both are required.
 
-The API currently supports Django session authentication and HTTP Basic
-authentication. All API endpoints require an authenticated user. Session login is
-available at `/api-auth/login/`; the Django admin remains at `/admin/`.
+The API uses JSON Web Tokens through DRF SimpleJWT. All API endpoints require an
+authenticated user and accept a Bearer access token. The Django admin still uses
+session authentication. REST endpoints are `/api/v1/auth/token/`, `/api/v1/auth/token/refresh/`,
+`/api/v1/auth/me/`, and `/api/v1/auth/logout/`.
 
-Basic authentication is convenient for local Postman testing. It is safe only
-over HTTPS outside local development. Token-based authentication can be added
-later without changing the organization role model.
+Refresh tokens rotate and are blacklisted after rotation. Logout blacklists the
+submitted refresh token. The React frontend keeps both tokens only in memory with
+Zustand, so a full page refresh requires signing in again.
 
 ## Membership model
 
@@ -81,7 +82,14 @@ Queries are always filtered by the resolved organization. A missing membership o
 insufficient capability normally returns `404 Not Found`; this avoids revealing
 whether an inaccessible organization exists.
 
-## Membership API
+## Automation Access
+
+Automation access uses these same boundaries: members can read rules and run
+history; owners/admins can create rules and invoke the manual action test.
+That test performs the action even for an inactive rule. It is not a permission
+preview or dry run. See [Automations](automations.md) for current behavior.
+
+## Membership Operations
 
 Only owners and administrators can list memberships:
 
@@ -133,7 +141,7 @@ always have an `OrganizationMembership`.
 ## Future security work
 
 - invitation and acceptance flow;
-- production token authentication;
+- a future HttpOnly-cookie refresh transport if the deployment needs stronger browser-side token protection;
 - inactive/suspended memberships;
 - audit log for membership and ownership changes;
 - rate limiting and production HTTPS/security settings.
