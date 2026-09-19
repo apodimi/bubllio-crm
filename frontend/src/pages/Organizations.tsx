@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Box, Button, Card, CardActionArea, CardContent, Chip, Stack, Typography } from '@mui/material'
 import AddRounded from '@mui/icons-material/AddRounded'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
-import { organizationsQuery, keys } from '../api/queries'
+import { keys } from '../api/queries'
+import { useOrganizations } from '../api/hooks'
 import { Loading, Failure, Empty, PageHeading } from '../components/Feedback'
 import { CreateDialog } from '../components/CreateDialog'
 
 export function Organizations() {
-  const query = useQuery(organizationsQuery)
+  const query = useOrganizations()
   const [create, setCreate] = useState(false)
   return <>
     <PageHeading title="Your workspaces" description="A home for every team and every relationship."

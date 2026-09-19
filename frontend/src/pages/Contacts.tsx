@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material'
 import AddRounded from '@mui/icons-material/AddRounded'
-import { companiesQuery, contactsQuery, keys, organizationPath } from '../api/queries'
+import { keys, organizationPath } from '../api/queries'
+import { useCompanies, useContacts } from '../api/hooks'
 import { useWorkspace, canCreateRecords } from '../app/workspace'
 import { Empty, Failure, Loading, PageHeading } from '../components/Feedback'
 import { CreateDialog } from '../components/CreateDialog'
 
 export function Contacts() {
   const org = useWorkspace()
-  const query = useQuery(contactsQuery(org.id))
-  const companies = useQuery(companiesQuery(org.id))
+  const query = useContacts(org.id)
+  const companies = useCompanies(org.id)
   const [search, setSearch] = useState('')
   const [create, setCreate] = useState(false)
   const rows = (query.data ?? []).filter(contact => [contact.first_name + ' ' + contact.last_name, contact.email].some(value => value.toLowerCase().includes(search.toLowerCase())))

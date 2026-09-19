@@ -71,6 +71,8 @@ Do not put secrets in VITE_* variables: they are public browser configuration.
 
 For the full contributor workflow, including state ownership and how to add a
 page or create form, read [Frontend Workflow](../docs/development/frontend-workflow.md).
+The local frontend rules are in [AGENTS.md](AGENTS.md), including the request-
+as-hook convention.
 
 ```text
 src/

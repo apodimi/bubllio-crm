@@ -1,12 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
 import { Alert, Chip, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
-import { automationsQuery, runsQuery } from '../api/queries'
+import { useAutomationRuns, useAutomations } from '../api/hooks'
 import { useWorkspace } from '../app/workspace'
 import { Empty, Failure, Loading, PageHeading } from '../components/Feedback'
 export function Automations() {
   const org = useWorkspace()
-  const rules = useQuery(automationsQuery(org.id))
-  const runs = useQuery(runsQuery(org.id))
+  const rules = useAutomations(org.id)
+  const runs = useAutomationRuns(org.id)
   const error = rules.error || runs.error
   return <>
     <PageHeading title="Automations" description="Your rules and their execution history." />

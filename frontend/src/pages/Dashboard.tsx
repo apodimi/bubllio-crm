@@ -1,16 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
-import { companiesQuery, contactsQuery, automationsQuery } from '../api/queries'
+import { useAutomations, useCompanies, useContacts } from '../api/hooks'
 import { useWorkspace } from '../app/workspace'
 import { Failure, Loading, PageHeading } from '../components/Feedback'
 
 export function Dashboard() {
   const org = useWorkspace()
-  const companies = useQuery(companiesQuery(org.id))
-  const contacts = useQuery(contactsQuery(org.id))
-  const automations = useQuery(automationsQuery(org.id))
+  const companies = useCompanies(org.id)
+  const contacts = useContacts(org.id)
+  const automations = useAutomations(org.id)
   const error = companies.error || contacts.error || automations.error
   if (error) return <Failure error={error} />
   if (!companies.data || !contacts.data || !automations.data) return <Loading />

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { Avatar, Box, Button, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, MenuItem, Select, Stack, Typography } from '@mui/material'
 import DashboardRounded from '@mui/icons-material/DashboardRounded'
 import BusinessRounded from '@mui/icons-material/BusinessRounded'
@@ -10,7 +9,7 @@ import MenuRounded from '@mui/icons-material/MenuRounded'
 import LogoutRounded from '@mui/icons-material/LogoutRounded'
 import { useAuth } from './auth'
 import { Login } from '../pages/Login'
-import { organizationsQuery, organizationQuery } from '../api/queries'
+import { useOrganization, useOrganizations } from '../api/hooks'
 import { WorkspaceContext } from './workspace'
 import { Failure, Loading } from '../components/Feedback'
 import { useNavigate } from '@tanstack/react-router'
@@ -25,7 +24,7 @@ function Shell() {
   const params = useParams({ strict: false })
   const orgId = 'organizationId' in params ? params.organizationId : undefined
   const pathname = useRouterState({ select: state => state.location.pathname })
-  const orgs = useQuery(organizationsQuery)
+  const orgs = useOrganizations()
   const navigate = useNavigate()
   const base = orgId ? '/organizations/' + orgId : ''
   const items = [
@@ -74,7 +73,7 @@ function Shell() {
 }
 export function WorkspaceLayout() {
   const { organizationId } = useParams({ from: '/organizations/$organizationId' })
-  const query = useQuery(organizationQuery(organizationId))
+  const query = useOrganization(organizationId)
   if (query.isPending) return <Loading />
   if (query.isError) return <Failure error={query.error} retry={() => void query.refetch()} />
   return <WorkspaceContext.Provider value={query.data}><Outlet key={organizationId} /></WorkspaceContext.Provider>

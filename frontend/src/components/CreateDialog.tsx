@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material'
-import { request } from '../api/client'
+import { useCreateResource } from '../api/hooks'
 import type { QueryKey } from '@tanstack/react-query'
 export interface Field {
   name: string; label: string; required?: boolean; type?: string; maxLength?: number
@@ -11,12 +10,8 @@ export interface Field {
 export function CreateDialog({ title, path, fields, invalidate, onClose }: {
   title: string; path: string; fields: Field[]; invalidate: QueryKey; onClose: () => void
 }) {
-  const queryClient = useQueryClient()
   const [values, setValues] = useState<Record<string, string>>({})
-  const mutation = useMutation({
-    mutationFn: (body: Record<string, string>) => request(path, { body }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: invalidate }); onClose() },
-  })
+  const mutation = useCreateResource(path, invalidate, onClose)
   function submit(event: FormEvent) {
     event.preventDefault()
     const body = Object.fromEntries(fields.map(field => [field.name, values[field.name] ?? '']))

@@ -22,6 +22,37 @@ The frontend does not own:
 - automation execution;
 - persistence of access or refresh tokens.
 
+## Request rule: hooks at the React boundary
+
+Requests used by React should be exposed as hooks. This is a good practice here
+because it gives every page the same cache, loading, error, cancellation, and
+authentication behavior. It also keeps URLs and response types out of visual
+components.
+
+The layers are intentionally separate:
+
+```text
+page/component → api/hooks.ts → api/queries.ts → api/client.ts → Axios
+```
+
+`client.ts` is the low-level transport: it knows Axios, Bearer headers, refresh,
+and API errors. `queries.ts` defines query keys, endpoint paths, response types,
+and `AbortSignal` handling. `hooks.ts` adapts those definitions to React with
+`useQuery` or `useMutation`.
+
+For example:
+
+```tsx
+const companies = useCompanies(organizationId)
+```
+
+A page should not contain `request('/organizations/...')`, create an Axios
+instance, or manually manage `isLoading` and cache invalidation for a server
+request. Login/logout remain an explicit exception because they are auth
+orchestration actions; they live in `app/auth.tsx` and use the shared client.
+
+See [Frontend Rules](../../frontend/AGENTS.md) for the enforceable checklist.
+
 ## Directory map
 
 ```text
