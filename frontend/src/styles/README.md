@@ -44,6 +44,8 @@ styles/
 ├── theme.ts                 Palette, typography, shape, and theme composition
 └── components/
     ├── button.ts            MuiButton defaults and styles
+    ├── input-label.ts       MuiInputLabel states and typography
+    ├── outlined-input.ts    Shared input surface and interaction states
     ├── table-cell.ts        MuiTableCell defaults and styles
     ├── ...
     └── index.ts             Maps local overrides to MUI component keys

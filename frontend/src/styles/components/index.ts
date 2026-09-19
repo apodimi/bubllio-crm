@@ -4,6 +4,7 @@ import { card } from './card'
 import { chip } from './chip'
 import { cssBaseline } from './css-baseline'
 import { drawer } from './drawer'
+import { inputLabel } from './input-label'
 import { listItemButton } from './list-item-button'
 import { outlinedInput } from './outlined-input'
 import { paper } from './paper'
@@ -21,6 +22,7 @@ export const components: Components<Theme> = {
   MuiChip: chip,
   MuiCssBaseline: cssBaseline,
   MuiDrawer: drawer,
+  MuiInputLabel: inputLabel,
   MuiListItemButton: listItemButton,
   MuiOutlinedInput: outlinedInput,
   MuiPaper: paper,
