@@ -98,6 +98,25 @@ the TanStack Query cache even if the server call fails.
 Tokens are intentionally memory-only. A future HttpOnly-cookie design must be
 an explicit security decision and documented as an API/browser contract change.
 
+## Theme and brand customization
+
+The application has one Material UI ThemeProvider in `main.tsx`. Developers
+customize the small set of intentional inputs in `src/styles/brand.ts`:
+
+- primary and secondary brand colors;
+- application background and surface;
+- primary and muted text;
+- font family;
+- base border radius.
+
+`src/styles/theme.ts` derives light/dark primary variants, dividers, action
+states, table styles, and shared component defaults. Pages and components use
+semantic palette paths instead of color literals. This lets a self-hosting team
+replace the base palette without searching through the application.
+
+The detailed contract and agent rules are in
+[`src/styles/README.md`](../../frontend/src/styles/README.md).
+
 ## Adding a read-only page
 
 1. Add or update the response type in `src/types/`.

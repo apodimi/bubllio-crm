@@ -61,6 +61,11 @@ Each business feature keeps domain hooks and service calls together. Pages stay
 thin and compose feature hooks/components. Shared infrastructure does not own
 domain behavior.
 
+Brand inputs live in `frontend/src/styles/brand.ts`; the Material UI theme
+derives variants and component defaults in `frontend/src/styles/theme.ts`.
+Pages and components use semantic theme tokens rather than hardcoded colors.
+See the [Theme Guide](../frontend/src/styles/README.md).
+
 ## `pyproject.toml`
 
 Defines the Python project.

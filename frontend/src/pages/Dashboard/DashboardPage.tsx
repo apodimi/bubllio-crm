@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
+import { alpha, lighten } from '@mui/material/styles'
 import { useAutomations } from '../../features/automations'
 import { useCompanies } from '../../features/companies'
 import { useContacts } from '../../features/contacts'
@@ -29,11 +30,11 @@ export function DashboardPage() {
         <Typography color="text.secondary" variant="body2">{stat.note}</Typography>
       </Paper>)}
     </Box>
-    <Paper sx={{ p: { xs: 3, md: 5 }, bgcolor: 'primary.dark', color: 'white', mb: 4, overflow: 'hidden' }}>
-      <Chip label="MAKE ROOM FOR RELATIONSHIPS" size="small" sx={{ bgcolor: '#ffffff15', color: '#cfe6b4', mb: 3, letterSpacing: 1, fontSize: 10 }} />
+    <Paper sx={{ p: { xs: 3, md: 5 }, bgcolor: 'primary.dark', color: 'primary.contrastText', mb: 4, overflow: 'hidden' }}>
+      <Chip label="MAKE ROOM FOR RELATIONSHIPS" size="small" sx={(theme) => ({ bgcolor: alpha(theme.palette.primary.contrastText, 0.08), color: 'primary.light', mb: 3, letterSpacing: 1, fontSize: 10 })} />
       <Typography variant="h4" sx={{ mb: 2 }}>Your next connection starts here.</Typography>
-      <Typography sx={{ maxWidth: 520, color: '#c8d8ce', mb: 3 }}>Keep track of the companies you know and the people behind them. Build your workspace one relationship at a time.</Typography>
-      <Link to="/organizations/$organizationId/companies" params={{ organizationId: org.id }} style={{ textDecoration: 'none' }}><Button component="span" variant="contained" endIcon={<ArrowForwardRounded />} sx={{ bgcolor: '#d6eab9', color: '#183c33', '&:hover': { bgcolor: '#e3f2cd' } }}>Explore companies</Button></Link>
+      <Typography sx={{ maxWidth: 520, color: 'primary.light', mb: 3, opacity: 0.82 }}>Keep track of the companies you know and the people behind them. Build your workspace one relationship at a time.</Typography>
+      <Link to="/organizations/$organizationId/companies" params={{ organizationId: org.id }} style={{ textDecoration: 'none' }}><Button component="span" variant="contained" endIcon={<ArrowForwardRounded />} sx={(theme) => ({ bgcolor: 'primary.light', color: 'primary.dark', '&:hover': { bgcolor: lighten(theme.palette.primary.light, 0.18) } })}>Explore companies</Button></Link>
     </Paper>
     <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, justifyContent: 'space-between' }}>
       <Typography color="text.secondary" variant="body2">All figures reflect current workspace data.</Typography>

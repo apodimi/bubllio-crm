@@ -60,6 +60,21 @@ than server-state queries. Keep those orchestration calls in
 - Hide unavailable actions for usability, but never treat hidden controls as
   authorization.
 
+## Theme rules
+
+- `src/styles/brand.ts` is the only place for manually selected brand colors,
+  font family, and base radius.
+- `src/styles/theme.ts` derives variants and defines application-wide MUI
+  defaults.
+- Pages, features, and components must not contain hex, RGB, HSL, or named color
+  literals.
+- Use semantic palette paths such as `primary.main`, `text.secondary`,
+  `background.paper`, `divider`, and `action.selected`.
+- Use an `sx` callback with MUI `alpha`, `lighten`, or `darken` when a semantic
+  derived value is needed.
+- Never add a second ThemeProvider or a feature-specific theme.
+- Read `src/styles/README.md` before changing visual tokens.
+
 ## Verification
 
 Every request or routing change should pass:

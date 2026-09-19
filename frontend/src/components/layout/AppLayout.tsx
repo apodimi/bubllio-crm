@@ -33,7 +33,7 @@ function Shell() {
     { text: 'Automations', to: '/organizations/$organizationId/automations' as const, path: base + '/automations', icon: <BoltRounded /> },
   ]
   const sidebar = <Stack sx={{ height: '100%', p: 2.5 }}>
-    <Typography component={Link} to="/" variant="h5" sx={{ textDecoration: 'none', color: 'primary.dark', fontWeight: 800, px: 1, pt: 1, pb: 4 }}>bubllio<span style={{ color: '#7e9688' }}>.</span></Typography>
+    <Typography component={Link} to="/" variant="h5" sx={{ textDecoration: 'none', color: 'primary.dark', fontWeight: 800, px: 1, pt: 1, pb: 4 }}>bubllio<Box component="span" sx={{ color: 'secondary.main' }}>.</Box></Typography>
     <Typography variant="overline" color="text.secondary" sx={{ px: 1, mb: 1 }}>WORKSPACE</Typography>
     <Select size="small" displayEmpty value={orgs.data?.some(org => org.id === orgId) ? orgId : ''} inputProps={{ 'aria-label': 'Select workspace' }}
       onChange={event => { setMobileOpen(false); void navigate({ to: '/organizations/$organizationId', params: { organizationId: event.target.value } }) }} sx={{ mb: 3 }}>
@@ -42,7 +42,7 @@ function Shell() {
     </Select>
     <List>
       {orgId && items.map(item => <Link to={item.to} params={{ organizationId: orgId }} key={item.text} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }} onClick={() => setMobileOpen(false)}><ListItemButton component="div" selected={pathname === item.path || pathname === item.path + '/'}
-        sx={{ mb: .5, borderRadius: 2, '&.Mui-selected': { bgcolor: '#e8f1e6', color: 'primary.main' } }}>
+        sx={{ mb: .5, borderRadius: 2, '&.Mui-selected': { bgcolor: 'action.selected', color: 'primary.main' } }}>
         <ListItemIcon sx={{ minWidth: 38, color: 'inherit' }}>{item.icon}</ListItemIcon><ListItemText primary={item.text} slotProps={{ primary: { sx: { fontSize: 14, fontWeight: 550 } } }} />
       </ListItemButton></Link>)}
     </List>
@@ -56,7 +56,7 @@ function Shell() {
     </Stack>
   </Stack>
   return <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-    <Drawer variant="permanent" sx={{ display: { xs: 'none', md: 'block' }, width: 248, '& .MuiDrawer-paper': { width: 248, bgcolor: '#fbfcf9' } }}>{sidebar}</Drawer>
+    <Drawer variant="permanent" sx={{ display: { xs: 'none', md: 'block' }, width: 248, '& .MuiDrawer-paper': { width: 248, bgcolor: 'background.paper' } }}>{sidebar}</Drawer>
     <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} sx={{ '& .MuiDrawer-paper': { width: 270 } }}>{sidebar}</Drawer>
     <Box sx={{ flex: 1, minWidth: 0 }}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: { xs: 2, md: 5 }, py: 2.5, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>

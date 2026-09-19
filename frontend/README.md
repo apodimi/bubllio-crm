@@ -105,8 +105,10 @@ Create forms POST only writable fields; ownership comes from the authorized URL.
 Successful mutations invalidate the affected query. Backend validation errors
 are shown in the dialog. Business rules and tenant checks stay in Django.
 
-Change `styles/theme.ts` for colors, typography and component defaults; replace page
-components freely. The backend does not import or depend on this frontend.
+Change the human-selected palette in `styles/brand.ts`. Derived colors and
+global Material UI defaults live in `styles/theme.ts`. Read the
+[Theme Guide](src/styles/README.md) before changing visual tokens. The backend
+does not import or depend on this frontend.
 
 ## Verify
 
