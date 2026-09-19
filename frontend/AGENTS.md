@@ -10,9 +10,9 @@ own Axios/fetch client. Network access follows this direction:
 
 ```text
 component/page
-  → domain hook in src/api/hooks.ts
-    → queryOptions in src/api/queries.ts
-      → request() in src/api/client.ts
+  → domain hook in src/features/<feature>/hooks/
+    → feature service in src/features/<feature>/services/
+      → request() in src/services/api.ts
         → Axios + JWT interceptors
 ```
 
@@ -22,18 +22,19 @@ Use a hook when a request is consumed by React:
 const companies = useCompanies(organizationId)
 ```
 
-Keep the query definition separate from the hook. `queries.ts` owns the URL,
-query key, response type, and abort signal. `hooks.ts` owns the React adapter.
-This makes the request reusable and keeps caching behavior consistent.
+Keep query keys and TanStack Query behavior in the owning feature's `hooks/`.
+Keep raw domain API calls in the feature's `services/`. Shared response
+interfaces live in `src/types/`.
 
 Authentication is the exception because login/logout are user actions rather
-than server-state queries. Keep those orchestration calls in `app/auth.tsx`,
-and keep token state in `app/authStore.ts`.
+than server-state queries. Keep those orchestration calls in
+`features/auth/hooks/useAuth.tsx`, and keep token state in
+`features/auth/store/authStore.ts`.
 
 ## Query and mutation rules
 
 - Use TanStack Query for all server state.
-- Give every query a stable key from `src/api/queries.ts`.
+- Give every query a stable key from its feature hook module.
 - Include the organization ID in both tenant URL and query key.
 - Pass TanStack Query's `signal` into the request hook.
 - Use a mutation hook for writes; invalidate affected queries after success.
@@ -53,8 +54,8 @@ and keep token state in `app/authStore.ts`.
 ## Component rules
 
 - Keep pages responsible for composition, not HTTP details.
-- Put reusable request behavior in `src/api/hooks.ts` or a feature hook module.
-- Keep shared visual behavior in `src/components/`.
+- Put query behavior in feature `hooks/` and raw requests in feature `services/`.
+- Keep shared visual behavior in `src/components/common/`.
 - Show loading, empty, error, and success states for server-backed views.
 - Hide unavailable actions for usability, but never treat hidden controls as
   authorization.

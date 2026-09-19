@@ -74,27 +74,38 @@ page or create form, read [Frontend Workflow](../docs/development/frontend-workf
 The local frontend rules are in [AGENTS.md](AGENTS.md), including the request-
 as-hook convention.
 
+The top-level organization follows the
+[Recommended Industry-Standard React.js Folder Structure](https://dev.to/pramod_boda/recommended-folder-structure-for-react-2025-48mc),
+adapted for TypeScript, TanStack Router/Query, Axios, Zustand, and this project's
+current size. We create a documented category when it has real code; we do not
+commit empty placeholder directories.
+
 ```text
 src/
-  api/          HTTP boundary, resource types, tenant-scoped query definitions
-  app/          Auth, query client, router, workspace context, theme and layout
-  components/   Shared feedback and create-form dialog
-  pages/        Organizations, dashboard, companies, contacts, automations, login
+  components/   Common UI and application layouts
+  features/     Domain hooks, services, auth store and public exports
+  pages/        Route-level screens
+  routes/       TanStack Router configuration
+  services/     Shared Axios client
+  hooks/        Global reusable hooks
+  context/      Shared React contexts
+  config/       Query client and application configuration
+  styles/       Material UI theme and future global styles
+  types/        Shared TypeScript domain types
 e2e/            Browser tests with mocked API
 ```
 
-To add a page: model the supported API response in api/types.ts, define a query
-in api/queries.ts, add the page and its route in app/router.tsx, then update
-navigation. Every organization-owned query key and URL must include the
+To add a domain, put raw requests under `features/<feature>/services/` and
+TanStack Query hooks under `features/<feature>/hooks/`. Add its shared types to
+`types/`, its route-level screen to `pages/`, and its lazy route to
+`routes/router.tsx`. Every organization-owned query key and URL must include the
 organization ID. Pass TanStack's AbortSignal through the Axios request wrapper.
-Do not reuse another
-workspace's records as placeholder data.
 
 Create forms POST only writable fields; ownership comes from the authorized URL.
 Successful mutations invalidate the affected query. Backend validation errors
 are shown in the dialog. Business rules and tenant checks stay in Django.
 
-Change app/theme.ts for colors, typography and component defaults; replace page
+Change `styles/theme.ts` for colors, typography and component defaults; replace page
 components freely. The backend does not import or depend on this frontend.
 
 ## Verify

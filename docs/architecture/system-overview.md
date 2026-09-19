@@ -107,10 +107,10 @@ switch automation delivery to that account.
 
 | Symptom | Start here |
 |---|---|
-| 401 during login or API use | `settings.py`, `urls.py`, `organizations/auth_views.py`, `frontend/src/api/client.ts` |
+| 401 during login or API use | `settings.py`, `urls.py`, `organizations/auth_views.py`, `frontend/src/services/api.ts` |
 | 403/404 for a tenant route | `organizations/permissions.py`, organization resolver, view queryset |
 | Wrong JSON shape or validation | the app's `serializers.py` |
 | Data missing from a list | view queryset, tenant filter, TanStack Query key |
 | Automation not firing | `companies/signals.py`, `automations/apps.py`, `automations/services.py` |
 | Email not visible | configured Django email backend and `runserver` output |
-| Frontend showing stale data | `frontend/src/api/queries.ts` and mutation invalidation |
+| Frontend showing stale data | the owning feature's `api.ts` query key and mutation invalidation |

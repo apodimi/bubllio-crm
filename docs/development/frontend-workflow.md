@@ -32,13 +32,13 @@ components.
 The layers are intentionally separate:
 
 ```text
-page/component → api/hooks.ts → api/queries.ts → api/client.ts → Axios
+page/component → feature hook → feature service → services/api.ts → Axios
 ```
 
-`client.ts` is the low-level transport: it knows Axios, Bearer headers, refresh,
-and API errors. `queries.ts` defines query keys, endpoint paths, response types,
-and `AbortSignal` handling. `hooks.ts` adapts those definitions to React with
-`useQuery` or `useMutation`.
+`services/api.ts` is the low-level transport: it knows Axios, Bearer headers,
+refresh, and API errors. A feature's `services/` folder owns its raw endpoint
+calls. Its `hooks/` folder owns query keys, TanStack Query definitions, and React
+hooks. Shared domain interfaces live in `types/`.
 
 For example:
 
@@ -49,7 +49,8 @@ const companies = useCompanies(organizationId)
 A page should not contain `request('/organizations/...')`, create an Axios
 instance, or manually manage `isLoading` and cache invalidation for a server
 request. Login/logout remain an explicit exception because they are auth
-orchestration actions; they live in `app/auth.tsx` and use the shared client.
+orchestration actions; they live in `features/auth/hooks/useAuth.tsx` and use the
+auth service.
 
 See [Frontend Rules](../../frontend/AGENTS.md) for the enforceable checklist.
 
@@ -57,21 +58,23 @@ See [Frontend Rules](../../frontend/AGENTS.md) for the enforceable checklist.
 
 ```text
 frontend/src/
-├── api/
-│   ├── client.ts       Axios instance, JWT interceptors, request errors
-│   ├── queries.ts      TanStack Query keys and query functions
-│   ├── types.ts        public API response types
-│   └── client.test.ts  small API/auth-state tests
-├── app/
-│   ├── auth.tsx        login/logout orchestration and React context
-│   ├── authStore.ts    memory-only Zustand token/user state
-│   ├── workspace.tsx   selected organization context
-│   ├── queryClient.ts  TanStack Query client defaults
-│   ├── router.tsx      application routes
-│   ├── Layout.tsx      authenticated shell and navigation
-│   └── theme.ts        Material UI theme
-├── components/         reusable form/feedback components
-└── pages/               route-level screens
+├── components/
+│   ├── common/         reusable dialogs and feedback states
+│   └── layout/         authenticated application shell
+├── config/             TanStack Query client and app configuration
+├── context/            shared React contexts
+├── features/
+│   ├── auth/           hooks, services, Zustand store
+│   ├── organizations/ domain hooks and services
+│   ├── companies/      domain hooks and services
+│   ├── contacts/       domain hooks and services
+│   └── automations/    domain hooks and services
+├── hooks/               globally reusable hooks
+├── pages/               route-level screens grouped by page
+├── routes/              TanStack Router configuration
+├── services/            Axios client and shared external services
+├── styles/              Material UI theme
+└── types/               shared TypeScript domain interfaces
 ```
 
 ## How authentication works
@@ -97,25 +100,35 @@ an explicit security decision and documented as an API/browser contract change.
 
 ## Adding a read-only page
 
-1. Add or update the response type in `src/api/types.ts`.
-2. Add a query key and `queryOptions` function in `src/api/queries.ts`.
-3. Include the organization ID in both the URL and query key for tenant data.
-4. Add a page under `src/pages/`.
-5. Add its route in `src/app/router.tsx` and navigation entry in `Layout.tsx`.
-6. Handle loading, empty, error, and successful states.
-7. Add a browser test with a mocked API response.
+1. Add or update the response type in `src/types/`.
+2. Add the raw endpoint call in the feature's `services/` folder.
+3. Add the query key, `queryOptions`, and hook in the feature's `hooks/` folder.
+4. Include the organization ID in both the URL and query key for tenant data.
+5. Add a named `*Page.tsx` under `src/pages/<PageName>/`.
+6. Add its route in `src/routes/router.tsx` and navigation entry in the layout.
+7. Handle loading, empty, error, and successful states.
+8. Add a browser test with a mocked API response.
 
 Example query shape:
 
 ```ts
-export const companiesQuery = (organizationId: string) => queryOptions({
-  queryKey: keys.companies(organizationId),
-  queryFn: ({ signal }) => request<Company[]>(
-    organizationPath(organizationId) + 'companies/',
-    { signal },
-  ),
+export const companyKeys = {
+  byOrganization: (organizationId: string) =>
+    ['organizations', organizationId, 'companies'] as const,
+}
+
+const companiesQuery = (organizationId: string) => queryOptions({
+  queryKey: companyKeys.byOrganization(organizationId),
+  queryFn: ({ signal }) => companyService.list(organizationId, signal),
 })
+
+export const useCompanies = (organizationId: string) =>
+  useQuery(companiesQuery(organizationId))
 ```
+
+The query definition may remain private. Export the hook and key factory through
+the feature's `index.ts`. Route pages are imported directly by the router so
+lazy loading is not defeated by a feature barrel imported elsewhere.
 
 ## Adding a create form
 
@@ -149,7 +162,7 @@ separation without requiring a running Django server.
 
 ## TanStack Router conventions
 
-Routes are defined in `src/app/router.tsx` with TanStack Router's code-based
+Routes are defined in `src/routes/router.tsx` with TanStack Router's code-based
 route tree. The root route owns the shell, the organization route owns the
 `$organizationId` parameter, and child routes own overview, companies,
 contacts, and automations screens.

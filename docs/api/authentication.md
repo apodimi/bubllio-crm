@@ -92,7 +92,8 @@ succeeds, because logout must also make the current UI private immediately.
 ## Browser client behavior
 
 The official React client implements this contract in
-`frontend/src/api/client.ts` and `frontend/src/app/auth.tsx`. Axios adds the
+`frontend/src/services/api.ts` and `frontend/src/features/auth/hooks/useAuth.tsx`.
+Axios adds the
 Bearer header and retries one failed request after refresh. Zustand stores the
 current tokens only in memory. A browser reload therefore returns to the login
 screen by design.

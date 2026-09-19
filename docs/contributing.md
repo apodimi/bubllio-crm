@@ -79,9 +79,9 @@ Use this decision table before adding a function:
 | Is it reusable business behavior across views/signals? | a domain service, for example `services.py` |
 | Is it a URL-to-view mapping? | the app's `urls.py` |
 | Is it tenant/capability authorization? | `organizations/permissions.py` and its resolver helpers |
-| Is it a React server request/cache? | `frontend/src/api/` and TanStack Query |
-| Is it visual composition or navigation? | `frontend/src/pages/` or `frontend/src/app/` |
-| Is it a token/session state transition? | `frontend/src/app/authStore.ts` and `auth.tsx` |
+| Is it a React domain request/cache? | the owning `frontend/src/features/<feature>/api.ts` |
+| Is it visual composition or navigation? | `frontend/src/pages/`, `components/`, or `routes/` |
+| Is it a token/session state transition? | `frontend/src/features/auth/` |
 | Is it an explanation of current behavior? | the matching `docs/` page |
 
 Do not move business rules into React because a button needs to be hidden. A
@@ -124,8 +124,9 @@ The frontend has three distinct kinds of state:
 3. **Local UI state** belongs close to the component. Examples: dialog open
    state, search text, and selected form values.
 
-Use the Axios wrapper in `frontend/src/api/client.ts`; do not create ad-hoc
-`fetch` or Axios clients in pages. Include the organization ID in every
+Use the Axios wrapper in `frontend/src/services/api.ts` through the owning
+feature's service and hook; do not create ad-hoc `fetch` or Axios clients in pages. Include
+the organization ID in every
 organization-owned URL and query key. After a successful mutation, invalidate
 the affected TanStack Query key.
 

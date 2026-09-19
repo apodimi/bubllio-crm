@@ -34,6 +34,33 @@ validation, capabilities, and business behavior.
 Start with [Frontend Guide](../frontend/README.md). A developer who wants a
 different UI can use the API directly; no frontend module is imported by Django.
 
+The React source follows the feature-based structure documented in the frontend
+guide, with separate top-level homes for routes, pages, shared infrastructure,
+and reusable components:
+
+```text
+frontend/src/
+  components/          common UI and layouts
+  config/              application-level clients/configuration
+  context/             shared React contexts
+  features/
+    auth/
+    organizations/
+    companies/
+    contacts/
+    automations/
+  hooks/               globally reusable hooks
+  pages/               route-level screens
+  routes/              TanStack Router configuration
+  services/            Axios and external communication
+  styles/              theme and global styling
+  types/               shared TypeScript domain types
+```
+
+Each business feature keeps domain hooks and service calls together. Pages stay
+thin and compose feature hooks/components. Shared infrastructure does not own
+domain behavior.
+
 ## `pyproject.toml`
 
 Defines the Python project.
