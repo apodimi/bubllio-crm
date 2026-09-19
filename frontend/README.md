@@ -110,6 +110,10 @@ global Material UI defaults live in `styles/theme.ts`. Read the
 [Theme Guide](src/styles/README.md) before changing visual tokens. The backend
 does not import or depend on this frontend.
 
+The default theme is professional and Atlassian-inspired: blue primary actions,
+cool neutral surfaces, compact controls, visible focus states, and restrained
+elevation. Branding remains fully controlled by the central palette.
+
 ## Verify
 
 ```bash

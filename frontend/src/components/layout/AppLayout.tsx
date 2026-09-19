@@ -42,7 +42,7 @@ function Shell() {
     </Select>
     <List>
       {orgId && items.map(item => <Link to={item.to} params={{ organizationId: orgId }} key={item.text} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }} onClick={() => setMobileOpen(false)}><ListItemButton component="div" selected={pathname === item.path || pathname === item.path + '/'}
-        sx={{ mb: .5, borderRadius: 2, '&.Mui-selected': { bgcolor: 'action.selected', color: 'primary.main' } }}>
+        sx={{ mb: .5 }}>
         <ListItemIcon sx={{ minWidth: 38, color: 'inherit' }}>{item.icon}</ListItemIcon><ListItemText primary={item.text} slotProps={{ primary: { sx: { fontSize: 14, fontWeight: 550 } } }} />
       </ListItemButton></Link>)}
     </List>

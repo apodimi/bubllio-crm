@@ -6,17 +6,17 @@
  */
 export const brand = {
   colors: {
-    primary: '#24614d',
-    secondary: '#a77737',
-    background: '#f5f6f2',
+    primary: '#0c66e4',
+    secondary: '#5e4db2',
+    background: '#f7f8f9',
     surface: '#ffffff',
-    text: '#1d3029',
-    textMuted: '#68756e',
+    text: '#172b4d',
+    textMuted: '#44546f',
   },
   typography: {
     fontFamily: '"Inter", "Segoe UI", sans-serif',
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 8,
   },
 } as const

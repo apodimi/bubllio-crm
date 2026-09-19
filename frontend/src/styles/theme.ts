@@ -28,10 +28,12 @@ const baseTheme = createTheme({
   },
   typography: {
     fontFamily: brand.typography.fontFamily,
-    h3: { fontWeight: 700, letterSpacing: '-1.2px' },
-    h4: { fontWeight: 700, letterSpacing: '-.7px' },
-    h6: { fontWeight: 650 },
-    button: { textTransform: 'none', fontWeight: 600 },
+    h3: { fontWeight: 700, letterSpacing: '-1.1px', lineHeight: 1.15 },
+    h4: { fontWeight: 700, letterSpacing: '-.6px', lineHeight: 1.2 },
+    h6: { fontWeight: 650, lineHeight: 1.3 },
+    body1: { lineHeight: 1.55 },
+    body2: { lineHeight: 1.5 },
+    button: { textTransform: 'none', fontWeight: 600, letterSpacing: 0 },
   },
   shape: {
     borderRadius: brand.shape.borderRadius,
@@ -40,13 +42,72 @@ const baseTheme = createTheme({
 
 export const theme = createTheme(baseTheme, {
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: { WebkitFontSmoothing: 'antialiased' },
+      },
+    },
     MuiButton: {
       defaultProps: { disableElevation: true },
-      styleOverrides: { root: { borderRadius: brand.shape.borderRadius * 0.67 } },
+      styleOverrides: {
+        root: {
+          minHeight: 36,
+          borderRadius: brand.shape.borderRadius * 0.75,
+          paddingInline: 14,
+        },
+      },
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { outlined: { borderColor: baseTheme.palette.divider } },
+      styleOverrides: {
+        outlined: { borderColor: baseTheme.palette.divider },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: { backgroundImage: 'none' },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: { borderColor: baseTheme.palette.divider },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: brand.shape.borderRadius * 0.75,
+          '&.Mui-selected': {
+            backgroundColor: baseTheme.palette.action.selected,
+            color: baseTheme.palette.primary.main,
+          },
+          '&.Mui-selected:hover': {
+            backgroundColor: alpha(baseTheme.palette.primary.main, 0.14),
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: baseTheme.palette.background.paper,
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: alpha(baseTheme.palette.primary.main, 0.5),
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderWidth: 2,
+          },
+        },
+        notchedOutline: { borderColor: baseTheme.palette.divider },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: brand.shape.borderRadius * 0.5,
+          fontWeight: 600,
+        },
+      },
     },
     MuiTableCell: {
       styleOverrides: {
@@ -55,11 +116,15 @@ export const theme = createTheme(baseTheme, {
           color: baseTheme.palette.text.secondary,
           fontWeight: 600,
           fontSize: 12,
+          letterSpacing: '0.02em',
         },
         root: { borderColor: alpha(baseTheme.palette.text.primary, 0.08) },
       },
     },
     MuiTextField: {
+      defaultProps: { size: 'small' },
+    },
+    MuiSelect: {
       defaultProps: { size: 'small' },
     },
   },
