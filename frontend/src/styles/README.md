@@ -31,9 +31,28 @@ export const brand = {
 }
 ```
 
-`theme.ts` derives primary light/dark variants, dividers, hover, selected,
-focus, table, button, and outlined-surface styles from those values. This keeps
-the interface coherent when the primary palette changes.
+`theme.ts` derives primary light/dark variants, dividers, hover, selected, and
+focus colors from those values. Application-wide MUI component overrides live
+in `components/`, with exactly one component per file. This keeps the interface
+coherent when the primary palette changes and makes each override easy to find.
+
+## Component override structure
+
+```text
+styles/
+├── brand.ts                 Human-selected brand inputs
+├── theme.ts                 Palette, typography, shape, and theme composition
+└── components/
+    ├── button.ts            MuiButton defaults and styles
+    ├── table-cell.ts        MuiTableCell defaults and styles
+    ├── ...
+    └── index.ts             Maps local overrides to MUI component keys
+```
+
+When adding a global override, create a file named after the MUI component in
+kebab-case and register it in `components/index.ts`. Export a typed
+`Components<Theme>['MuiComponentName']` object and use the callback `theme`
+argument for palette, shape, spacing, or typography values.
 
 ## Rules for developers and coding agents
 
@@ -42,7 +61,8 @@ the interface coherent when the primary palette changes.
   `background.paper`, `divider`, and `action.selected`.
 - Use an `sx` callback with `alpha`, `lighten`, or `darken` when a derived color
   is needed.
-- Put application-wide component defaults in `theme.ts`.
+- Put each application-wide component override in its own file under
+  `components/` and register it in `components/index.ts`.
 - Put only human-selected brand inputs in `brand.ts`.
 - Do not create a second ThemeProvider or feature-specific theme.
 - Check contrast when changing primary, surface, or text colors.
@@ -52,7 +72,8 @@ the interface coherent when the primary palette changes.
 | Need | File |
 |---|---|
 | Change the brand palette or font | `brand.ts` |
-| Change global MUI component appearance | `theme.ts` |
+| Change global MUI component appearance | its file in `components/` |
+| Register a new global MUI override | `components/index.ts` |
 | Change layout spacing for one screen | the relevant component/page |
 | Add a reusable visual component | `components/common/` |
 

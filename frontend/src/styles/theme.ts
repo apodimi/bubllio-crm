@@ -1,5 +1,6 @@
 import { alpha, createTheme, darken, lighten } from '@mui/material/styles'
 import { brand } from './brand'
+import { components } from './components'
 
 const baseTheme = createTheme({
   palette: {
@@ -41,91 +42,5 @@ const baseTheme = createTheme({
 })
 
 export const theme = createTheme(baseTheme, {
-  components: {
-    MuiCssBaseline: {
-      styleOverrides: {
-        body: { WebkitFontSmoothing: 'antialiased' },
-      },
-    },
-    MuiButton: {
-      defaultProps: { disableElevation: true },
-      styleOverrides: {
-        root: {
-          minHeight: 36,
-          borderRadius: brand.shape.borderRadius * 0.75,
-          paddingInline: 14,
-        },
-      },
-    },
-    MuiPaper: {
-      defaultProps: { elevation: 0 },
-      styleOverrides: {
-        outlined: { borderColor: baseTheme.palette.divider },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: { backgroundImage: 'none' },
-      },
-    },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: { borderColor: baseTheme.palette.divider },
-      },
-    },
-    MuiListItemButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: brand.shape.borderRadius * 0.75,
-          '&.Mui-selected': {
-            backgroundColor: baseTheme.palette.action.selected,
-            color: baseTheme.palette.primary.main,
-          },
-          '&.Mui-selected:hover': {
-            backgroundColor: alpha(baseTheme.palette.primary.main, 0.14),
-          },
-        },
-      },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          backgroundColor: baseTheme.palette.background.paper,
-          '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: alpha(baseTheme.palette.primary.main, 0.5),
-          },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderWidth: 2,
-          },
-        },
-        notchedOutline: { borderColor: baseTheme.palette.divider },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: brand.shape.borderRadius * 0.5,
-          fontWeight: 600,
-        },
-      },
-    },
-    MuiTableCell: {
-      styleOverrides: {
-        head: {
-          background: alpha(baseTheme.palette.primary.main, 0.03),
-          color: baseTheme.palette.text.secondary,
-          fontWeight: 600,
-          fontSize: 12,
-          letterSpacing: '0.02em',
-        },
-        root: { borderColor: alpha(baseTheme.palette.text.primary, 0.08) },
-      },
-    },
-    MuiTextField: {
-      defaultProps: { size: 'small' },
-    },
-    MuiSelect: {
-      defaultProps: { size: 'small' },
-    },
-  },
+  components,
 })

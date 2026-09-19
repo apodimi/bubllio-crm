@@ -64,8 +64,10 @@ than server-state queries. Keep those orchestration calls in
 
 - `src/styles/brand.ts` is the only place for manually selected brand colors,
   font family, and base radius.
-- `src/styles/theme.ts` derives variants and defines application-wide MUI
-  defaults.
+- `src/styles/theme.ts` derives variants and composes the final MUI theme.
+- Every application-wide MUI component override belongs in its own kebab-case
+  file under `src/styles/components/` and must be registered in that folder's
+  `index.ts`.
 - Pages, features, and components must not contain hex, RGB, HSL, or named color
   literals.
 - Use semantic palette paths such as `primary.main`, `text.secondary`,
