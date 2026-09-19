@@ -32,7 +32,7 @@ export function Dashboard() {
       <Chip label="MAKE ROOM FOR RELATIONSHIPS" size="small" sx={{ bgcolor: '#ffffff15', color: '#cfe6b4', mb: 3, letterSpacing: 1, fontSize: 10 }} />
       <Typography variant="h4" sx={{ mb: 2 }}>Your next connection starts here.</Typography>
       <Typography sx={{ maxWidth: 520, color: '#c8d8ce', mb: 3 }}>Keep track of the companies you know and the people behind them. Build your workspace one relationship at a time.</Typography>
-      <Button component={Link} to={'/organizations/' + org.id + '/companies'} variant="contained" endIcon={<ArrowForwardRounded />} sx={{ bgcolor: '#d6eab9', color: '#183c33', '&:hover': { bgcolor: '#e3f2cd' } }}>Explore companies</Button>
+      <Link to="/organizations/$organizationId/companies" params={{ organizationId: org.id }} style={{ textDecoration: 'none' }}><Button component="span" variant="contained" endIcon={<ArrowForwardRounded />} sx={{ bgcolor: '#d6eab9', color: '#183c33', '&:hover': { bgcolor: '#e3f2cd' } }}>Explore companies</Button></Link>
     </Paper>
     <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, justifyContent: 'space-between' }}>
       <Typography color="text.secondary" variant="body2">All figures reflect current workspace data.</Typography>

@@ -115,3 +115,32 @@ npm run test:e2e
 
 The browser suite mocks `/api/v1/` traffic. It verifies UI behavior and tenant
 separation without requiring a running Django server.
+
+## TanStack Router conventions
+
+Routes are defined in `src/app/router.tsx` with TanStack Router's code-based
+route tree. The root route owns the shell, the organization route owns the
+`$organizationId` parameter, and child routes own overview, companies,
+contacts, and automations screens.
+
+Use route templates and params for dynamic navigation:
+
+```tsx
+<Link
+  to="/organizations/$organizationId/companies"
+  params={{ organizationId: organization.id }}
+>
+  Companies
+</Link>
+```
+
+This is preferable to concatenating `/organizations/` strings because the
+router can type-check the route and its required parameters. When a component
+library's polymorphic `component={Link}` type cannot express TanStack params,
+wrap the visual component in a typed TanStack `Link` and keep the visual child
+non-interactive.
+
+Workspace routes use `beforeLoad` to redirect unauthenticated sessions to the
+public root route. The backend still performs the real authorization check when
+the workspace data is fetched; the router guard is only a navigation and UX
+boundary.

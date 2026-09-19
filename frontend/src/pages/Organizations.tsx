@@ -18,7 +18,8 @@ export function Organizations() {
       query.data.length === 0 ? <Empty title="Start with a workspace" description="Create your first workspace to organize companies and contacts." /> :
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
         {query.data.map(org => <Card variant="outlined" key={org.id}>
-          <CardActionArea component={Link} to={'/organizations/' + org.id} sx={{ height: '100%' }}>
+          <Link to="/organizations/$organizationId" params={{ organizationId: org.id }} style={{ display: 'block', height: '100%', color: 'inherit', textDecoration: 'none' }}>
+          <CardActionArea component="div" sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 4 }}>
                 <Box sx={{ width: 48, height: 48, bgcolor: 'primary.light', color: 'primary.main', borderRadius: 2, display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700 }}>{org.name.slice(0, 1).toUpperCase()}</Box>
@@ -28,6 +29,7 @@ export function Organizations() {
               <Stack direction="row" sx={{ gap: 1, alignItems: 'center', color: 'primary.main' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>Open workspace</Typography><ArrowForwardRounded fontSize="small" /></Stack>
             </CardContent>
           </CardActionArea>
+          </Link>
         </Card>)}
       </Box>}
     {create && <CreateDialog title="Create workspace" path="/organizations/" invalidate={keys.organizations} onClose={() => setCreate(false)}

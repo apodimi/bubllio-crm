@@ -29,10 +29,10 @@ function Shell() {
   const navigate = useNavigate()
   const base = orgId ? '/organizations/' + orgId : ''
   const items = [
-    { text: 'Overview', to: base, icon: <DashboardRounded /> },
-    { text: 'Companies', to: base + '/companies', icon: <BusinessRounded /> },
-    { text: 'Contacts', to: base + '/contacts', icon: <PeopleAltRounded /> },
-    { text: 'Automations', to: base + '/automations', icon: <BoltRounded /> },
+    { text: 'Overview', to: '/organizations/$organizationId' as const, path: base, icon: <DashboardRounded /> },
+    { text: 'Companies', to: '/organizations/$organizationId/companies' as const, path: base + '/companies', icon: <BusinessRounded /> },
+    { text: 'Contacts', to: '/organizations/$organizationId/contacts' as const, path: base + '/contacts', icon: <PeopleAltRounded /> },
+    { text: 'Automations', to: '/organizations/$organizationId/automations' as const, path: base + '/automations', icon: <BoltRounded /> },
   ]
   const sidebar = <Stack sx={{ height: '100%', p: 2.5 }}>
     <Typography component={Link} to="/" variant="h5" sx={{ textDecoration: 'none', color: 'primary.dark', fontWeight: 800, px: 1, pt: 1, pb: 4 }}>bubllio<span style={{ color: '#7e9688' }}>.</span></Typography>
@@ -43,10 +43,10 @@ function Shell() {
       {(orgs.data ?? []).map(org => <MenuItem value={org.id} key={org.id}>{org.name}</MenuItem>)}
     </Select>
     <List>
-      {orgId && items.map(item => <ListItemButton component={Link} to={item.to} key={item.text} selected={pathname === item.to || pathname === item.to + '/'}
-        onClick={() => setMobileOpen(false)} sx={{ mb: .5, borderRadius: 2, '&.Mui-selected': { bgcolor: '#e8f1e6', color: 'primary.main' } }}>
+      {orgId && items.map(item => <Link to={item.to} params={{ organizationId: orgId }} key={item.text} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }} onClick={() => setMobileOpen(false)}><ListItemButton component="div" selected={pathname === item.path || pathname === item.path + '/'}
+        sx={{ mb: .5, borderRadius: 2, '&.Mui-selected': { bgcolor: '#e8f1e6', color: 'primary.main' } }}>
         <ListItemIcon sx={{ minWidth: 38, color: 'inherit' }}>{item.icon}</ListItemIcon><ListItemText primary={item.text} slotProps={{ primary: { sx: { fontSize: 14, fontWeight: 550 } } }} />
-      </ListItemButton>)}
+      </ListItemButton></Link>)}
     </List>
     <Button component={Link} to="/" onClick={() => setMobileOpen(false)} sx={{ justifyContent: 'flex-start', px: 2 }}>All workspaces</Button>
     <Box sx={{ flexGrow: 1 }} />
