@@ -1,24 +1,26 @@
 import type { Components, Theme } from '@mui/material/styles'
 
 export const inputLabel: Components<Theme>['MuiInputLabel'] = {
+  defaultProps: {
+    shrink: true,
+  },
   styleOverrides: {
     root: ({ theme }) => ({
+      position: 'static',
       color: theme.palette.text.secondary,
+      fontSize: 13,
       fontWeight: 500,
-      transform: 'translate(14px, 16px) scale(1)',
+      lineHeight: 1.4,
+      marginBottom: 6,
+      maxWidth: '100%',
+      overflow: 'visible',
+      transform: 'none',
       transition: theme.transitions.create(
-        ['color', 'transform', 'max-width'],
+        ['color'],
         { duration: theme.transitions.duration.shorter },
       ),
-      '&.MuiInputLabel-sizeSmall': {
-        transform: 'translate(14px, 9px) scale(1)',
-      },
       '&.MuiInputLabel-shrink': {
-        maxWidth: 'calc(133% - 32px)',
-        paddingInline: 4,
-        backgroundColor: theme.palette.background.paper,
-        transform: 'translate(10px, -9px) scale(0.75)',
-        transformOrigin: 'top left',
+        transform: 'none',
       },
       '&.Mui-focused': {
         color: theme.palette.primary.main,

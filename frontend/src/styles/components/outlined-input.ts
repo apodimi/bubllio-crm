@@ -39,6 +39,9 @@ export const outlinedInput: Components<Theme>['MuiOutlinedInput'] = {
     },
     notchedOutline: ({ theme }) => ({
       borderColor: alpha(theme.palette.text.primary, 0.22),
+      '& legend': {
+        maxWidth: 0,
+      },
     }),
   },
 }
