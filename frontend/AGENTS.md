@@ -65,7 +65,9 @@ than server-state queries. Keep those orchestration calls in
 ## Theme rules
 
 - `src/styles/brand.ts` is the only place for manually selected brand colors,
-  font family, and base radius.
+  body/display font stacks, and base radius.
+- Manrope is the display face and Inter is the body face. Load font weights in
+  `src/styles/fonts.ts`; do not add font-family literals to UI components.
 - `src/styles/theme.ts` derives variants and composes the final MUI theme.
 - Every application-wide MUI component override belongs in its own kebab-case
   file under `src/styles/components/` and must be registered in that folder's

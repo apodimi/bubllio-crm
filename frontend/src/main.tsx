@@ -7,6 +7,7 @@ import { AuthProvider } from './features/auth'
 import { queryClient } from './config/queryClient'
 import { theme } from './styles/theme'
 import { router } from './routes/router'
+import './styles/fonts'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -6,6 +6,7 @@ import { cssBaseline } from './css-baseline'
 import { drawer } from './drawer'
 import { inputLabel } from './input-label'
 import { listItemButton } from './list-item-button'
+import { listItemText } from './list-item-text'
 import { outlinedInput } from './outlined-input'
 import { paper } from './paper'
 import { select } from './select'
@@ -24,6 +25,7 @@ export const components: Components<Theme> = {
   MuiDrawer: drawer,
   MuiInputLabel: inputLabel,
   MuiListItemButton: listItemButton,
+  MuiListItemText: listItemText,
   MuiOutlinedInput: outlinedInput,
   MuiPaper: paper,
   MuiSelect: select,

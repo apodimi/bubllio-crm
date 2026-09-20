@@ -1,12 +1,10 @@
 import type { Components, Theme } from '@mui/material/styles'
 import { brand } from '../brand'
 
-export const chip: Components<Theme>['MuiChip'] = {
+export const listItemText: Components<Theme>['MuiListItemText'] = {
   styleOverrides: {
-    root: {
-      borderRadius: brand.shape.borderRadius * 0.5,
+    primary: {
       fontFamily: brand.typography.display,
-      fontWeight: 600,
     },
   },
 }

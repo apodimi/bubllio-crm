@@ -14,7 +14,8 @@ export const brand = {
     text: '#0f172a',
   },
   typography: {
-    fontFamily: '"Inter", "Segoe UI", sans-serif',
+    body: '"Inter", "Segoe UI", sans-serif',
+    display: '"Manrope", "Inter", "Segoe UI", sans-serif',
   },
   shape: {
     borderRadius: 8,

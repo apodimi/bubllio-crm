@@ -23,7 +23,8 @@ export const brand = {
     text: '#0f172a',
   },
   typography: {
-    fontFamily: '"Inter", "Segoe UI", sans-serif',
+    body: '"Inter", "Segoe UI", sans-serif',
+    display: '"Manrope", "Inter", "Segoe UI", sans-serif',
   },
   shape: {
     borderRadius: 8,
@@ -36,6 +37,20 @@ The default Bubllio palette maps Core Blue to `primary`, Bright Blue to
 background, and Charcoal to primary text. Muted text, dividers, hover, focus,
 and dark variants are derived from these colors rather than added as unrelated
 palette values.
+
+## Typography
+
+The application bundles Manrope and Inter locally through `@fontsource`.
+`styles/fonts.ts` is the single font-file entry point:
+
+- Manrope is the display face for headings, buttons, product labels, and
+  high-emphasis navigation text.
+- Inter is the body face for paragraphs, forms, tables, and data-heavy UI.
+
+Use Material UI typography variants instead of adding `fontFamily` in pages or
+components. If the brand typography changes, update the semantic `body` and
+`display` stacks in `brand.ts`; if a new weight is needed, import only that
+weight in `fonts.ts`.
 
 `theme.ts` derives primary light/dark variants, dividers, hover, selected, and
 focus colors from those values. Application-wide MUI component overrides live
@@ -51,6 +66,7 @@ styles/
 └── components/
     ├── button.ts            MuiButton defaults and styles
     ├── input-label.ts       MuiInputLabel states and typography
+    ├── list-item-text.ts    Manrope navigation labels
     ├── outlined-input.ts    Shared input surface and interaction states
     ├── table-cell.ts        MuiTableCell defaults and styles
     ├── ...
@@ -64,7 +80,8 @@ argument for palette, shape, spacing, or typography values.
 
 ## Rules for developers and coding agents
 
-- Do not add hexadecimal, RGB, or named colors to pages or components.
+- Do not add hexadecimal, RGB, named colors, or font-family literals to pages
+  or components.
 - Use semantic Material UI paths such as `primary.main`, `text.secondary`,
   `background.paper`, `divider`, and `action.selected`.
 - Use an `sx` callback with `alpha`, `lighten`, or `darken` when a derived color

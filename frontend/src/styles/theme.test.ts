@@ -8,7 +8,9 @@ it('builds the Material UI palette from the centralized brand values', () => {
   expect(theme.palette.secondary.main).toBe(brand.colors.secondary)
   expect(theme.palette.background.default).toBe(brand.colors.background)
   expect(theme.palette.background.paper).toBe(brand.colors.surface)
-  expect(theme.typography.fontFamily).toBe(brand.typography.fontFamily)
+  expect(theme.typography.fontFamily).toBe(brand.typography.body)
+  expect(theme.typography.h3.fontFamily).toBe(brand.typography.display)
+  expect(theme.typography.button.fontFamily).toBe(brand.typography.display)
 })
 
 it('derives interaction and contrast colors from the base palette', () => {
