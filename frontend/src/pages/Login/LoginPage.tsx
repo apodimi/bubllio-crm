@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
+import { BrandLogo } from '../../components/common/BrandLogo'
 import { useAuth } from '../../features/auth'
 
 export function LoginPage() {
@@ -19,7 +20,7 @@ export function LoginPage() {
   }
   return <Box sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
     <Stack sx={{ justifyContent: 'space-between', bgcolor: 'primary.dark', color: 'primary.contrastText', p: { xs: 4, md: 8 } }}>
-      <Typography variant="h5" sx={{ fontWeight: 750 }}>bubllio<span style={{ opacity: .5 }}> / crm</span></Typography>
+      <BrandLogo inverse product="CRM" />
       <Box sx={{ py: 6 }}><Chip label="A little less busywork." sx={(theme) => ({ bgcolor: alpha(theme.palette.primary.contrastText, 0.08), color: 'primary.light', mb: 3 })} />
         <Typography variant="h3" sx={{ maxWidth: 480, mb: 3 }}>Good relationships.<br />Room to grow.</Typography>
         <Typography sx={{ color: 'primary.light', maxWidth: 380, opacity: 0.82 }}>Your companies, your people, and your next opportunity. Together in one workspace.</Typography>

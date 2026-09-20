@@ -56,6 +56,8 @@ than server-state queries. Keep those orchestration calls in
 - Keep pages responsible for composition, not HTTP details.
 - Put query behavior in feature `hooks/` and raw requests in feature `services/`.
 - Keep shared visual behavior in `src/components/common/`.
+- Render the Bubllio identity with `components/common/BrandLogo.tsx`; do not
+  duplicate the mark or wordmark in individual pages.
 - Show loading, empty, error, and success states for server-backed views.
 - Hide unavailable actions for usability, but never treat hidden controls as
   authorization.

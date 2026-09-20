@@ -82,6 +82,7 @@ commit empty placeholder directories.
 
 ```text
 src/
+  assets/       Versioned images and brand assets imported by the client
   components/   Common UI and application layouts
   features/     Domain hooks, services, auth store and public exports
   pages/        Route-level screens
@@ -114,6 +115,10 @@ does not import or depend on this frontend.
 The default theme is professional and Atlassian-inspired: blue primary actions,
 cool neutral surfaces, compact controls, visible focus states, and restrained
 elevation. Branding remains fully controlled by the central palette.
+
+The Bubllio mark lives in `assets/brand/` and is rendered through the shared
+`components/common/BrandLogo.tsx` component. Reuse that component instead of
+placing the image or rebuilding the wordmark independently in a page.
 
 ## Verify
 

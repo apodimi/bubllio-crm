@@ -11,6 +11,7 @@ import { useAuth } from '../../features/auth'
 import { useOrganization, useOrganizations, WorkspaceContext } from '../../features/organizations'
 import { LoginPage } from '../../pages/Login/LoginPage'
 import { Failure, Loading } from '../common/Feedback'
+import { BrandLogo } from '../common/BrandLogo'
 import { useNavigate } from '@tanstack/react-router'
 
 export function RootLayout() {
@@ -33,7 +34,9 @@ function Shell() {
     { text: 'Automations', to: '/organizations/$organizationId/automations' as const, path: base + '/automations', icon: <BoltRounded /> },
   ]
   const sidebar = <Stack sx={{ height: '100%', p: 2.5 }}>
-    <Typography component={Link} to="/" variant="h5" sx={{ textDecoration: 'none', color: 'primary.dark', fontWeight: 800, px: 1, pt: 1, pb: 4 }}>bubllio<Box component="span" sx={{ color: 'secondary.main' }}>.</Box></Typography>
+    <Box component={Link} to="/" aria-label="Bubllio home" sx={{ alignSelf: 'flex-start', textDecoration: 'none', mx: 1, mt: 1, mb: 4 }}>
+      <BrandLogo product="CRM" />
+    </Box>
     <Typography variant="overline" color="text.secondary" sx={{ px: 1, mb: 1 }}>WORKSPACE</Typography>
     <Select size="small" displayEmpty value={orgs.data?.some(org => org.id === orgId) ? orgId : ''} inputProps={{ 'aria-label': 'Select workspace' }}
       onChange={event => { setMobileOpen(false); void navigate({ to: '/organizations/$organizationId', params: { organizationId: event.target.value } }) }} sx={{ mb: 3 }}>
