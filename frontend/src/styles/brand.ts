@@ -6,12 +6,12 @@
  */
 export const brand = {
   colors: {
-    primary: '#0c66e4',
-    secondary: '#5e4db2',
-    background: '#f7f8f9',
+    primary: '#005bef',
+    secondary: '#1473ff',
+    lightBlue: '#eaf2ff',
+    background: '#f8fafc',
     surface: '#ffffff',
-    text: '#172b4d',
-    textMuted: '#44546f',
+    text: '#0f172a',
   },
   typography: {
     fontFamily: '"Inter", "Segoe UI", sans-serif',

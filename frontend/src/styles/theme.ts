@@ -1,4 +1,4 @@
-import { alpha, createTheme, darken, lighten } from '@mui/material/styles'
+import { alpha, createTheme, darken } from '@mui/material/styles'
 import { brand } from './brand'
 import { components } from './components'
 
@@ -6,7 +6,7 @@ const baseTheme = createTheme({
   palette: {
     primary: {
       main: brand.colors.primary,
-      light: lighten(brand.colors.primary, 0.82),
+      light: brand.colors.lightBlue,
       dark: darken(brand.colors.primary, 0.35),
     },
     secondary: {
@@ -18,12 +18,12 @@ const baseTheme = createTheme({
     },
     text: {
       primary: brand.colors.text,
-      secondary: brand.colors.textMuted,
+      secondary: alpha(brand.colors.text, 0.72),
     },
     divider: alpha(brand.colors.text, 0.12),
     action: {
       hover: alpha(brand.colors.primary, 0.06),
-      selected: alpha(brand.colors.primary, 0.1),
+      selected: brand.colors.lightBlue,
       focus: alpha(brand.colors.primary, 0.16),
     },
   },

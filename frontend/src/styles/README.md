@@ -15,12 +15,12 @@ Change the base values in `brand.ts`:
 ```ts
 export const brand = {
   colors: {
-    primary: '#0c66e4',
-    secondary: '#5e4db2',
-    background: '#f7f8f9',
+    primary: '#005bef',
+    secondary: '#1473ff',
+    lightBlue: '#eaf2ff',
+    background: '#f8fafc',
     surface: '#ffffff',
-    text: '#172b4d',
-    textMuted: '#44546f',
+    text: '#0f172a',
   },
   typography: {
     fontFamily: '"Inter", "Segoe UI", sans-serif',
@@ -30,6 +30,12 @@ export const brand = {
   },
 }
 ```
+
+The default Bubllio palette maps Core Blue to `primary`, Bright Blue to
+`secondary`, Light Blue to soft and selected surfaces, Off White to the page
+background, and Charcoal to primary text. Muted text, dividers, hover, focus,
+and dark variants are derived from these colors rather than added as unrelated
+palette values.
 
 `theme.ts` derives primary light/dark variants, dividers, hover, selected, and
 focus colors from those values. Application-wide MUI component overrides live
