@@ -20,10 +20,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from organizations.auth_views import CurrentUserAPIView, LogoutAPIView
 from organizations.setup_views import InstallationSetupAPIView, InstallationSmtpTestAPIView
+from organizations.invitation_views import InvitationAcceptAPIView, InvitationDetailAPIView
 
 urlpatterns = [
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),
     path("api/v1/setup/smtp-test/", InstallationSmtpTestAPIView.as_view(), name="installation-smtp-test"),
+    path("api/v1/invitations/<str:token>/", InvitationDetailAPIView.as_view(), name="invitation-detail"),
+    path("api/v1/invitations/<str:token>/accept/", InvitationAcceptAPIView.as_view(), name="invitation-accept"),
     path("admin/", admin.site.urls),
     path("api-auth/", include("rest_framework.urls")),
     path("api/v1/auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),

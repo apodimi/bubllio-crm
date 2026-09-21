@@ -11,6 +11,7 @@ Organization
   -> OrganizationMembership -> User
   -> OrganizationSettings
   -> EmailAccount
+  -> OrganizationInvitation
   -> Company
        -> Contact
   -> Automation
@@ -34,6 +35,7 @@ An organization owns its CRM data:
 - contacts
 - automations
 - users and role-based permissions through memberships
+- pending invitations to users who are not members yet
 - organization settings and encrypted SMTP email accounts
 
 ## Company

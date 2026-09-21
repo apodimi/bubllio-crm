@@ -90,6 +90,19 @@ is reached across a network. `DJANGO_SECRET_KEY`, database configuration,
 allowed hosts, and other deployment security settings remain environment
 configuration, not browser form fields.
 
+## Invite teammates
+
+Open a workspace and choose **People**. Enter a teammate's email and select
+their workspace role. Bubllio sends an invitation through that workspace's
+active default SMTP account; if none exists, configure one first. The link
+expires after seven days. A new recipient creates an account from the link;
+someone with an existing account signs in with the invited email. There is no
+public signup page. After joining, a user may create another workspace and
+become its owner while keeping their invited role in the original workspace.
+
+For deployments, set `BUBLLIO_APP_URL` to the public React origin so email
+links open the right site. The local default is `http://127.0.0.1:5173`.
+
 ## Command-line alternative
 
 If you prefer not to expose a first-run form, leave `BUBLLIO_SETUP_TOKEN`

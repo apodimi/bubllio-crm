@@ -1,0 +1,177 @@
+import hashlib
+import secrets
+from datetime import timedelta
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import serializers, status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .email_service import send_invitation_email
+from .models import EmailAccount, OrganizationInvitation, OrganizationMembership
+from .permissions import Capability, get_membership, get_organization_for_user
+
+
+def token_hash(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+class InvitationCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    role = serializers.ChoiceField(choices=[
+        OrganizationMembership.Role.ADMIN,
+        OrganizationMembership.Role.MEMBER,
+        OrganizationMembership.Role.VIEWER,
+    ])
+
+    def validate_email(self, value):
+        return value.strip().lower()
+
+
+class InvitationRegistrationSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(write_only=True)
+
+    def validate_username(self, value):
+        user_model = get_user_model()
+        if user_model.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already in use.")
+        return value
+
+    def validate(self, attrs):
+        candidate = get_user_model()(username=attrs["username"], email=self.context["invited_email"])
+        try:
+            validate_password(attrs["password"], user=candidate)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError({"password": error.messages}) from error
+        return attrs
+
+
+class OrganizationInvitationListCreateAPIView(APIView):
+    throttle_scope = "organization_invitation"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()] if self.request.method == "POST" else []
+
+    def _organization(self, request, organization_id):
+        return get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_MEMBERS,
+        )
+
+    def get(self, request, organization_id):
+        organization = self._organization(request, organization_id)
+        invitations = organization.invitations.filter(accepted_at__isnull=True, expires_at__gt=timezone.now()).order_by("-created_at")
+        return Response([{
+            "id": str(invite.id), "email": invite.email, "role": invite.role,
+            "expires_at": invite.expires_at,
+        } for invite in invitations])
+
+    def post(self, request, organization_id):
+        organization = self._organization(request, organization_id)
+        requester = get_membership(user=request.user, organization=organization)
+        serializer = InvitationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        role = serializer.validated_data["role"]
+        if requester and requester.role == OrganizationMembership.Role.ADMIN and role == OrganizationMembership.Role.ADMIN:
+            return Response({"role": "Only an owner can invite administrators."}, status=status.HTTP_403_FORBIDDEN)
+        if organization.memberships.filter(user__email__iexact=email).exists():
+            return Response({"email": "This person already belongs to the workspace."}, status=status.HTTP_400_BAD_REQUEST)
+        account = EmailAccount.objects.filter(organization=organization, is_default=True, is_active=True).first()
+        if account is None:
+            return Response({"detail": "Configure an active default SMTP account before inviting people."}, status=status.HTTP_400_BAD_REQUEST)
+
+        token = secrets.token_urlsafe(32)
+        base_url = getattr(settings, "BUBLLIO_APP_URL", "").rstrip("/") or request.build_absolute_uri("/").rstrip("/")
+        invite_url = f"{base_url}/invite/{token}"
+        try:
+            with transaction.atomic():
+                OrganizationInvitation.objects.filter(
+                    organization=organization, email__iexact=email, accepted_at__isnull=True,
+                ).delete()
+                invitation = OrganizationInvitation.objects.create(
+                    organization=organization, email=email, role=role,
+                    token_hash=token_hash(token), invited_by=request.user,
+                    expires_at=timezone.now() + timedelta(days=7),
+                )
+                send_invitation_email(
+                    account=account, recipient=email,
+                    organization_name=organization.name, invite_url=invite_url,
+                )
+        except Exception:
+            return Response({"detail": "The invitation email could not be sent. Check the workspace SMTP account."}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({
+            "id": str(invitation.id), "email": email, "role": role,
+            "expires_at": invitation.expires_at,
+        }, status=status.HTTP_201_CREATED)
+
+
+class InvitationDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        invitation = get_object_or_404(
+            OrganizationInvitation.objects.select_related("organization"),
+            token_hash=token_hash(token), accepted_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        )
+        return Response({
+            "email": invitation.email,
+            "organization_name": invitation.organization.name,
+            "role": invitation.role,
+            "expires_at": invitation.expires_at,
+        })
+
+
+class InvitationAcceptAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @transaction.atomic
+    def post(self, request, token):
+        invitation = get_object_or_404(
+            OrganizationInvitation.objects.select_for_update().select_related("organization"),
+            token_hash=token_hash(token), accepted_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        )
+        user_model = get_user_model()
+        if request.user.is_authenticated:
+            if request.user.email.lower() != invitation.email:
+                return Response({"detail": "Sign in with the invited email address."}, status=status.HTTP_403_FORBIDDEN)
+            user = request.user
+            tokens = None
+        else:
+            if user_model.objects.filter(email__iexact=invitation.email).exists():
+                return Response({"detail": "An account with this email exists. Sign in before accepting the invitation."}, status=status.HTTP_409_CONFLICT)
+            serializer = InvitationRegistrationSerializer(data=request.data, context={"invited_email": invitation.email})
+            serializer.is_valid(raise_exception=True)
+            user = user_model.objects.create_user(
+                username=serializer.validated_data["username"],
+                email=invitation.email,
+                password=serializer.validated_data["password"],
+            )
+            refresh = RefreshToken.for_user(user)
+            tokens = {"access": str(refresh.access_token), "refresh": str(refresh)}
+        membership, created = OrganizationMembership.objects.get_or_create(
+            organization=invitation.organization,
+            user=user,
+            defaults={"role": invitation.role},
+        )
+        invitation.accepted_at = timezone.now()
+        invitation.save(update_fields=("accepted_at",))
+        return Response({
+            "organization_id": str(invitation.organization_id),
+            "role": membership.role,
+            "membership_created": created,
+            "tokens": tokens,
+        }, status=status.HTTP_201_CREATED)

@@ -14,8 +14,10 @@ session authentication. REST endpoints are `/api/v1/auth/token/`, `/api/v1/auth/
 `/api/v1/auth/me/`, and `/api/v1/auth/logout/`.
 
 Refresh tokens rotate and are blacklisted after rotation. Logout blacklists the
-submitted refresh token. The React frontend keeps both tokens only in memory with
-Zustand, so a full page refresh requires signing in again.
+submitted refresh token. The React frontend keeps both tokens in Zustand with
+same-tab `sessionStorage` persistence. Reloads retain the session; signing out
+clears it. Browser-side JavaScript can read `sessionStorage`, so XSS prevention
+remains important.
 
 ## Membership model
 
@@ -109,8 +111,26 @@ Content-Type: application/json
 }
 ```
 
-Invitations and public user registration are not implemented yet. For local
-development, create users in Django admin or with `createsuperuser`.
+Owners and administrators invite by email through
+`POST /api/v1/organizations/<organization_id>/invitations/` with `email` and
+`role`. Owners may invite `admin`, `member`, or `viewer`; administrators may
+invite only `member` or `viewer`. `GET` on the same route lists unexpired,
+unaccepted invitations. The server sends through that organization's active
+default SMTP account; it returns an error and saves no invitation if there is
+no account or delivery fails. A new invitation to the same email replaces the
+earlier pending one. Invitation POST requests are limited to 20 per user per day.
+
+Invitation links contain a random token. Only its SHA-256 hash is stored, and
+the link expires after seven days. `GET /api/v1/invitations/<token>/` previews
+the workspace, invited email, role, and expiry. `POST` to the corresponding
+`accept/` route consumes it once. An existing user must sign in with the
+invited email; a new user supplies a username and password and receives JWTs.
+The invited email cannot be changed at acceptance. No general public signup
+endpoint exists. The account may later create its own organization and becomes
+that organization's owner without changing its role in the invited workspace.
+
+Set `BUBLLIO_APP_URL` to the public React origin for correct links in emails.
+Local development defaults to `http://127.0.0.1:5173`.
 
 Change a role:
 
@@ -147,7 +167,7 @@ always have an `OrganizationMembership`.
 
 ## Future security work
 
-- invitation and acceptance flow;
+- invitation revocation and audit trail;
 - a future HttpOnly-cookie refresh transport if the deployment needs stronger browser-side token protection;
 - inactive/suspended memberships;
 - audit log for membership and ownership changes;

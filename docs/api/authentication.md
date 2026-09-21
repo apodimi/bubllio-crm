@@ -15,6 +15,9 @@ debugging a browser login.
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
 | POST | `/api/v1/setup/smtp-test/` | server-side setup token in JSON | send a real test email with unsaved SMTP settings |
+| GET/POST | `/api/v1/organizations/<organization_id>/invitations/` | owner/admin Bearer token | list pending invitations or email a new invitation |
+| GET | `/api/v1/invitations/<token>/` | invitation token in URL | preview a valid invitation |
+| POST | `/api/v1/invitations/<token>/accept/` | invitation token; Bearer token for existing users | accept once and join the workspace |
 
 The Django admin continues to use session authentication at `/admin/`. The API
 does not use browser sessions for normal REST requests.
@@ -37,6 +40,22 @@ email account or consume the setup flow. Success (`200`) means the SMTP server
 accepted the message, not that the recipient inbox delivered it. Network or
 authentication failures return a generic `502` without exposing credentials.
 The endpoint closes as soon as installation setup closes.
+
+## Invite-only registration
+
+There is no general public signup endpoint. An owner or admin creates an
+invitation with `{ "email": "person@example.com", "role": "member" }` under
+their organization URL. `owner` is not an invitable role; only an owner may
+invite an `admin`. Sending requires the organization's active default SMTP
+account. The emailed link expires after seven days. Set `BUBLLIO_APP_URL` to
+the public React origin so the link points to the correct installation.
+
+The recipient opens the link to preview the workspace and role. A new user
+posts `username` and `password` to `accept/`; the invited email is assigned by
+the server, and the response includes JWT `tokens` and `organization_id`. An
+existing user signs in and posts an empty JSON body with their Bearer token.
+Their account email must match the invitation. Acceptance creates a membership
+for that workspace only and consumes the link; replay or expiry returns `404`.
 
 ## Login with curl
 
@@ -115,17 +134,17 @@ succeeds, because logout must also make the current UI private immediately.
 
 The official React client implements this contract in
 `frontend/src/services/api.ts` and `frontend/src/features/auth/hooks/useAuth.tsx`.
-Axios adds the
-Bearer header and retries one failed request after refresh. Zustand stores the
-current tokens only in memory. A browser reload therefore returns to the login
-screen by design.
+Axios adds the Bearer header and retries one failed request after refresh.
+Zustand persists the token pair in same-tab `sessionStorage`; reloads in that
+tab retain the session, while logout clears it.
 
 ## Security notes
 
 - Use HTTPS outside local development.
 - Never put JWTs in source control, Postman exports with real values, logs, or
   `VITE_*` variables.
-- The current starter sends the refresh token in JSON and stores it in memory.
+- The current starter sends the refresh token in JSON and stores it in
+  JavaScript-readable `sessionStorage`, which makes XSS prevention essential.
   A production browser deployment may choose an HttpOnly-cookie refresh design,
   but that requires deliberate CSRF and cookie configuration.
 - API authorization is enforced by Django, not by frontend route guards or

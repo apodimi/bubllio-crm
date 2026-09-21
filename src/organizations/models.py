@@ -127,3 +127,25 @@ class OrganizationMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.organization} ({self.role})"
+
+
+class OrganizationInvitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invitations")
+    email = models.EmailField()
+    role = models.CharField(max_length=20, choices=OrganizationMembership.Role.choices)
+    token_hash = models.CharField(max_length=64, unique=True)
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=("organization", "email"))]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("organization", "email"),
+                condition=models.Q(accepted_at__isnull=True),
+                name="unique_pending_invitation_per_email",
+            ),
+        ]

@@ -52,6 +52,9 @@ account; a four-step wizard can send a real SMTP test email to a chosen
   recipient before final confirmation. Each step validates its visible fields
   and shows errors inline. Setup is hidden after initialization.
 - Organization listing, creation, selection and direct workspace URLs.
+- Invite-only account registration and workspace invitations through the
+  workspace's default SMTP account. Owners/admins can view people and pending
+  invitations; acceptance adds a role only to that workspace.
 - Workspace overview with live company/contact/enabled-rule counts.
 - Company and contact lists, local search and creation forms.
 - Read-only automation rules and run history.

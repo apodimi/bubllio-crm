@@ -40,6 +40,7 @@ SECRET_KEY = os.environ.get(
 DEBUG = True
 
 ALLOWED_HOSTS = []
+BUBLLIO_APP_URL = os.environ.get("BUBLLIO_APP_URL", "http://127.0.0.1:5173" if DEBUG else "").rstrip("/")
 
 
 # Application definition
@@ -72,7 +73,10 @@ REST_FRAMEWORK = {
     ],
 }
 
-REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"installation_setup": "5/min"}
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    "installation_setup": "5/min",
+    "organization_invitation": "20/day",
+}
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),

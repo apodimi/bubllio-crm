@@ -4,7 +4,7 @@ from django.db import transaction
 
 from .email_security import encrypt_secret
 from .choices import locale_choices, timezone_choices
-from .models import EmailAccount, Organization, OrganizationMembership, OrganizationSettings
+from .models import EmailAccount, Organization, OrganizationInvitation, OrganizationMembership, OrganizationSettings
 
 
 class OrganizationSettingsAdminForm(forms.ModelForm):
@@ -63,6 +63,21 @@ class OrganizationMembershipAdmin(admin.ModelAdmin):
     list_display = ("id", "organization", "user", "role", "created_at", "updated_at")
     search_fields = ("organization__name", "user__username", "user__email")
     list_filter = ("organization", "role")
+
+
+@admin.register(OrganizationInvitation)
+class OrganizationInvitationAdmin(admin.ModelAdmin):
+    list_display = ("id", "organization", "email", "role", "expires_at", "accepted_at")
+    search_fields = ("organization__name", "email")
+    list_filter = ("organization", "role")
+    fields = ("id", "organization", "email", "role", "invited_by", "expires_at", "accepted_at", "created_at")
+    readonly_fields = fields
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(OrganizationSettings)

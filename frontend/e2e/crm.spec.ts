@@ -209,3 +209,68 @@ test('setup sends a real SMTP test request before final confirmation', async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: test.info().outputPath('setup-review-mobile.png'), fullPage: true })
 })
+
+test('workspace owner can send an invite with a selected role', async ({ page }) => {
+  let sent = false
+  await page.route('**/api/v1/organizations/alpha/members/', route => route.fulfill({ json: [{ id: 'member-1', username: 'demo', email: 'demo@example.com', role: 'owner' }] }))
+  await page.route('**/api/v1/organizations/alpha/invitations/', route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ email: 'new@example.com', role: 'viewer' })
+      sent = true
+      return route.fulfill({ status: 201, json: { id: 'invite-1', email: 'new@example.com', role: 'viewer', expires_at: '2030-01-01T00:00:00Z' } })
+    }
+    return route.fulfill({ json: sent ? [{ id: 'invite-1', email: 'new@example.com', role: 'viewer', expires_at: '2030-01-01T00:00:00Z' }] : [] })
+  })
+  await login(page); await openAlpha(page)
+  await page.getByRole('link', { name: 'People' }).click()
+  await page.getByLabel('Email address').fill('new@example.com')
+  await page.getByLabel('Role in this workspace').click()
+  await page.getByRole('option', { name: 'Viewer' }).click()
+  await page.getByRole('button', { name: 'Send invitation' }).click()
+  await expect(page.getByText('Invitation sent to new@example.com.')).toBeVisible()
+  expect(sent).toBe(true)
+})
+
+test('first installation superuser can reach workspace invitations', async ({ page }) => {
+  await page.route('**/api/v1/auth/me/', route => route.fulfill({ json: {
+    id: 1, username: 'first-admin', email: 'admin@example.com', is_superuser: true,
+    organizations: [{ ...orgs[0], current_user_role: null }],
+  } }))
+  await page.route('**/api/v1/organizations/', route => route.fulfill({ json: [{ ...orgs[0], current_user_role: null }] }))
+  await page.route('**/api/v1/organizations/alpha/members/', route => route.fulfill({ json: [] }))
+  await page.route('**/api/v1/organizations/alpha/invitations/', route => route.fulfill({ json: [] }))
+  await login(page); await openAlpha(page)
+  await page.getByRole('link', { name: 'People' }).click()
+  await expect(page.getByRole('heading', { name: 'People & invitations' })).toBeVisible()
+})
+
+test('invite-only registration creates an account and opens the invited workspace', async ({ page }) => {
+  await page.route('**/api/v1/invitations/sample-token/', route => route.fulfill({ json: { email: 'new@example.com', organization_name: 'Alpha Studio', role: 'member', expires_at: '2030-01-01T00:00:00Z' } }))
+  await page.route('**/api/v1/invitations/sample-token/accept/', route => {
+    expect(route.request().postDataJSON()).toEqual({ username: 'new-person', password: 'a-strong-unique-password-4938' })
+    return route.fulfill({ status: 201, json: { organization_id: 'alpha', role: 'member', tokens: { access: 'new-access', refresh: 'new-refresh' } } })
+  })
+  await page.goto('/invite/sample-token')
+  await expect(page.getByRole('heading', { name: 'Join Alpha Studio' })).toBeVisible()
+  await page.getByLabel('Username').fill('new-person')
+  await page.getByLabel('Password').fill('a-strong-unique-password-4938')
+  await page.getByRole('button', { name: 'Create account and join' }).click()
+  await expect(page).toHaveURL('/organizations/alpha')
+  await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible()
+})
+
+test('existing account signs in and accepts a workspace invitation', async ({ page }) => {
+  await page.route('**/api/v1/invitations/existing-token/', route => route.fulfill({ json: { email: 'demo@example.com', organization_name: 'Alpha Studio', role: 'viewer', expires_at: '2030-01-01T00:00:00Z' } }))
+  await page.route('**/api/v1/invitations/existing-token/accept/', route => {
+    expect(route.request().headers().authorization).toBe('Bearer access-token')
+    expect(route.request().postDataJSON()).toEqual({})
+    return route.fulfill({ status: 201, json: { organization_id: 'alpha', role: 'viewer', tokens: null } })
+  })
+  await page.goto('/invite/existing-token')
+  await page.getByRole('button', { name: 'I have an account' }).click()
+  await page.getByLabel('Username').fill('demo')
+  await page.getByLabel('Password').fill('password')
+  await page.getByRole('button', { name: 'Sign in and join' }).click()
+  await expect(page).toHaveURL('/organizations/alpha')
+  await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible()
+})

@@ -1,6 +1,6 @@
 # Email Sending: Current Behavior and Direction
 
-There are currently three separate sending paths. Configuring an organization SMTP
+There are currently four separate sending paths. Configuring an organization SMTP
 account does not switch automation emails to that account.
 
 | Caller | Implementation | Transport |
@@ -8,6 +8,7 @@ account does not switch automation emails to that account.
 | Automation action and manual automation test | `automations/services.py` calls Django `send_mail` | Global backend, currently console |
 | Email account test endpoint | `organizations/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
 | First-run setup test email | `organizations/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
+| Workspace invitation | `organizations/email_service.py` sends the invitation link | Active default SMTP account of the inviting organization |
 
 The first path prints email in the terminal with checked-in settings. The second
 attempts a real network send. Tests use mocked or test email boundaries.
@@ -38,6 +39,11 @@ stored as a truncated string in `last_test_error`; it is not comprehensively
 sanitized. The immediate HTTP failure response is generic and uses status 502.
 Treat stored diagnostics as potentially sensitive. Password fields are write-only
 through the API and encrypted at rest.
+
+An owner or administrator can send a workspace invitation only when an active
+default SMTP account exists. Invitation delivery failure returns `502` and
+rolls back the invitation. The invitation link uses `BUBLLIO_APP_URL`, which
+must be set to the public frontend origin in deployments.
 
 Set `BUBLLIO_EMAIL_ENCRYPTION_KEY` before storing passwords. Generate a Fernet key:
 

@@ -4,10 +4,12 @@ import { Avatar, Box, Button, Divider, Drawer, IconButton, List, ListItemButton,
 import DashboardRounded from '@mui/icons-material/DashboardRounded'
 import BusinessRounded from '@mui/icons-material/BusinessRounded'
 import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
+import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
 import BoltRounded from '@mui/icons-material/BoltRounded'
 import MenuRounded from '@mui/icons-material/MenuRounded'
 import LogoutRounded from '@mui/icons-material/LogoutRounded'
 import { useAuth } from '../../features/auth'
+import { useAuthStore } from '../../features/auth/store/authStore'
 import { useOrganization, useOrganizations, WorkspaceContext } from '../../features/organizations'
 import { LoginPage } from '../../pages/Login/LoginPage'
 import { Failure, Loading } from '../common/Feedback'
@@ -20,16 +22,19 @@ export function RootLayout() {
   const auth = useAuth()
   const setup = useSetupStatus()
   const navigate = useNavigate()
+  const pathname = useRouterState({ select: state => state.location.pathname })
   if (setup.isPending) return <Loading />
   if (setup.isError) return <Failure error={setup.error} retry={() => void setup.refetch()} />
   if (setup.data.available) return <SetupPage onComplete={() => {
     void navigate({ to: '/', replace: true })
     void setup.refetch()
   }} />
+  if (pathname.startsWith('/invite/')) return <Outlet />
   return auth.username ? <Shell /> : <LoginPage />
 }
 function Shell() {
   const auth = useAuth()
+  const isSuperuser = useAuthStore(state => state.user?.is_superuser ?? false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const params = useParams({ strict: false })
   const orgId = 'organizationId' in params ? params.organizationId : undefined
@@ -37,11 +42,13 @@ function Shell() {
   const orgs = useOrganizations()
   const navigate = useNavigate()
   const base = orgId ? '/organizations/' + orgId : ''
+  const currentRole = orgs.data?.find(org => org.id === orgId)?.current_user_role
   const items = [
     { text: 'Overview', to: '/organizations/$organizationId' as const, path: base, icon: <DashboardRounded /> },
     { text: 'Companies', to: '/organizations/$organizationId/companies' as const, path: base + '/companies', icon: <BusinessRounded /> },
     { text: 'Contacts', to: '/organizations/$organizationId/contacts' as const, path: base + '/contacts', icon: <PeopleAltRounded /> },
     { text: 'Automations', to: '/organizations/$organizationId/automations' as const, path: base + '/automations', icon: <BoltRounded /> },
+    ...(isSuperuser || currentRole === 'owner' || currentRole === 'admin' ? [{ text: 'People', to: '/organizations/$organizationId/members' as const, path: base + '/members', icon: <GroupAddRounded /> }] : []),
   ]
   const sidebar = <Stack sx={{ height: '100%', p: 2.5 }}>
     <Box component={Link} to="/" aria-label="Bubllio home" sx={{ alignSelf: 'flex-start', textDecoration: 'none', mx: 1, mt: 1, mb: 4 }}>
