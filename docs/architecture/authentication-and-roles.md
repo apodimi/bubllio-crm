@@ -134,6 +134,13 @@ DELETE /api/v1/organizations/<organization_id>/members/<membership_id>/
 
 ## Superusers
 
+The optional first-run setup flow at `GET/POST /api/v1/setup/` can create the
+first Django superuser and first organization owner. It is available only when
+`BUBLLIO_SETUP_TOKEN` is configured, the installation has not been completed,
+and the user and organization tables are empty. POST requires that server-side token; successful
+setup closes the flow permanently for that database. An existing installation
+does not gain a public user-creation path. See [Getting Started](../getting-started.md).
+
 Django superusers may access every organization for support and administration.
 They are not a product-level organization role. Ordinary application users must
 always have an `OrganizationMembership`.

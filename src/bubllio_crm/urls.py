@@ -19,8 +19,10 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from organizations.auth_views import CurrentUserAPIView, LogoutAPIView
+from organizations.setup_views import InstallationSetupAPIView
 
 urlpatterns = [
+    path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),
     path("admin/", admin.site.urls),
     path("api-auth/", include("rest_framework.urls")),
     path("api/v1/auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),

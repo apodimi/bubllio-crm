@@ -37,6 +37,13 @@ Open `http://127.0.0.1:5173`. Vite proxies `/api/` to the Django server at
 contributors may replace its UI without changing backend ownership or rules.
 See [Frontend Guide](frontend/README.md).
 
+For a fresh installation, the optional first-run screen can create the initial
+Django admin, workspace, and SMTP account. Set a random server-side
+`BUBLLIO_SETUP_TOKEN` before starting, then follow
+[Getting Started](docs/getting-started.md). With no token, the standard
+`createsuperuser` command remains available; existing installations never expose
+the first-run form.
+
 This uses SQLite without additional configuration. For local PostgreSQL:
 
 ```bash

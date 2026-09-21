@@ -15,6 +15,17 @@ class Organization(models.Model):
         return self.name
 
 
+class InstallationState(models.Model):
+    """A single database row serializes and permanently closes first-run setup."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.id = 1
+        super().save(*args, **kwargs)
+
+
 class OrganizationSettings(models.Model):
     organization = models.OneToOneField(
         Organization,

@@ -31,6 +31,11 @@ than server-state queries. Keep those orchestration calls in
 `features/auth/hooks/useAuth.tsx`, and keep token state in
 `features/auth/store/authStore.ts`.
 
+The first-run setup request follows the same hook → service → Axios path under
+`features/setup/`. Never put `BUBLLIO_SETUP_TOKEN` or SMTP credentials in source,
+localStorage, query strings, or `VITE_*` environment variables. The backend is
+the authority on whether setup is available.
+
 ## Query and mutation rules
 
 - Use TanStack Query for all server state.

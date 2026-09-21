@@ -13,9 +13,15 @@ import { LoginPage } from '../../pages/Login/LoginPage'
 import { Failure, Loading } from '../common/Feedback'
 import { BrandLogo } from '../common/BrandLogo'
 import { useNavigate } from '@tanstack/react-router'
+import { useSetupStatus } from '../../features/setup/hooks/useSetup'
+import { SetupPage } from '../../pages/Setup/SetupPage'
 
 export function RootLayout() {
   const auth = useAuth()
+  const setup = useSetupStatus()
+  if (setup.isPending) return <Loading />
+  if (setup.isError) return <Failure error={setup.error} retry={() => void setup.refetch()} />
+  if (setup.data.available) return <SetupPage onComplete={() => void setup.refetch()} />
   return auth.username ? <Shell /> : <LoginPage />
 }
 function Shell() {

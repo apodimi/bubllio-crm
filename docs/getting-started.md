@@ -53,7 +53,41 @@ The local database file is ignored by git:
 src/db.sqlite3
 ```
 
-## Create Admin User
+## First-run setup
+
+For a new installation, generate a one-time setup token and put it in the
+server's ignored `.env` file as `BUBLLIO_SETUP_TOKEN`. It must be at least 32
+characters long. Use a random value:
+
+```bash
+uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+After migrations, start Django and the React frontend (see
+[Frontend README](../frontend/README.md)). Open the frontend. It displays the
+setup form only while there are no Django users or organizations, no completed installation,
+and a server-side setup token is configured. Enter the token, first admin
+username/email/password, and first workspace name/slug. This creates a Django
+superuser who is also the workspace owner. Sign in with that account afterward.
+
+SMTP is optional. To add it during setup, first set
+`BUBLLIO_EMAIL_ENCRYPTION_KEY` on the server as described in
+[Email Sending](architecture/email-adapters.md). Setup stores the SMTP password
+encrypted in the existing organization email-account model. It does not send a
+test email or route automation emails through that account. You may skip SMTP
+and configure it later via the authenticated organization API or Django admin.
+
+The endpoint is rate-limited, checks the setup token, and closes after success.
+Remove `BUBLLIO_SETUP_TOKEN` from the environment afterward. Never place it in
+`VITE_*` variables, a public URL, logs, or version control. Use HTTPS if setup
+is reached across a network. `DJANGO_SECRET_KEY`, database configuration,
+allowed hosts, and other deployment security settings remain environment
+configuration, not browser form fields.
+
+## Command-line alternative
+
+If you prefer not to expose a first-run form, leave `BUBLLIO_SETUP_TOKEN`
+unset and create the admin with Django's standard command:
 
 ```bash
 uv run python src/manage.py createsuperuser

@@ -13,12 +13,11 @@ authentication state. There is no additional authentication provider.
 
 Use Node 22.12+ (Node 22 is specified in .nvmrc) and npm.
 
-Start the Django backend in its own repository:
+Start the Django backend from the monorepo root:
 
 ```bash
 uv sync
 uv run python src/manage.py migrate
-uv run python src/manage.py createsuperuser
 uv run python src/manage.py runserver 127.0.0.1:8000
 ```
 
@@ -29,7 +28,12 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5173 and sign in with your Django username and password.
+Open http://127.0.0.1:5173. For an empty installation with
+`BUBLLIO_SETUP_TOKEN` configured on the backend, complete the first-run setup
+form; otherwise create a user with `uv run python src/manage.py createsuperuser`
+and sign in with that Django username and password. The token is entered into
+the form and must never be placed in a `VITE_*` variable. See
+[Getting Started](../docs/getting-started.md) for the secure setup steps.
 Create a workspace, add companies, and then add contacts linked to those companies.
 No seed data or external auth account is required.
 
@@ -40,6 +44,8 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 ## Implemented
 
 - Login/logout using the backend's REST JWT endpoints.
+- First-run setup for the initial Django admin, workspace, and optional SMTP
+  account; hidden once an installation is initialized.
 - Organization listing, creation, selection and direct workspace URLs.
 - Workspace overview with live company/contact/enabled-rule counts.
 - Company and contact lists, local search and creation forms.
@@ -50,7 +56,7 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 
 There are no fake production records or dashboard statistics. Browser tests use
 isolated mocked API responses. Editing/deleting CRM records, member management,
-email settings and the visual workflow editor are not part of this first slice.
+ongoing email settings and the visual workflow editor are not part of this first slice.
 Those features must follow supported backend endpoints.
 
 ## Authentication
@@ -132,7 +138,8 @@ npm run test:e2e
 
 Browser tests start Vite automatically and mock API traffic; they do not send
 email or write to a real CRM database. They cover tenant switching, role-based
-controls, creation/validation, login/logout and mobile navigation.
+controls, creation/validation, login/logout, first-run setup, and mobile
+navigation. If port 5173 is occupied, use `PLAYWRIGHT_PORT=5174 npm run test:e2e`.
 
 ## Deployment
 

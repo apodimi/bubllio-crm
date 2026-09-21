@@ -8,6 +8,9 @@ async function mockApi(page: Page) {
   const companies = [{ id: 'co-a', organization: 'alpha', name: 'Acme Ltd', email: 'hello@example.com', phone_number: '', website: '', lifecycle_stage: 'lead' }]
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
+    if (path === '/api/v1/setup/' && route.request().method() === 'GET') {
+      return route.fulfill({ json: { available: false } })
+    }
     if (path === '/api/v1/auth/token/' && route.request().method() === 'POST') {
       return route.fulfill({ json: { access: 'access-token', refresh: 'refresh-token' } })
     }
@@ -105,5 +108,34 @@ test('invalid login remains on the sign-in screen', async ({ page }) => {
   await page.getByLabel('Password').fill('bad')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
+})
+
+test('first-run setup creates an admin and then opens sign in', async ({ page }) => {
+  let completed = false
+  await page.route('**/api/v1/setup/', async route => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({ json: { available: !completed } })
+    }
+    const body = route.request().postDataJSON()
+    expect(body).toMatchObject({
+      setup_token: 'install-token',
+      username: 'first-admin',
+      organization_name: 'Nerds Lab',
+      organization_slug: 'nerds-lab',
+    })
+    expect(body.smtp).toBeUndefined()
+    completed = true
+    return route.fulfill({ status: 201, json: { detail: 'Installation complete.' } })
+  })
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Set up your workspace' })).toBeVisible()
+  await page.getByLabel('Setup token').fill('install-token')
+  await page.getByLabel('Username').fill('first-admin')
+  await page.getByLabel('Email').fill('admin@example.com')
+  await page.getByLabel('Password').fill('a-strong-unique-password-4938')
+  await page.getByLabel('Workspace name').fill('Nerds Lab')
+  await page.getByLabel('Workspace slug').fill('nerds-lab')
+  await page.getByRole('button', { name: 'Complete setup' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
 })

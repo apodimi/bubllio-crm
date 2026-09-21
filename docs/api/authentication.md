@@ -12,9 +12,22 @@ debugging a browser login.
 | POST | `/api/v1/auth/token/refresh/` | refresh token in JSON | rotate the refresh token and issue a new access token |
 | GET | `/api/v1/auth/me/` | access Bearer token | return the current user and visible organizations |
 | POST | `/api/v1/auth/logout/` | access Bearer token | blacklist the submitted refresh token |
+| GET | `/api/v1/setup/` | none | report whether first-run setup is available |
+| POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
 
 The Django admin continues to use session authentication at `/admin/`. The API
 does not use browser sessions for normal REST requests.
+
+The setup endpoint is a separate bootstrap path, not public registration. Its
+GET response is only `{ "available": true|false }` and never reveals the token.
+POST is accepted only with a server-configured `BUBLLIO_SETUP_TOKEN` of at
+least 32 characters, empty user and organization tables, and an unfinished installation. The
+request contains `setup_token`, `username`, `email`, `password`,
+`organization_name`, and `organization_slug`; `smtp` may contain the existing
+email-account fields including its password. SMTP requires a valid server-side
+`BUBLLIO_EMAIL_ENCRYPTION_KEY`. Success returns `201` and permanently closes
+setup in that database. The API rate-limits setup POST attempts. See
+[Getting Started](../getting-started.md) for the complete operator procedure.
 
 ## Login with curl
 

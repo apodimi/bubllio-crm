@@ -14,7 +14,8 @@ attempts a real network send. Tests use mocked or test email boundaries.
 ## Organization SMTP Accounts Are Implemented
 
 Owners and administrators manage accounts through the API; authorized staff can
-use Django admin. A custom frontend is not included yet.
+use Django admin. The first-run frontend can create one optional SMTP account;
+ongoing account management is not yet available there.
 
 ```text
 GET    /api/v1/organizations/<organization_id>/email-accounts/
