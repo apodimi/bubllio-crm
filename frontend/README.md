@@ -68,9 +68,13 @@ Those features must follow supported backend endpoints.
 
 The backend exposes SimpleJWT endpoints at /api/v1/auth/token/,
 /api/v1/auth/token/refresh/, /api/v1/auth/me/, and /api/v1/auth/logout/.
-The frontend keeps access and refresh tokens only in Zustand memory. It never
-persists credentials in localStorage, sessionStorage, cookies, or environment
-files. Refreshing the page requires signing in again.
+The frontend keeps access and refresh tokens in Zustand, persisted to
+`sessionStorage` for the current browser tab. Refreshing the page or entering a
+URL in that tab preserves sign-in; closing the tab or signing out clears it.
+Tokens are never stored in `localStorage`, cookies, or environment files.
+Because browser JavaScript can read `sessionStorage`, avoid untrusted scripts
+and treat XSS prevention as essential. The backend remains the authority for
+token validity and permissions.
 
 Axios attaches the Bearer access token, retries one unauthorized request after
 refreshing it, and clears the Zustand session when refresh fails. Logout calls

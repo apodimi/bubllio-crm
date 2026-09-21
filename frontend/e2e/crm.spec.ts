@@ -111,6 +111,16 @@ test('invalid login remains on the sign-in screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
 })
 
+test('a signed-in user keeps the session when opening /login from the address bar', async ({ page }) => {
+  await login(page)
+  await page.goto('/login')
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Welcome back.' })).toHaveCount(0)
+  expect(await page.evaluate(() => localStorage.length)).toBe(0)
+  expect(await page.evaluate(() => sessionStorage.length)).toBe(1)
+})
+
 test('first-run setup creates an admin and then opens sign in', async ({ page }) => {
   let completed = false
   await page.route('**/api/v1/setup/', async route => {

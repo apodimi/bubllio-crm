@@ -7,6 +7,7 @@ const root = createRootRoute({
   notFoundComponent: () => <Stack spacing={2}><Typography variant="h4">Page not found</Typography><Button component={Link} to="/">Back to workspaces</Button></Stack>,
 })
 const home = createRoute({ getParentRoute: () => root, path: '/', component: lazyRouteComponent(() => import('../pages/Organizations/OrganizationsPage'), 'OrganizationsPage') })
+const login = createRoute({ getParentRoute: () => root, path: '/login', beforeLoad: () => { throw redirect({ to: '/', replace: true }) } })
 const workspace = createRoute({
   getParentRoute: () => root,
   path: '/organizations/$organizationId',
@@ -19,5 +20,5 @@ const overview = createRoute({ getParentRoute: () => workspace, path: '/', compo
 const companies = createRoute({ getParentRoute: () => workspace, path: '/companies', component: lazyRouteComponent(() => import('../pages/Companies/CompaniesPage'), 'CompaniesPage') })
 const contacts = createRoute({ getParentRoute: () => workspace, path: '/contacts', component: lazyRouteComponent(() => import('../pages/Contacts/ContactsPage'), 'ContactsPage') })
 const automations = createRoute({ getParentRoute: () => workspace, path: '/automations', component: lazyRouteComponent(() => import('../pages/Automations/AutomationsPage'), 'AutomationsPage') })
-export const router = createRouter({ routeTree: root.addChildren([home, workspace.addChildren([overview, companies, contacts, automations])]) })
+export const router = createRouter({ routeTree: root.addChildren([home, login, workspace.addChildren([overview, companies, contacts, automations])]) })
 declare module '@tanstack/react-router' { interface Register { router: typeof router } }

@@ -33,7 +33,9 @@ than server-state queries. Keep those orchestration calls in
 
 The first-run setup request follows the same hook → service → Axios path under
 `features/setup/`. Never put `BUBLLIO_SETUP_TOKEN` or SMTP credentials in source,
-localStorage, query strings, or `VITE_*` environment variables. The backend is
+localStorage, query strings, or `VITE_*` environment variables. Auth tokens are
+persisted only in same-tab `sessionStorage` through the Zustand store; never
+write them from individual components. The backend is
 the authority on whether setup is available.
 
 ## Query and mutation rules
