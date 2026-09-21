@@ -20,6 +20,10 @@ class InstallationState(models.Model):
 
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     completed_at = models.DateTimeField(null=True, blank=True)
+    fallback_email_account = models.ForeignKey(
+        "EmailAccount", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="installation_fallback_for",
+    )
 
     def save(self, *args, **kwargs):
         self.id = 1

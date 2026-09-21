@@ -5,6 +5,7 @@ import DashboardRounded from '@mui/icons-material/DashboardRounded'
 import BusinessRounded from '@mui/icons-material/BusinessRounded'
 import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
 import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
+import SettingsRounded from '@mui/icons-material/SettingsRounded'
 import BoltRounded from '@mui/icons-material/BoltRounded'
 import MenuRounded from '@mui/icons-material/MenuRounded'
 import LogoutRounded from '@mui/icons-material/LogoutRounded'
@@ -49,6 +50,7 @@ function Shell() {
     { text: 'Contacts', to: '/organizations/$organizationId/contacts' as const, path: base + '/contacts', icon: <PeopleAltRounded /> },
     { text: 'Automations', to: '/organizations/$organizationId/automations' as const, path: base + '/automations', icon: <BoltRounded /> },
     ...(isSuperuser || currentRole === 'owner' || currentRole === 'admin' ? [{ text: 'People', to: '/organizations/$organizationId/members' as const, path: base + '/members', icon: <GroupAddRounded /> }] : []),
+    ...(isSuperuser || currentRole === 'owner' || currentRole === 'admin' ? [{ text: 'Settings', to: '/organizations/$organizationId/settings' as const, path: base + '/settings', icon: <SettingsRounded /> }] : []),
   ]
   const sidebar = <Stack sx={{ height: '100%', p: 2.5 }}>
     <Box component={Link} to="/" aria-label="Bubllio home" sx={{ alignSelf: 'flex-start', textDecoration: 'none', mx: 1, mt: 1, mb: 4 }}>

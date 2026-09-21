@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .email_service import send_invitation_email
-from .models import EmailAccount, OrganizationInvitation, OrganizationMembership
+from .models import EmailAccount, InstallationState, OrganizationInvitation, OrganizationMembership
 from .permissions import Capability, get_membership, get_organization_for_user
 
 
@@ -90,7 +90,10 @@ class OrganizationInvitationListCreateAPIView(APIView):
             return Response({"email": "This person already belongs to the workspace."}, status=status.HTTP_400_BAD_REQUEST)
         account = EmailAccount.objects.filter(organization=organization, is_default=True, is_active=True).first()
         if account is None:
-            return Response({"detail": "Configure an active default SMTP account before inviting people."}, status=status.HTTP_400_BAD_REQUEST)
+            fallback_id = InstallationState.objects.values_list("fallback_email_account_id", flat=True).first()
+            account = EmailAccount.objects.filter(id=fallback_id, is_active=True).first() if fallback_id else None
+        if account is None:
+            return Response({"detail": "Configure an SMTP account in workspace Settings, or configure the installation fallback SMTP first."}, status=status.HTTP_400_BAD_REQUEST)
 
         token = secrets.token_urlsafe(32)
         base_url = getattr(settings, "BUBLLIO_APP_URL", "").rstrip("/") or request.build_absolute_uri("/").rstrip("/")

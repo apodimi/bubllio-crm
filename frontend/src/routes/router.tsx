@@ -22,5 +22,6 @@ const companies = createRoute({ getParentRoute: () => workspace, path: '/compani
 const contacts = createRoute({ getParentRoute: () => workspace, path: '/contacts', component: lazyRouteComponent(() => import('../pages/Contacts/ContactsPage'), 'ContactsPage') })
 const automations = createRoute({ getParentRoute: () => workspace, path: '/automations', component: lazyRouteComponent(() => import('../pages/Automations/AutomationsPage'), 'AutomationsPage') })
 const members = createRoute({ getParentRoute: () => workspace, path: '/members', component: lazyRouteComponent(() => import('../pages/Members/MembersPage'), 'MembersPage') })
-export const router = createRouter({ routeTree: root.addChildren([home, login, invite, workspace.addChildren([overview, companies, contacts, automations, members])]) })
+const settings = createRoute({ getParentRoute: () => workspace, path: '/settings', component: lazyRouteComponent(() => import('../pages/Settings/SettingsPage'), 'SettingsPage') })
+export const router = createRouter({ routeTree: root.addChildren([home, login, invite, workspace.addChildren([overview, companies, contacts, automations, members, settings])]) })
 declare module '@tanstack/react-router' { interface Register { router: typeof router } }

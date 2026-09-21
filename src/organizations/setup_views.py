@@ -86,13 +86,14 @@ class InstallationSetupAPIView(APIView):
         OrganizationMembership.objects.create(organization=organization, user=user, role=OrganizationMembership.Role.OWNER)
         OrganizationSettings.objects.get_or_create(organization=organization)
         if smtp_values:
-            EmailAccount.objects.create(
+            account = EmailAccount.objects.create(
                 organization=organization,
                 encrypted_password=encrypted_password,
                 **{key: value for key, value in smtp_values.items() if key != "password"},
             )
+            state.fallback_email_account = account
         state.completed_at = timezone.now()
-        state.save(update_fields=["completed_at"])
+        state.save(update_fields=["completed_at", "fallback_email_account"])
         return Response({"detail": "Installation complete. Sign in with your new admin account."}, status=status.HTTP_201_CREATED)
 
 
