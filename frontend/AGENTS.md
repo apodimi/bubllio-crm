@@ -67,6 +67,22 @@ the authority on whether setup is available.
 - Hide unavailable actions for usability, but never treat hidden controls as
   authorization.
 
+## Form rules
+
+- New multi-field forms should use React Hook Form for field state and Zod for
+  client-side validation. Keep the schema in the owning feature, not the page.
+- Use a small feature-local field component to connect MUI inputs to React Hook
+  Form and show validation errors inline. Put labels above inputs and explain
+  domain-specific terms in helper text.
+- Multi-step forms should validate only the current step before continuing,
+  retain entered values when moving backward, and validate the full payload on
+  final submission. Hidden optional fields must not block submission.
+- The first-run wizard in `features/setup/` is the working example. Existing
+  company/contact dialogs have not yet been migrated to React Hook Form; keep
+  their current behavior until that work is explicitly requested.
+- Client validation is for fast feedback. Django serializers remain the final
+  authority, and server validation errors must still be displayed.
+
 ## Theme rules
 
 - `src/styles/brand.ts` is the only place for manually selected brand colors,

@@ -6,8 +6,9 @@ This is a separate application within the monorepo, not a Django admin theme or 
 ## Stack
 
 React + TypeScript + Vite, TanStack Router for navigation, TanStack Query for
-server state, Material UI with Emotion, Axios for HTTP, and Zustand for in-memory
-authentication state. There is no additional authentication provider.
+server state, Material UI with Emotion, Axios for HTTP, Zustand for in-memory
+authentication state, and React Hook Form with Zod for the onboarding wizard.
+There is no additional authentication provider.
 
 ## Run locally
 
@@ -46,7 +47,8 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 - Login/logout using the backend's REST JWT endpoints.
 - First-run setup for the initial Django admin, workspace, and optional SMTP
   account; a four-step wizard can send a real SMTP test email to a chosen
-  recipient before final confirmation. Setup is hidden after initialization.
+  recipient before final confirmation. Each step validates its visible fields
+  and shows errors inline. Setup is hidden after initialization.
 - Organization listing, creation, selection and direct workspace URLs.
 - Workspace overview with live company/contact/enabled-rule counts.
 - Company and contact lists, local search and creation forms.

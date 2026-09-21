@@ -119,7 +119,7 @@ test('first-run setup creates an admin and then opens sign in', async ({ page })
     }
     const body = route.request().postDataJSON()
     expect(body).toMatchObject({
-      setup_token: 'install-token',
+      setup_token: 'install-token-with-at-least-32-chars',
       username: 'first-admin',
       organization_name: 'Nerds Lab',
       organization_slug: 'nerds-lab',
@@ -130,14 +130,14 @@ test('first-run setup creates an admin and then opens sign in', async ({ page })
   })
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Create your admin' })).toBeVisible()
-  await page.getByLabel('Setup token').fill('install-token')
-  await page.getByLabel('Username').fill('first-admin')
-  await page.getByLabel('Email').fill('admin@example.com')
-  await page.getByLabel('Password').fill('a-strong-unique-password-4938')
+  await page.getByLabel('Installation setup token').fill('install-token-with-at-least-32-chars')
+  await page.getByLabel('Admin username').fill('first-admin')
+  await page.getByLabel('Admin email address').fill('admin@example.com')
+  await page.getByLabel('Admin password').fill('a-strong-unique-password-4938')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('heading', { name: 'Name your workspace' })).toBeVisible()
-  await page.getByLabel('Workspace name').fill('Nerds Lab')
-  await page.getByLabel('Workspace slug').fill('nerds-lab')
+  await page.getByLabel('Workspace display name').fill('Nerds Lab')
+  await page.getByLabel('Workspace URL slug').fill('nerds-lab')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('heading', { name: 'Email settings' })).toBeVisible()
   await page.getByRole('button', { name: 'Skip for now' }).click()
@@ -146,13 +146,22 @@ test('first-run setup creates an admin and then opens sign in', async ({ page })
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
 })
 
+test('setup explains invalid fields before moving to the next step', async ({ page }) => {
+  await page.route('**/api/v1/setup/', route => route.fulfill({ json: { available: true } }))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByText('Enter the full setup token from the server.')).toBeVisible()
+  await expect(page.getByText('Admin username is required.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Create your admin' })).toBeVisible()
+})
+
 test('setup sends a real SMTP test request before final confirmation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   let sent = false
   await page.route('**/api/v1/setup/', route => route.fulfill({ json: { available: true } }))
   await page.route('**/api/v1/setup/smtp-test/', route => {
     expect(route.request().postDataJSON()).toMatchObject({
-      setup_token: 'install-token',
+      setup_token: 'install-token-with-at-least-32-chars',
       recipient: 'owner@example.com',
       smtp: { host: 'smtp.example.com', port: 587, username: 'mailer', password: 'smtp-secret' },
     })
@@ -160,25 +169,27 @@ test('setup sends a real SMTP test request before final confirmation', async ({ 
     return route.fulfill({ json: { detail: 'Test email sent. Check the recipient inbox.' } })
   })
   await page.goto('/')
-  await page.getByLabel('Setup token').fill('install-token')
-  await page.getByLabel('Username').fill('first-admin')
-  await page.getByLabel('Email').fill('admin@example.com')
-  await page.getByLabel('Password').fill('a-strong-unique-password-4938')
+  await page.getByLabel('Installation setup token').fill('install-token-with-at-least-32-chars')
+  await page.getByLabel('Admin username').fill('first-admin')
+  await page.getByLabel('Admin email address').fill('admin@example.com')
+  await page.getByLabel('Admin password').fill('a-strong-unique-password-4938')
   await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByLabel('Workspace name').fill('Nerds Lab')
-  await page.getByLabel('Workspace slug').fill('nerds-lab')
+  await page.getByLabel('Workspace display name').fill('Nerds Lab')
+  await page.getByLabel('Workspace URL slug').fill('nerds-lab')
   await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByLabel('Configure SMTP now').check()
-  await page.getByLabel('From email').fill('hello@example.com')
-  await page.getByLabel('SMTP host').fill('smtp.example.com')
-  await page.getByLabel('SMTP username').fill('mailer')
-  await page.getByLabel('SMTP password').fill('smtp-secret')
-  await page.getByLabel('Recipient email').fill('owner@example.com')
+  await page.getByLabel('Configure an SMTP account now').check()
+  await page.getByLabel('Sender email address (From)').fill('hello@example.com')
+  await page.getByLabel('SMTP server hostname').fill('smtp.example.com')
+  await page.getByLabel('SMTP login username').fill('mailer')
+  await page.getByLabel('SMTP login password').fill('smtp-secret')
+  await page.getByLabel('Test recipient email address').fill('owner@example.com')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: test.info().outputPath('setup-email-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: 'Send test email' }).click()
   await expect(page.getByText('Test email sent. Check the recipient inbox.')).toBeVisible()
   expect(sent).toBe(true)
   await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByText('A test email was sent. Check the inbox to confirm delivery.')).toBeVisible()
+  await expect(page.getByText('The SMTP server accepted a test email. Check the recipient inbox to confirm delivery.')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: test.info().outputPath('setup-review-mobile.png'), fullPage: true })
 })
