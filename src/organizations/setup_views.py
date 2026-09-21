@@ -12,8 +12,9 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from .email_security import encrypt_secret
+from .email_service import send_setup_test_email
 from .models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
-from .setup_serializers import InstallationSetupSerializer
+from .setup_serializers import InstallationSetupSerializer, InstallationSmtpTestSerializer
 
 
 class SetupAttemptThrottle(AnonRateThrottle):
@@ -28,6 +29,16 @@ def setup_available():
         and not get_user_model().objects.exists()
         and not Organization.objects.exists()
     )
+
+
+def setup_access_error(request):
+    if not setup_available():
+        return Response({"detail": "Installation setup is unavailable."}, status=status.HTTP_403_FORBIDDEN)
+    supplied = request.data.get("setup_token", "")
+    expected = os.environ["BUBLLIO_SETUP_TOKEN"]
+    if not isinstance(supplied, str) or not hmac.compare_digest(supplied, expected):
+        return Response({"setup_token": ["Invalid setup token."]}, status=status.HTTP_400_BAD_REQUEST)
+    return None
 
 
 class InstallationSetupAPIView(APIView):
@@ -46,13 +57,11 @@ class InstallationSetupAPIView(APIView):
     @transaction.atomic
     def post(self, request):
         state = InstallationState.objects.select_for_update().get(pk=1)
-        if not setup_available() or state.completed_at is not None:
+        error = setup_access_error(request)
+        if error is not None:
+            return error
+        if state.completed_at is not None:
             return Response({"detail": "Installation setup is unavailable."}, status=status.HTTP_403_FORBIDDEN)
-
-        supplied = request.data.get("setup_token", "")
-        expected = os.environ["BUBLLIO_SETUP_TOKEN"]
-        if not isinstance(supplied, str) or not hmac.compare_digest(supplied, expected):
-            return Response({"setup_token": ["Invalid setup token."]}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = InstallationSetupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -85,3 +94,25 @@ class InstallationSetupAPIView(APIView):
         state.completed_at = timezone.now()
         state.save(update_fields=["completed_at"])
         return Response({"detail": "Installation complete. Sign in with your new admin account."}, status=status.HTTP_201_CREATED)
+
+
+class InstallationSmtpTestAPIView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [SetupAttemptThrottle]
+
+    def post(self, request):
+        error = setup_access_error(request)
+        if error is not None:
+            return error
+        serializer = InstallationSmtpTestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        smtp = serializer.validated_data["smtp"]
+        try:
+            send_setup_test_email(smtp=smtp, recipient=serializer.validated_data["recipient"])
+        except Exception:
+            return Response(
+                {"detail": "Test email could not be sent. Check the SMTP settings and recipient."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({"detail": "Test email sent. Check the recipient inbox."})

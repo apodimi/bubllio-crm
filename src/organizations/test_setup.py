@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .email_security import decrypt_secret
+from .email_service import send_setup_test_email
 from .models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 
 
@@ -17,6 +18,7 @@ class InstallationSetupTests(APITestCase):
     def setUp(self):
         cache.clear()
         self.url = reverse("installation-setup")
+        self.smtp_test_url = reverse("installation-smtp-test")
         self.payload = {
             "setup_token": self.setup_token,
             "username": "first-admin",
@@ -107,3 +109,101 @@ class InstallationSetupTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(get_user_model().objects.exists())
         self.assertFalse(Organization.objects.exists())
+
+    def test_setup_test_email_uses_supplied_recipient_without_saving(self):
+        smtp = {
+            "name": "Primary", "host": "smtp.example.com", "port": 587,
+            "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
+            "use_tls": True, "use_ssl": False,
+        }
+        with patch("organizations.setup_views.send_setup_test_email") as send:
+            response = self.client.post(
+                self.smtp_test_url,
+                {"setup_token": self.setup_token, "smtp": smtp, "recipient": "admin@example.com"},
+                format="json",
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["detail"], "Test email sent. Check the recipient inbox.")
+        send.assert_called_once()
+        self.assertEqual(send.call_args.kwargs["recipient"], "admin@example.com")
+        self.assertEqual(send.call_args.kwargs["smtp"]["password"], "smtp-secret")
+        self.assertFalse(EmailAccount.objects.exists())
+        self.assertFalse(get_user_model().objects.exists())
+
+    def test_setup_test_email_helper_sends_message(self):
+        smtp = {
+            "host": "smtp.example.com", "port": 465, "username": "mailer",
+            "password": "smtp-secret", "from_email": "hello@example.com",
+            "from_name": "Bubllio", "use_tls": False, "use_ssl": True,
+        }
+        with patch("organizations.email_service.get_connection") as get_connection, patch(
+            "organizations.email_service.EmailMessage"
+        ) as message_class:
+            message_class.return_value.send.return_value = 1
+            send_setup_test_email(smtp=smtp, recipient="admin@example.com")
+        get_connection.assert_called_once_with(
+            backend="django.core.mail.backends.smtp.EmailBackend",
+            host="smtp.example.com", port=465, username="mailer",
+            password="smtp-secret", use_tls=False, use_ssl=True,
+            timeout=10, fail_silently=False,
+        )
+        message_class.assert_called_once_with(
+            subject="Bubllio CRM setup test email",
+            body="Your SMTP settings sent this test email successfully. You can finish setting up Bubllio CRM.",
+            from_email="Bubllio <hello@example.com>",
+            to=["admin@example.com"],
+            connection=get_connection.return_value,
+        )
+        message_class.return_value.send.assert_called_once_with(fail_silently=False)
+
+    def test_setup_test_email_rejects_zero_messages_sent(self):
+        smtp = {
+            "host": "smtp.example.com", "port": 587, "username": "mailer",
+            "password": "smtp-secret", "from_email": "hello@example.com",
+        }
+        with patch("organizations.email_service.get_connection"), patch(
+            "organizations.email_service.EmailMessage"
+        ) as message_class:
+            message_class.return_value.send.return_value = 0
+            with self.assertRaises(RuntimeError):
+                send_setup_test_email(smtp=smtp, recipient="admin@example.com")
+
+    def test_setup_test_email_rejects_invalid_token_without_sending(self):
+        with patch("organizations.setup_views.send_setup_test_email") as send:
+            response = self.client.post(self.smtp_test_url, {"setup_token": "wrong"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        send.assert_not_called()
+
+    def test_setup_test_email_validates_recipient(self):
+        smtp = {
+            "name": "Primary", "host": "smtp.example.com", "port": 587,
+            "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
+        }
+        with patch("organizations.setup_views.send_setup_test_email") as send:
+            response = self.client.post(
+                self.smtp_test_url,
+                {"setup_token": self.setup_token, "smtp": smtp, "recipient": "not-an-email"}, format="json",
+            )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        send.assert_not_called()
+
+    def test_setup_test_email_returns_generic_error_and_keeps_setup_open(self):
+        smtp = {
+            "name": "Primary", "host": "smtp.example.com", "port": 587,
+            "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
+        }
+        with patch("organizations.setup_views.send_setup_test_email", side_effect=RuntimeError("secret-details")):
+            response = self.client.post(
+                self.smtp_test_url,
+                {"setup_token": self.setup_token, "smtp": smtp, "recipient": "admin@example.com"}, format="json",
+            )
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertNotIn("secret-details", str(response.data))
+        self.assertTrue(self.client.get(self.url).data["available"])
+
+    def test_setup_test_email_closes_after_setup(self):
+        self.assertEqual(self.client.post(self.url, self.payload, format="json").status_code, status.HTTP_201_CREATED)
+        with patch("organizations.setup_views.send_setup_test_email") as send:
+            response = self.client.post(self.smtp_test_url, {"setup_token": self.setup_token}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        send.assert_not_called()

@@ -45,7 +45,8 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 
 - Login/logout using the backend's REST JWT endpoints.
 - First-run setup for the initial Django admin, workspace, and optional SMTP
-  account; hidden once an installation is initialized.
+  account; a four-step wizard can send a real SMTP test email to a chosen
+  recipient before final confirmation. Setup is hidden after initialization.
 - Organization listing, creation, selection and direct workspace URLs.
 - Workspace overview with live company/contact/enabled-rule counts.
 - Company and contact lists, local search and creation forms.

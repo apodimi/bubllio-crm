@@ -14,6 +14,7 @@ debugging a browser login.
 | POST | `/api/v1/auth/logout/` | access Bearer token | blacklist the submitted refresh token |
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
+| POST | `/api/v1/setup/smtp-test/` | server-side setup token in JSON | send a real test email with unsaved SMTP settings |
 
 The Django admin continues to use session authentication at `/admin/`. The API
 does not use browser sessions for normal REST requests.
@@ -28,6 +29,14 @@ email-account fields including its password. SMTP requires a valid server-side
 `BUBLLIO_EMAIL_ENCRYPTION_KEY`. Success returns `201` and permanently closes
 setup in that database. The API rate-limits setup POST attempts. See
 [Getting Started](../getting-started.md) for the complete operator procedure.
+
+The SMTP test request contains `setup_token`, `recipient` (a valid email
+address), and the same `smtp` object accepted by setup. It opens an SMTP
+connection, authenticates, and sends one test message. It does not persist an
+email account or consume the setup flow. Success (`200`) means the SMTP server
+accepted the message, not that the recipient inbox delivered it. Network or
+authentication failures return a generic `502` without exposing credentials.
+The endpoint closes as soon as installation setup closes.
 
 ## Login with curl
 

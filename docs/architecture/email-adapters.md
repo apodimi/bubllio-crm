@@ -1,12 +1,13 @@
 # Email Sending: Current Behavior and Direction
 
-There are currently two separate sending paths. Configuring an organization SMTP
+There are currently three separate sending paths. Configuring an organization SMTP
 account does not switch automation emails to that account.
 
 | Caller | Implementation | Transport |
 |---|---|---|
 | Automation action and manual automation test | `automations/services.py` calls Django `send_mail` | Global backend, currently console |
 | Email account test endpoint | `organizations/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
+| First-run setup test email | `organizations/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
 
 The first path prints email in the terminal with checked-in settings. The second
 attempts a real network send. Tests use mocked or test email boundaries.
@@ -15,7 +16,12 @@ attempts a real network send. Tests use mocked or test email boundaries.
 
 Owners and administrators manage accounts through the API; authorized staff can
 use Django admin. The first-run frontend can create one optional SMTP account;
-ongoing account management is not yet available there.
+ongoing account management is not yet available there. Before completing setup,
+the frontend can send a real test email through
+`POST /api/v1/setup/smtp-test/` using unsaved settings and a recipient supplied
+by the operator. The test does not persist credentials or switch automation
+emails to SMTP. A successful response means the SMTP server accepted the
+message; delivery still needs to be checked in the inbox.
 
 ```text
 GET    /api/v1/organizations/<organization_id>/email-accounts/

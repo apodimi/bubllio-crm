@@ -29,3 +29,9 @@ class InstallationSetupSerializer(serializers.Serializer):
         except ValidationError as exc:
             raise serializers.ValidationError({"password": exc.messages}) from exc
         return attrs
+
+
+class InstallationSmtpTestSerializer(serializers.Serializer):
+    setup_token = serializers.CharField(write_only=True, trim_whitespace=False)
+    recipient = serializers.EmailField()
+    smtp = EmailAccountSerializer()

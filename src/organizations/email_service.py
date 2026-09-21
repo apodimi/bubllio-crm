@@ -5,6 +5,33 @@ from .email_security import decrypt_secret
 from .models import EmailAccount
 
 
+def send_setup_test_email(*, smtp, recipient):
+    """Send a real test email with unsaved first-run SMTP settings."""
+    connection = get_connection(
+        backend="django.core.mail.backends.smtp.EmailBackend",
+        host=smtp["host"],
+        port=smtp["port"],
+        username=smtp["username"],
+        password=smtp["password"],
+        use_tls=smtp.get("use_tls", True),
+        use_ssl=smtp.get("use_ssl", False),
+        timeout=10,
+        fail_silently=False,
+    )
+    from_email = smtp["from_email"]
+    if smtp.get("from_name"):
+        from_email = f'{smtp["from_name"]} <{from_email}>'
+    message = EmailMessage(
+        subject="Bubllio CRM setup test email",
+        body="Your SMTP settings sent this test email successfully. You can finish setting up Bubllio CRM.",
+        from_email=from_email,
+        to=[recipient],
+        connection=connection,
+    )
+    if message.send(fail_silently=False) != 1:
+        raise RuntimeError("SMTP test email was not accepted for delivery.")
+
+
 def send_test_email(*, account: EmailAccount, recipient: str):
     connection = get_connection(
         backend="django.core.mail.backends.smtp.EmailBackend",

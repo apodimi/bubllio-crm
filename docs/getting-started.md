@@ -70,11 +70,17 @@ and a server-side setup token is configured. Enter the token, first admin
 username/email/password, and first workspace name/slug. This creates a Django
 superuser who is also the workspace owner. Sign in with that account afterward.
 
-SMTP is optional. To add it during setup, first set
+SMTP is optional. The setup screen has four steps: Admin, Workspace, Email, and
+Review. You can move back without losing entered values, skip SMTP, and review
+the details before creating anything. To add SMTP during setup, first set
 `BUBLLIO_EMAIL_ENCRYPTION_KEY` on the server as described in
 [Email Sending](architecture/email-adapters.md). Setup stores the SMTP password
-encrypted in the existing organization email-account model. It does not send a
-test email or route automation emails through that account. You may skip SMTP
+encrypted in the existing organization email-account model only when you finish.
+The Email step has a **Send test email** button: enter a recipient address and
+it sends a real message using the currently entered settings. A successful API
+response means the SMTP server accepted the message; check the inbox to verify
+delivery. The test does not save the account and can be skipped. Setup does not
+route automation emails through that account. You may skip SMTP
 and configure it later via the authenticated organization API or Django admin.
 
 The endpoint is rate-limited, checks the setup token, and closes after success.

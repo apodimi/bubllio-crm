@@ -8,3 +8,7 @@ export function useSetupStatus() {
 export function useCompleteSetup() {
   return useMutation({ mutationFn: setupService.complete })
 }
+
+export function useTestSmtpConnection() {
+  return useMutation({ mutationFn: setupService.testSmtp })
+}
