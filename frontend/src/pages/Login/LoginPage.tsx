@@ -2,11 +2,13 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
+import { useNavigate } from '@tanstack/react-router'
 import { BrandLogo } from '../../components/common/BrandLogo'
 import { useAuth } from '../../features/auth'
 
 export function LoginPage() {
   const auth = useAuth()
+  const navigate = useNavigate()
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -14,7 +16,11 @@ export function LoginPage() {
     const form = event.currentTarget
     const values = new FormData(form)
     setPending(true); setError('')
-    try { await auth.login(String(values.get('username')), String(values.get('password'))); form.reset() }
+    try {
+      await auth.login(String(values.get('username')), String(values.get('password')))
+      form.reset()
+      await navigate({ to: '/', replace: true })
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not sign in.') }
     finally { setPending(false) }
   }

@@ -35,6 +35,8 @@ form; otherwise create a user with `uv run python src/manage.py createsuperuser`
 and sign in with that Django username and password. The token is entered into
 the form and must never be placed in a `VITE_*` variable. See
 [Getting Started](../docs/getting-started.md) for the secure setup steps.
+The wizard and successful sign-in both navigate to `/`, even when setup was
+opened from another URL such as `/login`.
 Create a workspace, add companies, and then add contacts linked to those companies.
 No seed data or external auth account is required.
 
@@ -46,7 +48,7 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 
 - Login/logout using the backend's REST JWT endpoints.
 - First-run setup for the initial Django admin, workspace, and optional SMTP
-  account; a four-step wizard can send a real SMTP test email to a chosen
+account; a four-step wizard can send a real SMTP test email to a chosen
   recipient before final confirmation. Each step validates its visible fields
   and shows errors inline. Setup is hidden after initialization.
 - Organization listing, creation, selection and direct workspace URLs.

@@ -19,9 +19,13 @@ import { SetupPage } from '../../pages/Setup/SetupPage'
 export function RootLayout() {
   const auth = useAuth()
   const setup = useSetupStatus()
+  const navigate = useNavigate()
   if (setup.isPending) return <Loading />
   if (setup.isError) return <Failure error={setup.error} retry={() => void setup.refetch()} />
-  if (setup.data.available) return <SetupPage onComplete={() => void setup.refetch()} />
+  if (setup.data.available) return <SetupPage onComplete={() => {
+    void navigate({ to: '/', replace: true })
+    void setup.refetch()
+  }} />
   return auth.username ? <Shell /> : <LoginPage />
 }
 function Shell() {
