@@ -1,5 +1,31 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
+import type { StateStorage } from 'zustand/middleware'
+
+const memoryStorage = new Map<string, string>()
+const fallbackStorage: StateStorage = {
+  getItem: (name) => memoryStorage.get(name) ?? null,
+  setItem: (name, value) => {
+    memoryStorage.set(name, value)
+  },
+  removeItem: (name) => {
+    memoryStorage.delete(name)
+  },
+}
+
+function getSessionStorage(): StateStorage {
+  try {
+    const storage = globalThis.sessionStorage
+    const probe = '__bubllio_storage_probe__'
+    storage.setItem(probe, '1')
+    storage.removeItem(probe)
+    return storage
+  } catch {
+    return fallbackStorage
+  }
+}
+
+const authStorage = createJSONStorage(getSessionStorage)
 
 export interface AuthUser {
   id: number
@@ -28,12 +54,12 @@ export const useAuthStore = create<AuthState>()(
       setAccessToken: (accessToken) => set({ accessToken }),
       clearSession: () => {
         set({ accessToken: null, refreshToken: null, user: null })
-        void useAuthStore.persist.clearStorage()
+        void authStorage?.removeItem('bubllio-auth')
       },
     }),
     {
       name: 'bubllio-auth',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: authStorage,
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
