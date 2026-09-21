@@ -106,6 +106,34 @@ the authority on whether setup is available.
 
 ## Verification
 
+## Formatting rules
+
+Prettier is the source of truth for frontend formatting. Before opening a PR,
+run `npm run format`; CI and reviewers use `npm run format:check` to verify that
+the working tree is already formatted.
+
+- Keep one logical JSX element or statement per readable line; do not compress
+  pages, forms, hooks, or route definitions into one-line expressions.
+- Use two spaces, single quotes, no semicolons, trailing commas, and a 100
+  character print width. These values live in `.prettierrc.json`.
+- Let Prettier wrap JSX props and arrays. Do not manually defeat wrapping with
+  long inline `sx` objects or nested ternaries; extract a named component or
+  constant when a block remains difficult to scan.
+- Keep imports grouped by external package, feature/domain, then relative local
+  modules. ESLint handles correctness; Prettier handles whitespace and layout.
+- Generated output and test artifacts are ignored by `.prettierignore` and must
+  never be formatted or committed.
+
+The expected contributor loop is:
+
+```bash
+npm run format
+npm run lint
+npm run format:check
+npm test
+npm run build
+```
+
 Every request or routing change should pass:
 
 ```bash

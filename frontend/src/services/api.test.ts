@@ -14,10 +14,12 @@ it('accepts only same-origin API base paths', () => {
 })
 
 it('keeps the JWT session in the Zustand store and clears it on logout', () => {
-  useAuthStore.getState().setSession(
-    { access: 'access-token', refresh: 'refresh-token' },
-    { id: 1, username: 'demo', email: 'demo@example.com', is_superuser: false },
-  )
+  useAuthStore
+    .getState()
+    .setSession(
+      { access: 'access-token', refresh: 'refresh-token' },
+      { id: 1, username: 'demo', email: 'demo@example.com', is_superuser: false },
+    )
   expect(useAuthStore.getState().accessToken).toBe('access-token')
   expect(useAuthStore.getState().refreshToken).toBe('refresh-token')
   useAuthStore.getState().clearSession()

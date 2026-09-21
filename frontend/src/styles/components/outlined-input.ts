@@ -6,10 +6,9 @@ export const outlinedInput: Components<Theme>['MuiOutlinedInput'] = {
     root: ({ theme }) => ({
       backgroundColor: theme.palette.background.paper,
       borderRadius: 6,
-      transition: theme.transitions.create(
-        ['background-color', 'border-color', 'box-shadow'],
-        { duration: theme.transitions.duration.shorter },
-      ),
+      transition: theme.transitions.create(['background-color', 'border-color', 'box-shadow'], {
+        duration: theme.transitions.duration.shorter,
+      }),
       '&:hover .MuiOutlinedInput-notchedOutline': {
         borderColor: alpha(theme.palette.text.primary, 0.42),
       },

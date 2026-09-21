@@ -5,8 +5,18 @@ const orgs = [
   { id: 'beta', name: 'Beta Studio', slug: 'beta', current_user_role: 'viewer' },
 ]
 async function mockApi(page: Page) {
-  const companies = [{ id: 'co-a', organization: 'alpha', name: 'Acme Ltd', email: 'hello@example.com', phone_number: '', website: '', lifecycle_stage: 'lead' }]
-  await page.route('**/api/v1/**', async route => {
+  const companies = [
+    {
+      id: 'co-a',
+      organization: 'alpha',
+      name: 'Acme Ltd',
+      email: 'hello@example.com',
+      phone_number: '',
+      website: '',
+      lifecycle_stage: 'lead',
+    },
+  ]
+  await page.route('**/api/v1/**', async (route) => {
     const path = new URL(route.request().url()).pathname
     if (path === '/api/v1/setup/' && route.request().method() === 'GET') {
       return route.fulfill({ json: { available: false } })
@@ -15,26 +25,43 @@ async function mockApi(page: Page) {
       return route.fulfill({ json: { access: 'access-token', refresh: 'refresh-token' } })
     }
     if (path === '/api/v1/auth/me/') {
-      return route.fulfill({ json: { id: 1, username: 'demo', email: 'demo@example.com', is_superuser: false, organizations: orgs } })
+      return route.fulfill({
+        json: {
+          id: 1,
+          username: 'demo',
+          email: 'demo@example.com',
+          is_superuser: false,
+          organizations: orgs,
+        },
+      })
     }
     if (path === '/api/v1/auth/token/refresh/') {
       return route.fulfill({ json: { access: 'access-token', refresh: 'refresh-token' } })
     }
-    if (!route.request().headers().authorization) return route.fulfill({ status: 403, json: { detail: 'Authentication required' } })
+    if (!route.request().headers().authorization)
+      return route.fulfill({ status: 403, json: { detail: 'Authentication required' } })
     if (path === '/api/v1/organizations/') return route.fulfill({ json: orgs })
     if (path === '/api/v1/organizations/alpha/') return route.fulfill({ json: orgs[0] })
     if (path === '/api/v1/organizations/beta/') return route.fulfill({ json: orgs[1] })
     if (path === '/api/v1/organizations/alpha/companies/') {
       if (route.request().method() === 'POST') {
         const body = route.request().postDataJSON()
-        if (body.name === 'Invalid') return route.fulfill({ status: 400, json: { name: ['Please choose another name.'] } })
+        if (body.name === 'Invalid')
+          return route.fulfill({ status: 400, json: { name: ['Please choose another name.'] } })
         companies.push({ ...body, id: 'co-new', organization: 'alpha' })
         return route.fulfill({ status: 201, json: companies[companies.length - 1] })
       }
       return route.fulfill({ json: companies })
     }
-    if (path === '/api/v1/organizations/beta/companies/') return route.fulfill({ json: [{ ...companies[0], id: 'co-b', organization: 'beta', name: 'Beta Only' }] })
-    if (path === '/api/v1/organizations/alpha/contacts/' && route.request().method() === 'POST') return route.fulfill({ status: 201, json: { id: 'contact-a', ...route.request().postDataJSON() } })
+    if (path === '/api/v1/organizations/beta/companies/')
+      return route.fulfill({
+        json: [{ ...companies[0], id: 'co-b', organization: 'beta', name: 'Beta Only' }],
+      })
+    if (path === '/api/v1/organizations/alpha/contacts/' && route.request().method() === 'POST')
+      return route.fulfill({
+        status: 201,
+        json: { id: 'contact-a', ...route.request().postDataJSON() },
+      })
     return route.fulfill({ json: [] })
   })
 }
@@ -51,7 +78,8 @@ async function openAlpha(page: Page) {
 }
 test.beforeEach(async ({ page }) => mockApi(page))
 test('login, tenant switch, permissions and logout isolate data', async ({ page }) => {
-  await login(page); await openAlpha(page)
+  await login(page)
+  await openAlpha(page)
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
   await expect(page.getByRole('cell', { name: 'Acme Ltd' })).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('companies-desktop.png'), fullPage: true })
@@ -66,7 +94,8 @@ test('login, tenant switch, permissions and logout isolate data', async ({ page 
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0])
 })
 test('creates company, handles validation and refreshes list', async ({ page }) => {
-  await login(page); await openAlpha(page)
+  await login(page)
+  await openAlpha(page)
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
   await page.getByRole('button', { name: 'Add company' }).click()
   await page.getByLabel('Company name', { exact: false }).fill('Invalid')
@@ -80,29 +109,37 @@ test('creates company, handles validation and refreshes list', async ({ page }) 
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 test('contact creation uses a company from the selected workspace', async ({ page }) => {
-  await login(page); await openAlpha(page)
+  await login(page)
+  await openAlpha(page)
   await page.getByRole('link', { name: 'Contacts', exact: true }).click()
   await page.getByRole('button', { name: 'Add contact' }).click()
   await page.getByRole('combobox', { name: 'Company' }).click()
   await expect(page.getByRole('option', { name: 'Beta Only' })).toHaveCount(0)
   await page.getByRole('option', { name: 'Acme Ltd' }).click()
   await page.getByLabel('First name', { exact: false }).fill('Maria')
-  const sent = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/contacts/'))
+  const sent = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/contacts/'),
+  )
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   expect((await sent).postDataJSON()).toMatchObject({ company: 'co-a', first_name: 'Maria' })
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 test('mobile navigation works without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await login(page); await openAlpha(page)
+  await login(page)
+  await openAlpha(page)
   await page.getByRole('button', { name: 'Open navigation' }).click()
   await page.getByRole('link', { name: 'Contacts', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
   await page.screenshot({ path: test.info().outputPath('contacts-mobile.png'), fullPage: true })
 })
 test('invalid login remains on the sign-in screen', async ({ page }) => {
-  await page.route('**/api/v1/auth/token/', route => route.fulfill({ status: 401, json: { detail: 'Invalid credentials' } }))
+  await page.route('**/api/v1/auth/token/', (route) =>
+    route.fulfill({ status: 401, json: { detail: 'Invalid credentials' } }),
+  )
   await page.goto('/')
   await page.getByLabel('Username').fill('bad')
   await page.getByLabel('Password').fill('bad')
@@ -111,7 +148,9 @@ test('invalid login remains on the sign-in screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
 })
 
-test('a signed-in user keeps the session when opening /login from the address bar', async ({ page }) => {
+test('a signed-in user keeps the session when opening /login from the address bar', async ({
+  page,
+}) => {
   await login(page)
   await page.goto('/login')
   await expect(page).toHaveURL('/')
@@ -123,7 +162,7 @@ test('a signed-in user keeps the session when opening /login from the address ba
 
 test('first-run setup creates an admin and then opens sign in', async ({ page }) => {
   let completed = false
-  await page.route('**/api/v1/setup/', async route => {
+  await page.route('**/api/v1/setup/', async (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill({ json: { available: !completed } })
     }
@@ -163,7 +202,7 @@ test('first-run setup creates an admin and then opens sign in', async ({ page })
 })
 
 test('setup explains invalid fields before moving to the next step', async ({ page }) => {
-  await page.route('**/api/v1/setup/', route => route.fulfill({ json: { available: true } }))
+  await page.route('**/api/v1/setup/', (route) => route.fulfill({ json: { available: true } }))
   await page.goto('/')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByText('Enter the full setup token from the server.')).toBeVisible()
@@ -174,8 +213,8 @@ test('setup explains invalid fields before moving to the next step', async ({ pa
 test('setup sends a real SMTP test request before final confirmation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   let sent = false
-  await page.route('**/api/v1/setup/', route => route.fulfill({ json: { available: true } }))
-  await page.route('**/api/v1/setup/smtp-test/', route => {
+  await page.route('**/api/v1/setup/', (route) => route.fulfill({ json: { available: true } }))
+  await page.route('**/api/v1/setup/smtp-test/', (route) => {
     expect(route.request().postDataJSON()).toMatchObject({
       setup_token: 'install-token-with-at-least-32-chars',
       recipient: 'owner@example.com',
@@ -199,29 +238,61 @@ test('setup sends a real SMTP test request before final confirmation', async ({ 
   await page.getByLabel('SMTP login username').fill('mailer')
   await page.getByLabel('SMTP login password').fill('smtp-secret')
   await page.getByLabel('Test recipient email address').fill('owner@example.com')
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
   await page.screenshot({ path: test.info().outputPath('setup-email-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: 'Send test email' }).click()
   await expect(page.getByText('Test email sent. Check the recipient inbox.')).toBeVisible()
   expect(sent).toBe(true)
   await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByText('The SMTP server accepted a test email. Check the recipient inbox to confirm delivery.')).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await expect(
+    page.getByText(
+      'The SMTP server accepted a test email. Check the recipient inbox to confirm delivery.',
+    ),
+  ).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
   await page.screenshot({ path: test.info().outputPath('setup-review-mobile.png'), fullPage: true })
 })
 
 test('workspace owner can send an invite with a selected role', async ({ page }) => {
   let sent = false
-  await page.route('**/api/v1/organizations/alpha/members/', route => route.fulfill({ json: [{ id: 'member-1', username: 'demo', email: 'demo@example.com', role: 'owner' }] }))
-  await page.route('**/api/v1/organizations/alpha/invitations/', route => {
+  await page.route('**/api/v1/organizations/alpha/members/', (route) =>
+    route.fulfill({
+      json: [{ id: 'member-1', username: 'demo', email: 'demo@example.com', role: 'owner' }],
+    }),
+  )
+  await page.route('**/api/v1/organizations/alpha/invitations/', (route) => {
     if (route.request().method() === 'POST') {
       expect(route.request().postDataJSON()).toEqual({ email: 'new@example.com', role: 'viewer' })
       sent = true
-      return route.fulfill({ status: 201, json: { id: 'invite-1', email: 'new@example.com', role: 'viewer', expires_at: '2030-01-01T00:00:00Z' } })
+      return route.fulfill({
+        status: 201,
+        json: {
+          id: 'invite-1',
+          email: 'new@example.com',
+          role: 'viewer',
+          expires_at: '2030-01-01T00:00:00Z',
+        },
+      })
     }
-    return route.fulfill({ json: sent ? [{ id: 'invite-1', email: 'new@example.com', role: 'viewer', expires_at: '2030-01-01T00:00:00Z' }] : [] })
+    return route.fulfill({
+      json: sent
+        ? [
+            {
+              id: 'invite-1',
+              email: 'new@example.com',
+              role: 'viewer',
+              expires_at: '2030-01-01T00:00:00Z',
+            },
+          ]
+        : [],
+    })
   })
-  await login(page); await openAlpha(page)
+  await login(page)
+  await openAlpha(page)
   await page.getByRole('link', { name: 'People' }).click()
   await page.getByLabel('Email address').fill('new@example.com')
   await page.getByLabel('Role in this workspace').click()
@@ -232,23 +303,56 @@ test('workspace owner can send an invite with a selected role', async ({ page })
 })
 
 test('first installation superuser can reach workspace invitations', async ({ page }) => {
-  await page.route('**/api/v1/auth/me/', route => route.fulfill({ json: {
-    id: 1, username: 'first-admin', email: 'admin@example.com', is_superuser: true,
-    organizations: [{ ...orgs[0], current_user_role: null }],
-  } }))
-  await page.route('**/api/v1/organizations/', route => route.fulfill({ json: [{ ...orgs[0], current_user_role: null }] }))
-  await page.route('**/api/v1/organizations/alpha/members/', route => route.fulfill({ json: [] }))
-  await page.route('**/api/v1/organizations/alpha/invitations/', route => route.fulfill({ json: [] }))
-  await login(page); await openAlpha(page)
+  await page.route('**/api/v1/auth/me/', (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: 'first-admin',
+        email: 'admin@example.com',
+        is_superuser: true,
+        organizations: [{ ...orgs[0], current_user_role: null }],
+      },
+    }),
+  )
+  await page.route('**/api/v1/organizations/', (route) =>
+    route.fulfill({ json: [{ ...orgs[0], current_user_role: null }] }),
+  )
+  await page.route('**/api/v1/organizations/alpha/members/', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v1/organizations/alpha/invitations/', (route) =>
+    route.fulfill({ json: [] }),
+  )
+  await login(page)
+  await openAlpha(page)
   await page.getByRole('link', { name: 'People' }).click()
   await expect(page.getByRole('heading', { name: 'People & invitations' })).toBeVisible()
 })
 
-test('invite-only registration creates an account and opens the invited workspace', async ({ page }) => {
-  await page.route('**/api/v1/invitations/sample-token/', route => route.fulfill({ json: { email: 'new@example.com', organization_name: 'Alpha Studio', role: 'member', expires_at: '2030-01-01T00:00:00Z' } }))
-  await page.route('**/api/v1/invitations/sample-token/accept/', route => {
-    expect(route.request().postDataJSON()).toEqual({ username: 'new-person', password: 'a-strong-unique-password-4938' })
-    return route.fulfill({ status: 201, json: { organization_id: 'alpha', role: 'member', tokens: { access: 'new-access', refresh: 'new-refresh' } } })
+test('invite-only registration creates an account and opens the invited workspace', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/invitations/sample-token/', (route) =>
+    route.fulfill({
+      json: {
+        email: 'new@example.com',
+        organization_name: 'Alpha Studio',
+        role: 'member',
+        expires_at: '2030-01-01T00:00:00Z',
+      },
+    }),
+  )
+  await page.route('**/api/v1/invitations/sample-token/accept/', (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      username: 'new-person',
+      password: 'a-strong-unique-password-4938',
+    })
+    return route.fulfill({
+      status: 201,
+      json: {
+        organization_id: 'alpha',
+        role: 'member',
+        tokens: { access: 'new-access', refresh: 'new-refresh' },
+      },
+    })
   })
   await page.goto('/invite/sample-token')
   await expect(page.getByRole('heading', { name: 'Join Alpha Studio' })).toBeVisible()
@@ -260,11 +364,23 @@ test('invite-only registration creates an account and opens the invited workspac
 })
 
 test('existing account signs in and accepts a workspace invitation', async ({ page }) => {
-  await page.route('**/api/v1/invitations/existing-token/', route => route.fulfill({ json: { email: 'demo@example.com', organization_name: 'Alpha Studio', role: 'viewer', expires_at: '2030-01-01T00:00:00Z' } }))
-  await page.route('**/api/v1/invitations/existing-token/accept/', route => {
+  await page.route('**/api/v1/invitations/existing-token/', (route) =>
+    route.fulfill({
+      json: {
+        email: 'demo@example.com',
+        organization_name: 'Alpha Studio',
+        role: 'viewer',
+        expires_at: '2030-01-01T00:00:00Z',
+      },
+    }),
+  )
+  await page.route('**/api/v1/invitations/existing-token/accept/', (route) => {
     expect(route.request().headers().authorization).toBe('Bearer access-token')
     expect(route.request().postDataJSON()).toEqual({})
-    return route.fulfill({ status: 201, json: { organization_id: 'alpha', role: 'viewer', tokens: null } })
+    return route.fulfill({
+      status: 201,
+      json: { organization_id: 'alpha', role: 'viewer', tokens: null },
+    })
   })
   await page.goto('/invite/existing-token')
   await page.getByRole('button', { name: 'I have an account' }).click()

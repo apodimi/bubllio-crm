@@ -15,19 +15,26 @@ type Props = Omit<TextFieldProps, 'name' | 'value' | 'onChange' | 'error'> & {
 /** Keeps MUI input state and inline Zod errors consistent across setup steps. */
 export function SetupField({ name, helperText, onValueChange, ...props }: Props) {
   const { control } = useFormContext<SetupFormValues>()
-  return <Controller
-    name={name}
-    control={control}
-    render={({ field, fieldState }) => <TextField
-      {...props}
-      name={field.name}
-      value={field.value}
-      onBlur={field.onBlur}
-      onChange={event => { field.onChange(event); onValueChange?.() }}
-      inputRef={field.ref}
-      error={Boolean(fieldState.error)}
-      helperText={fieldState.error?.message ?? helperText}
-      fullWidth
-    />}
-  />
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState }) => (
+        <TextField
+          {...props}
+          name={field.name}
+          value={field.value}
+          onBlur={field.onBlur}
+          onChange={(event) => {
+            field.onChange(event)
+            onValueChange?.()
+          }}
+          inputRef={field.ref}
+          error={Boolean(fieldState.error)}
+          helperText={fieldState.error?.message ?? helperText}
+          fullWidth
+        />
+      )}
+    />
+  )
 }

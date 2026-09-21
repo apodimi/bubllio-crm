@@ -35,11 +35,14 @@ export const apiClient = axios.create({
 })
 
 function messageFor(status: number, body: unknown) {
-  if (status === 401 || status === 403) return 'Sign-in or permission check failed. Please sign in again or contact your workspace owner.'
+  if (status === 401 || status === 403)
+    return 'Sign-in or permission check failed. Please sign in again or contact your workspace owner.'
   if (status === 404) return 'This resource is unavailable or you do not have access.'
   if (status >= 500) return 'The server could not complete this request. Please try again.'
   if (typeof body === 'object' && body !== null) {
-    return Object.entries(body).map(([key, value]) => key + ': ' + (Array.isArray(value) ? value.join(' ') : String(value))).join(' · ')
+    return Object.entries(body)
+      .map(([key, value]) => key + ': ' + (Array.isArray(value) ? value.join(' ') : String(value)))
+      .join(' · ')
   }
   return 'The request could not be completed.'
 }
@@ -56,7 +59,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     if (!axios.isAxiosError(error) || !error.response) throw error
-    const original = error.config as (NonNullable<typeof error.config> & { _retry?: boolean })
+    const original = error.config as NonNullable<typeof error.config> & { _retry?: boolean }
     const isAuthRoute = original.url?.startsWith('/auth/token/')
     if (error.response.status !== 401 || original._retry || isAuthRoute) throw error
 
@@ -67,13 +70,16 @@ apiClient.interceptors.response.use(
     }
 
     original._retry = true
-    refreshing ??= apiClient.post<RefreshResponse>('/auth/token/refresh/', { refresh })
+    refreshing ??= apiClient
+      .post<RefreshResponse>('/auth/token/refresh/', { refresh })
       .then(({ data }) => {
         useAuthStore.getState().setAccessToken(data.access)
         if (data.refresh) useAuthStore.setState({ refreshToken: data.refresh })
         return data.access
       })
-      .finally(() => { refreshing = null })
+      .finally(() => {
+        refreshing = null
+      })
     try {
       await refreshing
       return apiClient(original)
@@ -84,7 +90,10 @@ apiClient.interceptors.response.use(
   },
 )
 
-export async function request<T>(path: string, options: { signal?: AbortSignal; body?: unknown } = {}): Promise<T> {
+export async function request<T>(
+  path: string,
+  options: { signal?: AbortSignal; body?: unknown } = {},
+): Promise<T> {
   const config: AxiosRequestConfig = {
     url: path,
     method: options.body === undefined ? 'GET' : 'POST',

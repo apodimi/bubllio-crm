@@ -11,10 +11,11 @@ const organizationsQuery = queryOptions({
   queryFn: ({ signal }) => organizationService.list(signal),
 })
 
-const organizationQuery = (id: string) => queryOptions({
-  queryKey: organizationKeys.detail(id),
-  queryFn: ({ signal }) => organizationService.get(id, signal),
-})
+const organizationQuery = (id: string) =>
+  queryOptions({
+    queryKey: organizationKeys.detail(id),
+    queryFn: ({ signal }) => organizationService.get(id, signal),
+  })
 
 export const useOrganizations = () => useQuery(organizationsQuery)
 export const useOrganization = (id: string) => useQuery(organizationQuery(id))

@@ -94,13 +94,13 @@ argument for palette, shape, spacing, or typography values.
 
 ## Which file should change?
 
-| Need | File |
-|---|---|
-| Change the brand palette or font | `brand.ts` |
-| Change global MUI component appearance | its file in `components/` |
-| Register a new global MUI override | `components/index.ts` |
-| Change layout spacing for one screen | the relevant component/page |
-| Add a reusable visual component | `components/common/` |
+| Need                                   | File                        |
+| -------------------------------------- | --------------------------- |
+| Change the brand palette or font       | `brand.ts`                  |
+| Change global MUI component appearance | its file in `components/`   |
+| Register a new global MUI override     | `components/index.ts`       |
+| Change layout spacing for one screen   | the relevant component/page |
+| Add a reusable visual component        | `components/common/`        |
 
 After a theme change, run lint, unit tests, build, and Playwright. Review both
 desktop and mobile screenshots because automated tests validate behavior, not

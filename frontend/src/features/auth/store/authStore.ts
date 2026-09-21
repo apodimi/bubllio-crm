@@ -17,18 +17,28 @@ interface AuthState {
   clearSession: () => void
 }
 
-export const useAuthStore = create<AuthState>()(persist((set) => ({
-  accessToken: null,
-  refreshToken: null,
-  user: null,
-  setSession: (tokens, user) => set({ accessToken: tokens.access, refreshToken: tokens.refresh, user }),
-  setAccessToken: (accessToken) => set({ accessToken }),
-  clearSession: () => {
-    set({ accessToken: null, refreshToken: null, user: null })
-    void useAuthStore.persist.clearStorage()
-  },
-}), {
-  name: 'bubllio-auth',
-  storage: createJSONStorage(() => sessionStorage),
-  partialize: (state) => ({ accessToken: state.accessToken, refreshToken: state.refreshToken, user: state.user }),
-}))
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+      setSession: (tokens, user) =>
+        set({ accessToken: tokens.access, refreshToken: tokens.refresh, user }),
+      setAccessToken: (accessToken) => set({ accessToken }),
+      clearSession: () => {
+        set({ accessToken: null, refreshToken: null, user: null })
+        void useAuthStore.persist.clearStorage()
+      },
+    }),
+    {
+      name: 'bubllio-auth',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        user: state.user,
+      }),
+    },
+  ),
+)

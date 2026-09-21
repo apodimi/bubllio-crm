@@ -9,7 +9,13 @@ export default defineConfig({
   use: {
     baseURL,
     viewport: { width: 1440, height: 1000 },
-    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {},
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+      : {},
   },
-  webServer: { command: `npm run dev -- --port ${port}`, url: baseURL, reuseExistingServer: !process.env.CI },
+  webServer: {
+    command: `npm run dev -- --port ${port}`,
+    url: baseURL,
+    reuseExistingServer: !process.env.CI,
+  },
 })

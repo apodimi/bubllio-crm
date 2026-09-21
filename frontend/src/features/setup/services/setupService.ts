@@ -1,15 +1,15 @@
 import { request } from '../../../services/api'
 
 export type SmtpSettings = {
-    name: string
-    host: string
-    port: number
-    username: string
-    password: string
-    from_email: string
-    use_tls: boolean
-    use_ssl: boolean
-    is_default: boolean
+  name: string
+  host: string
+  port: number
+  username: string
+  password: string
+  from_email: string
+  use_tls: boolean
+  use_ssl: boolean
+  is_default: boolean
 }
 
 export type SetupValues = {

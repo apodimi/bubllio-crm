@@ -48,7 +48,7 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 
 - Login/logout using the backend's REST JWT endpoints.
 - First-run setup for the initial Django admin, workspace, and optional SMTP
-account; a four-step wizard can send a real SMTP test email to a chosen
+  account; a four-step wizard can send a real SMTP test email to a chosen
   recipient before final confirmation. Each step validates its visible fields
   and shows errors inline. Setup is hidden after initialization.
 - Organization listing, creation, selection and direct workspace URLs.
@@ -139,6 +139,17 @@ The Bubllio mark lives in `assets/brand/` and is rendered through the shared
 placing the image or rebuilding the wordmark independently in a page.
 
 ## Verify
+
+Format the frontend before committing. Prettier keeps JSX readable and makes
+diffs predictable for contributors and coding agents:
+
+```bash
+npm run format
+npm run format:check
+```
+
+The formatter configuration is in `.prettierrc.json`; generated folders are in
+`.prettierignore`. Formatting is separate from ESLint: run both.
 
 ```bash
 npm run lint

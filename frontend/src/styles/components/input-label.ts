@@ -15,10 +15,9 @@ export const inputLabel: Components<Theme>['MuiInputLabel'] = {
       maxWidth: '100%',
       overflow: 'visible',
       transform: 'none',
-      transition: theme.transitions.create(
-        ['color'],
-        { duration: theme.transitions.duration.shorter },
-      ),
+      transition: theme.transitions.create(['color'], {
+        duration: theme.transitions.duration.shorter,
+      }),
       '&.MuiInputLabel-shrink': {
         transform: 'none',
       },

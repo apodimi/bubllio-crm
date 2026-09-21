@@ -23,8 +23,14 @@ it('requires valid SMTP details only when enabled', () => {
 
 it('validates SMTP port and test recipient', () => {
   const result = setupSchema.safeParse({
-    ...valid, smtp_enabled: true, smtp_name: 'Primary', smtp_host: 'smtp.example.com',
-    smtp_username: 'mailer', smtp_password: 'secret', smtp_from_email: 'hello@example.com', smtp_port: '99999',
+    ...valid,
+    smtp_enabled: true,
+    smtp_name: 'Primary',
+    smtp_host: 'smtp.example.com',
+    smtp_username: 'mailer',
+    smtp_password: 'secret',
+    smtp_from_email: 'hello@example.com',
+    smtp_port: '99999',
   })
   expect(result.success).toBe(false)
   if (!result.success) expect(result.error.flatten().fieldErrors.smtp_port).toBeDefined()

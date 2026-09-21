@@ -10,5 +10,8 @@ export function useWorkspace() {
 }
 
 export function canCreateRecords(organization: Organization) {
-  return organization.current_user_role === null || ['owner', 'admin', 'member'].includes(organization.current_user_role)
+  return (
+    organization.current_user_role === null ||
+    ['owner', 'admin', 'member'].includes(organization.current_user_role)
+  )
 }
