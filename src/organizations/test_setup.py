@@ -46,6 +46,12 @@ class InstallationSetupTests(APITestCase):
         self.assertEqual(self.client.post(self.url, self.payload, format="json").status_code, status.HTTP_201_CREATED)
         user = get_user_model().objects.get(username="first-admin")
         self.client.force_authenticate(user)
+        policy = self.client.patch(
+            self.settings_url,
+            {"allow_personal_workspaces": True},
+            format="json",
+        )
+        self.assertEqual(policy.status_code, status.HTTP_200_OK)
         response = self.client.post(reverse("personal-workspace"), {}, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["is_personal"])

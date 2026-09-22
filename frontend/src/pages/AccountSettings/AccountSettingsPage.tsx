@@ -55,6 +55,7 @@ export function AccountSettingsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [allowPersonalWorkspaces, setAllowPersonalWorkspaces] = useState(false)
 
   useEffect(() => {
     if (!account) return
@@ -77,6 +78,11 @@ export function AccountSettingsPage() {
     })
     setMarketingConsent(profile.marketing_consent)
   }, [profile])
+  useEffect(() => {
+    if (installation.settings.data) {
+      setAllowPersonalWorkspaces(installation.settings.data.allow_personal_workspaces)
+    }
+  }, [installation.settings.data])
 
   if (accountSettings.settings.isPending || (isSuperuser && installation.settings.isPending))
     return <Loading />
@@ -338,6 +344,19 @@ export function AccountSettingsPage() {
             ) : (
               <Alert severity="info">No installation fallback SMTP is configured yet.</Alert>
             )}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={allowPersonalWorkspaces}
+                  onChange={(event) => {
+                    const enabled = event.target.checked
+                    setAllowPersonalWorkspaces(enabled)
+                    void installation.save.mutateAsync({ allow_personal_workspaces: enabled })
+                  }}
+                />
+              }
+              label="Allow users to create personal workspaces"
+            />
             <Stack component="form" onSubmit={submit} spacing={2}>
               {(['name', 'host', 'port', 'username', 'from_email'] as const).map((field) => (
                 <TextField

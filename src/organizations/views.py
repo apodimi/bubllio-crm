@@ -21,6 +21,12 @@ from .personal_workspace import ensure_personal_workspace
 
 class PersonalWorkspaceAPIView(APIView):
     def post(self, request):
+        state = InstallationState.objects.get(pk=1)
+        if not state.allow_personal_workspaces:
+            return Response(
+                {"detail": "Personal workspaces are disabled by the installation administrator."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         existed = Organization.objects.filter(personal_owner=request.user).exists()
         organization = ensure_personal_workspace(request.user)
         return Response(
@@ -254,13 +260,31 @@ class InstallationSettingsAPIView(APIView):
         return Response({
             "smtp": EmailAccountSerializer(account).data if account else None,
             "configured": account is not None and account.is_active,
+            "allow_personal_workspaces": state.allow_personal_workspaces,
         })
 
     @transaction.atomic
     def patch(self, request):
         state = InstallationState.objects.select_for_update().select_related("fallback_email_account").get(pk=1)
+        allow_personal_workspaces = request.data.get("allow_personal_workspaces")
+        if allow_personal_workspaces is not None and not isinstance(allow_personal_workspaces, bool):
+            return Response(
+                {"allow_personal_workspaces": ["This field must be a boolean."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        smtp_fields = {"name", "host", "port", "username", "password", "from_email"}
+        if allow_personal_workspaces is not None and not smtp_fields.intersection(request.data):
+            state.allow_personal_workspaces = allow_personal_workspaces
+            state.save(update_fields=("allow_personal_workspaces",))
+            account = state.fallback_email_account
+            return Response({
+                "smtp": EmailAccountSerializer(account).data if account else None,
+                "configured": account is not None and account.is_active,
+                "allow_personal_workspaces": state.allow_personal_workspaces,
+            })
         account = state.fallback_email_account
         payload = request.data.copy()
+        payload.pop("allow_personal_workspaces", None)
         payload["is_default"] = True
         payload["is_active"] = True
 
@@ -292,10 +316,14 @@ class InstallationSettingsAPIView(APIView):
 
         if state.fallback_email_account_id != account.id:
             state.fallback_email_account = account
-            state.save(update_fields=("fallback_email_account",))
+        if allow_personal_workspaces is not None:
+            state.allow_personal_workspaces = allow_personal_workspaces
+        if state.fallback_email_account_id != account.id or allow_personal_workspaces is not None:
+            state.save(update_fields=("fallback_email_account", "allow_personal_workspaces"))
         return Response({
             "smtp": EmailAccountSerializer(account).data,
             "configured": account.is_active,
+            "allow_personal_workspaces": state.allow_personal_workspaces,
         })
 
 

@@ -40,6 +40,11 @@ email-account fields including its password. SMTP requires a valid server-side
 setup in that database. The API rate-limits setup POST attempts. See
 [Getting Started](../getting-started.md) for the complete operator procedure.
 
+Installation settings expose the `allow_personal_workspaces` policy. It
+defaults to `false` and can be changed only by the installation administrator.
+When enabled, users may create one personal workspace explicitly; disabling
+the policy does not delete existing personal workspaces.
+
 The SMTP test request contains `setup_token`, `recipient` (a valid email
 address), and the same `smtp` object accepted by setup. It opens an SMTP
 connection, authenticates, and sends one test message. It does not persist an

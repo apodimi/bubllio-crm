@@ -50,6 +50,7 @@ export const organizationService = {
         is_default: boolean
         is_active: boolean
       } | null
+      allow_personal_workspaces: boolean
     }>('/organizations/installation-settings/', { signal }),
   patchInstallationSettings: (body: Record<string, unknown>) =>
     request('/organizations/installation-settings/', { method: 'PATCH', body }),
