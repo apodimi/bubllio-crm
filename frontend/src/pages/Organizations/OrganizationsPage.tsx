@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Box,
@@ -13,21 +14,39 @@ import {
 import AddRounded from '@mui/icons-material/AddRounded'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
 import { organizationKeys, useOrganizations } from '../../features/organizations'
+import { organizationService } from '../../features/organizations/services/organizationService'
 import { Loading, Failure, Empty, PageHeading } from '../../components/common/Feedback'
 import { CreateDialog } from '../../components/common/CreateDialog'
 
 export function OrganizationsPage() {
   const query = useOrganizations()
+  const queryClient = useQueryClient()
+  const personalWorkspace = useMutation({
+    mutationFn: organizationService.createPersonal,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
+  })
   const [create, setCreate] = useState(false)
+  const hasPersonalWorkspace = query.data?.some((org) => org.is_personal) ?? false
   return (
     <>
       <PageHeading
         title="Your workspaces"
         description="A home for every team and every relationship."
         action={
-          <Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreate(true)}>
-            New workspace
-          </Button>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            {!hasPersonalWorkspace && (
+              <Button
+                variant="outlined"
+                onClick={() => void personalWorkspace.mutateAsync()}
+                disabled={personalWorkspace.isPending}
+              >
+                {personalWorkspace.isPending ? 'Creating…' : 'Create personal'}
+              </Button>
+            )}
+            <Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreate(true)}>
+              New shared workspace
+            </Button>
+          </Stack>
         }
       />
       {query.isPending ? (

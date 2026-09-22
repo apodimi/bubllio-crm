@@ -11,12 +11,14 @@ from .views import (
     OrganizationSettingsAPIView,
     OrganizationSettingsOptionsAPIView,
     InstallationSettingsAPIView,
+    PersonalWorkspaceAPIView,
 )
 from .invitation_views import OrganizationInvitationListCreateAPIView
 
 urlpatterns = [
     path("", OrganizationListCreateAPIView.as_view(), name="organization-list"),
     path("installation-settings/", InstallationSettingsAPIView.as_view(), name="installation-settings"),
+    path("personal/", PersonalWorkspaceAPIView.as_view(), name="personal-workspace"),
     path("settings/options/", OrganizationSettingsOptionsAPIView.as_view(), name="organization-settings-options"),
     path("<uuid:organization_id>/", OrganizationDetailAPIView.as_view(), name="organization-detail"),
     path("<uuid:organization_id>/invitations/", OrganizationInvitationListCreateAPIView.as_view(), name="organization-invitation-list"),

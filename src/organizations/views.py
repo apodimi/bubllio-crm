@@ -16,6 +16,17 @@ from .serializers import (
     OrganizationSerializer,
     OrganizationSettingsSerializer,
 )
+from .personal_workspace import ensure_personal_workspace
+
+
+class PersonalWorkspaceAPIView(APIView):
+    def post(self, request):
+        existed = Organization.objects.filter(personal_owner=request.user).exists()
+        organization = ensure_personal_workspace(request.user)
+        return Response(
+            OrganizationSerializer(organization, context={"request": request}).data,
+            status=status.HTTP_200_OK if existed else status.HTTP_201_CREATED,
+        )
 
 
 class OrganizationListCreateAPIView(APIView):

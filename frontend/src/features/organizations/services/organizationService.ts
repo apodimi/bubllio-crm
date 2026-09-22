@@ -5,6 +5,7 @@ export const organizationPath = (id: string) => '/organizations/' + encodeURICom
 
 export const organizationService = {
   list: (signal?: AbortSignal) => request<Organization[]>('/organizations/', { signal }),
+  createPersonal: () => request<Organization>('/organizations/personal/', { body: {} }),
   get: (id: string, signal?: AbortSignal) =>
     request<Organization>(organizationPath(id), { signal }),
   settings: (id: string, signal?: AbortSignal) =>

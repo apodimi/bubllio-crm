@@ -42,6 +42,17 @@ class InstallationSetupTests(APITestCase):
         self.assertEqual(self.client.get(self.url).data, {"available": False})
         self.assertEqual(self.client.post(self.url, self.payload, format="json").status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_personal_workspace_is_opt_in(self):
+        self.assertEqual(self.client.post(self.url, self.payload, format="json").status_code, status.HTTP_201_CREATED)
+        user = get_user_model().objects.get(username="first-admin")
+        self.client.force_authenticate(user)
+        response = self.client.post(reverse("personal-workspace"), {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["is_personal"])
+        again = self.client.post(reverse("personal-workspace"), {}, format="json")
+        self.assertEqual(again.status_code, status.HTTP_200_OK)
+        self.assertEqual(Organization.objects.filter(personal_owner=user).count(), 1)
+
     def test_missing_server_token_disables_setup(self):
         with patch.dict("os.environ", {"BUBLLIO_SETUP_TOKEN": ""}):
             self.assertEqual(self.client.get(self.url).data, {"available": False})
@@ -67,9 +78,7 @@ class InstallationSetupTests(APITestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.check_password(self.payload["password"]))
         self.assertTrue(OrganizationMembership.objects.filter(user=user, organization=organization, role="owner").exists())
-        personal = Organization.objects.get(personal_owner=user)
-        self.assertTrue(personal.is_personal)
-        self.assertTrue(OrganizationMembership.objects.filter(user=user, organization=personal, role="owner").exists())
+        self.assertFalse(Organization.objects.filter(personal_owner=user).exists())
         self.assertTrue(OrganizationSettings.objects.filter(organization=organization).exists())
         self.assertIsNotNone(InstallationState.objects.get(pk=1).completed_at)
         self.assertEqual(self.client.get(self.url).data, {"available": False})

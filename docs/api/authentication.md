@@ -72,7 +72,7 @@ settings use `/api/v1/auth/me/settings/` for email and profile updates and
 requests always return the same generic response whether or not the email
 exists. Reset links are single-use and expire when the user password changes.
 
-After an installation is initialized, every user also receives one private
+After an installation is initialized, users may explicitly create one private
 personal workspace. Shared/team workspaces are separate organizations and are
 visible only through an accepted membership. Personal workspaces cannot invite
 other users, add members, or be deleted; create a regular workspace when a team

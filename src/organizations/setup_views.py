@@ -15,7 +15,6 @@ from .email_security import encrypt_secret
 from .email_service import send_setup_test_email
 from .models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 from .setup_serializers import InstallationSetupSerializer, InstallationSmtpTestSerializer
-from .personal_workspace import ensure_personal_workspace
 
 
 class SetupAttemptThrottle(AnonRateThrottle):
@@ -95,7 +94,6 @@ class InstallationSetupAPIView(APIView):
             state.fallback_email_account = account
         state.completed_at = timezone.now()
         state.save(update_fields=["completed_at", "fallback_email_account"])
-        ensure_personal_workspace(user)
         return Response({"detail": "Installation complete. Sign in with your new admin account."}, status=status.HTTP_201_CREATED)
 
 
