@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
-  Avatar,
   Box,
   Button,
   Divider,
@@ -20,7 +19,6 @@ import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
 import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
 import SettingsRounded from '@mui/icons-material/SettingsRounded'
 import BoltRounded from '@mui/icons-material/BoltRounded'
-import LogoutRounded from '@mui/icons-material/LogoutRounded'
 import { BrandLogo } from '../common/BrandLogo'
 
 type SidebarProps = {
@@ -32,7 +30,6 @@ type SidebarProps = {
   currentRole?: string | null
   onOrganizationChange: (organizationId: string) => void
   onClose: () => void
-  onLogout: () => void
 }
 
 type NavigationItem = {
@@ -57,7 +54,6 @@ export function WorkspaceSidebar({
   currentRole,
   onOrganizationChange,
   onClose,
-  onLogout,
 }: SidebarProps) {
   const canManageWorkspace = isSuperuser || currentRole === 'owner' || currentRole === 'admin'
   const basePath = organizationId ? `/organizations/${organizationId}` : ''
@@ -139,20 +135,6 @@ export function WorkspaceSidebar({
         ))}
       </Select>
       <List>
-        {isSuperuser && (
-          <Link
-            to="/account/settings"
-            style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}
-            onClick={onClose}
-          >
-            <ListItemButton selected={currentPath === '/account/settings'}>
-              <ListItemIcon>
-                <SettingsRounded />
-              </ListItemIcon>
-              <ListItemText primary="Account settings" />
-            </ListItemButton>
-          </Link>
-        )}
         {organizationId &&
           navigationItems.map((item) => (
             <Link
@@ -186,22 +168,9 @@ export function WorkspaceSidebar({
       </Button>
       <Box sx={{ flexGrow: 1 }} />
       <Divider sx={{ my: 2 }} />
-      <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-        <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.main', width: 36, height: 36 }}>
-          {username?.slice(0, 1).toUpperCase()}
-        </Avatar>
-        <Typography variant="body2" noWrap sx={{ flex: 1 }}>
-          {username}
-        </Typography>
-        <Button
-          onClick={onLogout}
-          aria-label="Sign out"
-          startIcon={<LogoutRounded fontSize="small" />}
-          size="small"
-        >
-          Sign out
-        </Button>
-      </Stack>
+      <Typography variant="caption" color="text.secondary" noWrap sx={{ px: 1 }}>
+        Signed in as {username}
+      </Typography>
     </Stack>
   )
 }

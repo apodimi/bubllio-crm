@@ -68,7 +68,6 @@ function Shell() {
       currentRole={currentOrganization?.current_user_role}
       onOrganizationChange={selectOrganization}
       onClose={closeMobileNavigation}
-      onLogout={auth.logout}
     />
   )
 
@@ -95,6 +94,9 @@ function Shell() {
         <WorkspaceHeader
           workspaceName={currentOrganization?.name}
           onOpenNavigation={() => setMobileOpen(true)}
+          username={auth.username}
+          isSuperuser={isSuperuser}
+          onLogout={auth.logout}
         />
         <Box
           component="main"
