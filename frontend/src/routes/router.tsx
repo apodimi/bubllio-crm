@@ -40,6 +40,17 @@ const invite = createRoute({
   path: '/invite/$token',
   component: lazyRouteComponent(() => import('../pages/Invite/InvitePage'), 'InvitePage'),
 })
+const accountSettings = createRoute({
+  getParentRoute: () => root,
+  path: '/account/settings',
+  beforeLoad: () => {
+    if (!useAuthStore.getState().accessToken) throw redirect({ to: '/' })
+  },
+  component: lazyRouteComponent(
+    () => import('../pages/AccountSettings/AccountSettingsPage'),
+    'AccountSettingsPage',
+  ),
+})
 const workspace = createRoute({
   getParentRoute: () => root,
   path: '/organizations/$organizationId',
@@ -86,6 +97,7 @@ export const router = createRouter({
     home,
     login,
     invite,
+    accountSettings,
     workspace.addChildren([overview, companies, contacts, automations, members, settings]),
   ]),
 })

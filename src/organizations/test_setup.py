@@ -19,6 +19,7 @@ class InstallationSetupTests(APITestCase):
         cache.clear()
         self.url = reverse("installation-setup")
         self.smtp_test_url = reverse("installation-smtp-test")
+        self.settings_url = reverse("installation-settings")
         self.payload = {
             "setup_token": self.setup_token,
             "username": "first-admin",
@@ -99,6 +100,36 @@ class InstallationSetupTests(APITestCase):
             self.assertEqual(account.organization.slug, "nerds-lab")
             self.assertNotIn("smtp-secret", account.encrypted_password)
             self.assertEqual(decrypt_secret(account.encrypted_password), "smtp-secret")
+
+    def test_admin_can_view_and_replace_installation_fallback_smtp(self):
+        key = Fernet.generate_key().decode()
+        smtp = {
+            "name": "Primary",
+            "host": "smtp.example.com",
+            "port": 587,
+            "username": "mailer",
+            "password": "smtp-secret",
+            "from_email": "hello@example.com",
+            "use_tls": True,
+            "use_ssl": False,
+            "is_default": True,
+        }
+        with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": key}):
+            self.assertEqual(self.client.post(self.url, {**self.payload, "smtp": smtp}, format="json").status_code, 201)
+            admin = get_user_model().objects.get(username="first-admin")
+            self.client.force_authenticate(admin)
+            response = self.client.get(self.settings_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["smtp"]["host"], "smtp.example.com")
+            response = self.client.patch(
+                self.settings_url,
+                {**smtp, "host": "smtp.new.example.com", "password": "new-secret"},
+                format="json",
+            )
+            self.assertEqual(response.status_code, 200)
+            account = EmailAccount.objects.get()
+            self.assertEqual(account.host, "smtp.new.example.com")
+            self.assertEqual(decrypt_secret(account.encrypted_password), "new-secret")
 
     def test_smtp_without_encryption_key_cannot_create_partial_installation(self):
         with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": ""}):

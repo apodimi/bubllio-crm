@@ -139,6 +139,20 @@ export function WorkspaceSidebar({
         ))}
       </Select>
       <List>
+        {isSuperuser && (
+          <Link
+            to="/account/settings"
+            style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}
+            onClick={onClose}
+          >
+            <ListItemButton selected={currentPath === '/account/settings'}>
+              <ListItemIcon>
+                <SettingsRounded />
+              </ListItemIcon>
+              <ListItemText primary="Account settings" />
+            </ListItemButton>
+          </Link>
+        )}
         {organizationId &&
           navigationItems.map((item) => (
             <Link

@@ -36,4 +36,20 @@ export const organizationService = {
       method: 'PATCH',
       body,
     }),
+  installationSettings: (signal?: AbortSignal) =>
+    request<{
+      configured: boolean
+      smtp: {
+        id: string
+        name: string
+        host: string
+        port: number
+        username: string
+        from_email: string
+        is_default: boolean
+        is_active: boolean
+      } | null
+    }>('/organizations/installation-settings/', { signal }),
+  patchInstallationSettings: (body: Record<string, unknown>) =>
+    request('/organizations/installation-settings/', { method: 'PATCH', body }),
 }
