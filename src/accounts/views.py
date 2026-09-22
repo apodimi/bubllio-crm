@@ -7,9 +7,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 from rest_framework.views import APIView
 
@@ -70,8 +72,63 @@ class PasswordChangeAPIView(APIView):
         return Response({"detail": "Password changed successfully."})
 
 
+class CurrentUserExportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        memberships = request.user.organization_memberships.select_related("organization").order_by("created_at")
+        payload = {
+            "account": {
+                "username": request.user.username,
+                "email": request.user.email,
+                "date_joined": request.user.date_joined,
+            },
+            "profile": {
+                "display_name": profile.display_name,
+                "first_name": profile.first_name,
+                "last_name": profile.last_name,
+                "date_of_birth": profile.date_of_birth,
+                "timezone": profile.timezone,
+                "locale": profile.locale,
+                "marketing_consent": profile.marketing_consent,
+                "privacy_policy_version": profile.privacy_policy_version,
+                "privacy_policy_accepted_at": profile.privacy_policy_accepted_at,
+            },
+            "memberships": [
+                {
+                    "organization_id": str(membership.organization_id),
+                    "organization_name": membership.organization.name,
+                    "role": membership.role,
+                    "created_at": membership.created_at,
+                }
+                for membership in memberships
+            ],
+        }
+        return JsonResponse(payload, json_dumps_params={"default": str}, headers={"Content-Disposition": "attachment; filename=bubllio-account-export.json"})
+
+
+class CurrentUserDeleteAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        password = request.data.get("password", "")
+        if not request.user.check_password(password):
+            return Response({"password": "The password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+        if request.data.get("confirmation") != "DELETE":
+            return Response({"confirmation": "Type DELETE to confirm account deletion."}, status=status.HTTP_400_BAD_REQUEST)
+        owned = request.user.organization_memberships.filter(role="owner").select_related("organization")
+        if owned.exists():
+            names = ", ".join(membership.organization.name for membership in owned)
+            return Response({"detail": f"Transfer ownership before deleting this account: {names}."}, status=status.HTTP_409_CONFLICT)
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class PasswordResetRequestAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)

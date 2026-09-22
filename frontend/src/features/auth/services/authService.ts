@@ -1,4 +1,4 @@
-import { request, type TokenPair } from '../../../services/api'
+import { apiClient, request, type TokenPair } from '../../../services/api'
 import type { Organization } from '../../../types/organization.types'
 
 export interface CurrentUser {
@@ -24,6 +24,7 @@ export const authService = {
       date_of_birth: string | null
       timezone: string
       locale: string
+      marketing_consent: boolean
     }>('/auth/me/settings/', { signal }),
   patchAccountSettings: (body: Record<string, unknown>) =>
     request('/auth/me/settings/', { method: 'PATCH', body }),
@@ -34,4 +35,7 @@ export const authService = {
     request(`/auth/password-reset/${encodeURIComponent(uid)}/${encodeURIComponent(token)}/`, {
       body: { new_password },
     }),
+  exportAccount: () => apiClient.get<Blob>('/auth/me/export/', { responseType: 'blob' }),
+  deleteAccount: (body: { password: string; confirmation: string }) =>
+    request('/auth/me/delete/', { body }),
 }

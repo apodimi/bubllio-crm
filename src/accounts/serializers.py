@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
@@ -37,12 +38,15 @@ class AccountSettingsSerializer(serializers.ModelSerializer):
     date_of_birth = serializers.DateField(source="profile.date_of_birth", required=False, allow_null=True)
     timezone = serializers.CharField(source="profile.timezone", required=False)
     locale = serializers.CharField(source="profile.locale", required=False)
+    marketing_consent = serializers.BooleanField(source="profile.marketing_consent", required=False)
+    privacy_policy_accepted = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = User
         fields = [
             "username", "email", "display_name", "first_name", "last_name",
-            "date_of_birth", "timezone", "locale",
+            "date_of_birth", "timezone", "locale", "marketing_consent",
+            "privacy_policy_accepted",
         ]
         read_only_fields = ("username",)
 
@@ -54,12 +58,22 @@ class AccountSettingsSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop("profile", {})
+        privacy_accepted = validated_data.pop("privacy_policy_accepted", False)
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save(update_fields=("email",))
         profile, _ = UserProfile.objects.get_or_create(user=instance)
         for field, value in profile_data.items():
             setattr(profile, field, value)
+        current_policy_version = getattr(settings, "BUBLLIO_PRIVACY_POLICY_VERSION", "1")
+        if privacy_accepted and (
+            not profile.privacy_policy_accepted_at
+            or profile.privacy_policy_version != current_policy_version
+        ):
+            profile.privacy_policy_version = current_policy_version
+            profile.privacy_policy_accepted_at = timezone.now()
+        if "marketing_consent" in profile_data:
+            profile.marketing_consent_updated_at = timezone.now()
         profile.onboarding_completed_at = timezone.now()
         profile.save()
         return instance

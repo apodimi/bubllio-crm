@@ -15,5 +15,9 @@ export function useAccountSettings() {
     mutationFn: (body: { current_password: string; new_password: string }) =>
       authService.changePassword(body),
   })
-  return { settings, save, changePassword }
+  const deleteAccount = useMutation({
+    mutationFn: (body: { password: string; confirmation: string }) =>
+      authService.deleteAccount(body),
+  })
+  return { settings, save, changePassword, deleteAccount }
 }

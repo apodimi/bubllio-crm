@@ -13,6 +13,8 @@ debugging a browser login.
 | GET | `/api/v1/auth/me/` | access Bearer token | return the current user and visible organizations |
 | GET/PATCH | `/api/v1/auth/me/profile/` | access Bearer token | read or complete the personal onboarding profile |
 | GET/PATCH | `/api/v1/auth/me/settings/` | access Bearer token | read or update email and profile settings |
+| GET | `/api/v1/auth/me/export/` | access Bearer token | download the authenticated user's personal account export |
+| POST | `/api/v1/auth/me/delete/` | access Bearer token | delete the account after password and ownership checks |
 | POST | `/api/v1/auth/me/password/` | access Bearer token | change the current password |
 | POST | `/api/v1/auth/password-reset/` | none | request a generic password-reset email response |
 | POST | `/api/v1/auth/password-reset/<uidb64>/<token>/` | reset token in URL | set a new password from a valid reset link |
@@ -69,6 +71,12 @@ settings use `/api/v1/auth/me/settings/` for email and profile updates and
 `/api/v1/auth/me/password/` for an authenticated password change. Password reset
 requests always return the same generic response whether or not the email
 exists. Reset links are single-use and expire when the user password changes.
+
+Account settings also expose an explicit personal-data export and account
+deletion flow. The export contains account/profile/membership metadata only;
+never tokens, passwords, SMTP secrets or workspace CRM data. Deletion requires
+the current password and the literal confirmation `DELETE`, and owners must
+transfer workspace ownership first.
 
 ## Login with curl
 

@@ -41,6 +41,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 BUBLLIO_APP_URL = os.environ.get("BUBLLIO_APP_URL", "http://127.0.0.1:5173" if DEBUG else "").rstrip("/")
+BUBLLIO_PRIVACY_POLICY_VERSION = os.environ.get("BUBLLIO_PRIVACY_POLICY_VERSION", "2026-09-22")
 
 
 # Application definition
@@ -77,6 +78,7 @@ REST_FRAMEWORK = {
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "installation_setup": "5/min",
     "organization_invitation": "20/day",
+    "password_reset": "5/hour",
 }
 
 SIMPLE_JWT = {

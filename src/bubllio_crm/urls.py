@@ -22,6 +22,8 @@ from organizations.auth_views import CurrentUserAPIView, LogoutAPIView
 from accounts.views import (
     CurrentAccountSettingsAPIView,
     CurrentUserProfileAPIView,
+    CurrentUserExportAPIView,
+    CurrentUserDeleteAPIView,
     PasswordChangeAPIView,
     PasswordResetConfirmAPIView,
     PasswordResetRequestAPIView,
@@ -42,6 +44,8 @@ urlpatterns = [
     path("api/v1/auth/me/profile/", CurrentUserProfileAPIView.as_view(), name="current-user-profile"),
     path("api/v1/auth/me/settings/", CurrentAccountSettingsAPIView.as_view(), name="current-account-settings"),
     path("api/v1/auth/me/password/", PasswordChangeAPIView.as_view(), name="password-change"),
+    path("api/v1/auth/me/export/", CurrentUserExportAPIView.as_view(), name="current-user-export"),
+    path("api/v1/auth/me/delete/", CurrentUserDeleteAPIView.as_view(), name="current-user-delete"),
     path("api/v1/auth/password-reset/", PasswordResetRequestAPIView.as_view(), name="password-reset-request"),
     path("api/v1/auth/password-reset/<uidb64>/<token>/", PasswordResetConfirmAPIView.as_view(), name="password-reset-confirm"),
     path("api/v1/auth/logout/", LogoutAPIView.as_view(), name="logout"),

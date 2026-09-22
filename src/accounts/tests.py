@@ -52,6 +52,36 @@ class UserProfileTests(APITestCase):
         self.assertEqual(self.user.email, "new@example.com")
         self.assertEqual(self.user.profile.display_name, "Maria Example")
 
+    def test_account_settings_records_privacy_and_marketing_consent(self):
+        response = self.client.patch(
+            reverse("current-account-settings"),
+            {"marketing_consent": True, "privacy_policy_accepted": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertTrue(profile.marketing_consent)
+        self.assertIsNotNone(profile.marketing_consent_updated_at)
+        self.assertEqual(profile.privacy_policy_version, "2026-09-22")
+        self.assertIsNotNone(profile.privacy_policy_accepted_at)
+
+    def test_account_export_contains_personal_data_without_credentials(self):
+        response = self.client.get(reverse("current-user-export"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("attachment;", response["Content-Disposition"])
+        payload = response.json()
+        self.assertEqual(payload["account"]["email"], self.user.email)
+        self.assertNotIn("password", payload["account"])
+
+    def test_account_delete_requires_valid_confirmation(self):
+        response = self.client.post(
+            reverse("current-user-delete"),
+            {"password": "test-pass", "confirmation": "DELETE"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(get_user_model().objects.filter(pk=self.user.pk).exists())
+
     def test_authenticated_user_can_change_password(self):
         response = self.client.post(
             reverse("password-change"),

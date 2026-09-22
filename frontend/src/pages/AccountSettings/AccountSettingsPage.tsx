@@ -5,7 +5,13 @@ import {
   Avatar,
   Box,
   Button,
+  Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
   Paper,
   Stack,
   TextField,
@@ -17,6 +23,7 @@ import EmailOutlined from '@mui/icons-material/EmailOutlined'
 import { Failure, Loading } from '../../components/common/Feedback'
 import { useInstallationSettings } from '../../features/organizations/hooks/useInstallationSettings'
 import { useAccountSettings } from '../../features/auth/hooks/useAccountSettings'
+import { authService } from '../../features/auth/services/authService'
 import { useAuthStore } from '../../features/auth/store/authStore'
 
 export function AccountSettingsPage() {
@@ -44,6 +51,10 @@ export function AccountSettingsPage() {
     new_password: '',
     confirm_password: '',
   })
+  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
 
   useEffect(() => {
     if (!account) return
@@ -64,6 +75,7 @@ export function AccountSettingsPage() {
       first_name: profile.first_name,
       last_name: profile.last_name,
     })
+    setMarketingConsent(profile.marketing_consent)
   }, [profile])
 
   if (accountSettings.settings.isPending || (isSuperuser && installation.settings.isPending))
@@ -85,7 +97,11 @@ export function AccountSettingsPage() {
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault()
-    await accountSettings.save.mutateAsync(profileValues)
+    await accountSettings.save.mutateAsync({
+      ...profileValues,
+      marketing_consent: marketingConsent,
+      privacy_policy_accepted: true,
+    })
   }
 
   async function changePassword(event: FormEvent) {
@@ -111,6 +127,26 @@ export function AccountSettingsPage() {
       use_ssl: false,
     })
     setValues((current) => ({ ...current, password: '' }))
+  }
+
+  async function exportAccount() {
+    const response = await authService.exportAccount()
+    const file = response.data
+    const url = URL.createObjectURL(file)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'bubllio-account-export.json'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function deleteAccount() {
+    await accountSettings.deleteAccount.mutateAsync({
+      password: deletePassword,
+      confirmation: deleteConfirmation,
+    })
+    useAuthStore.getState().clearSession()
+    window.location.assign('/')
   }
 
   return (
@@ -183,11 +219,40 @@ export function AccountSettingsPage() {
               }
             />
           </Stack>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={marketingConsent}
+                onChange={(event) => setMarketingConsent(event.target.checked)}
+              />
+            }
+            label="I agree to receive optional product updates by email."
+          />
           <Button type="submit" variant="contained" disabled={accountSettings.save.isPending}>
             {accountSettings.save.isPending ? 'Saving…' : 'Save profile'}
           </Button>
           {accountSettings.save.isError && (
             <Alert severity="error">{accountSettings.save.error.message}</Alert>
+          )}
+        </Stack>
+      </Paper>
+      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
+        <Stack spacing={2}>
+          <Typography variant="h6">Privacy & data</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Download the personal data Bubllio stores for your account, or request account deletion.
+            Workspace CRM data remains controlled by each workspace.
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            <Button variant="outlined" onClick={() => void exportAccount()}>
+              Download my data
+            </Button>
+            <Button color="error" variant="text" onClick={() => setDeleteOpen(true)}>
+              Delete my account
+            </Button>
+          </Stack>
+          {accountSettings.deleteAccount.isError && (
+            <Alert severity="error">{accountSettings.deleteAccount.error.message}</Alert>
           )}
         </Stack>
       </Paper>
@@ -312,6 +377,44 @@ export function AccountSettingsPage() {
           </Stack>
         </Paper>
       )}
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete account?</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              This is permanent. Transfer workspace ownership first if you own a workspace.
+            </Typography>
+            <TextField
+              label="Current password"
+              type="password"
+              value={deletePassword}
+              onChange={(event) => setDeletePassword(event.target.value)}
+              required
+            />
+            <TextField
+              label="Type DELETE to confirm"
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              required
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => void deleteAccount()}
+            disabled={
+              deleteConfirmation !== 'DELETE' ||
+              !deletePassword ||
+              accountSettings.deleteAccount.isPending
+            }
+          >
+            Delete account
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   )
 }
