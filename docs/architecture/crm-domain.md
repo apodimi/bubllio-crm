@@ -41,6 +41,13 @@ An organization owns its CRM data:
 - pending invitations to users who are not members yet
 - organization settings and encrypted SMTP email accounts
 
+Every user also receives one private personal workspace. It is a normal
+tenant for the user's own companies, contacts and automations, but it is marked
+`is_personal` and has a single owner. Personal workspaces cannot be deleted,
+invited to, or given additional members. Team/shared workspaces remain normal
+organizations: users see them only after an accepted invitation (or when they
+create one themselves) and membership roles control access.
+
 ## Company
 
 `Company` is an external business stored inside the CRM.
@@ -117,6 +124,7 @@ Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
 Organization 1 -> 1 OrganizationSettings
 Organization 1 -> many EmailAccounts
+User 1 -> 1 personal Organization
 ```
 
 ## Business Logic

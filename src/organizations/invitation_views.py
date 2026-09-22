@@ -81,6 +81,8 @@ class OrganizationInvitationListCreateAPIView(APIView):
 
     def get(self, request, organization_id):
         organization = self._organization(request, organization_id)
+        if organization.is_personal:
+            return Response([])
         invitations = organization.invitations.filter(accepted_at__isnull=True, expires_at__gt=timezone.now()).order_by("-created_at")
         return Response([{
             "id": str(invite.id), "email": invite.email, "role": invite.role,
@@ -89,6 +91,11 @@ class OrganizationInvitationListCreateAPIView(APIView):
 
     def post(self, request, organization_id):
         organization = self._organization(request, organization_id)
+        if organization.is_personal:
+            return Response(
+                {"detail": "Personal workspaces cannot send invitations."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         requester = get_membership(user=request.user, organization=organization)
         serializer = InvitationCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

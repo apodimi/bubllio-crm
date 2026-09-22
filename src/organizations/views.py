@@ -62,6 +62,11 @@ class OrganizationDetailAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.DELETE_ORGANIZATION,
         )
+        if organization.is_personal:
+            return Response(
+                {"detail": "Personal workspaces cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         organization.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -76,11 +81,18 @@ class OrganizationMembershipListCreateAPIView(APIView):
 
     def get(self, request, organization_id):
         organization = self._organization(request, organization_id)
+        if organization.is_personal:
+            return Response([])
         memberships = organization.memberships.select_related("user").order_by("created_at")
         return Response(OrganizationMembershipSerializer(memberships, many=True).data)
 
     def post(self, request, organization_id):
         organization = self._organization(request, organization_id)
+        if organization.is_personal:
+            return Response(
+                {"detail": "Personal workspaces cannot have additional members."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         requester = get_membership(user=request.user, organization=organization)
         serializer = OrganizationMembershipSerializer(
             data=request.data,

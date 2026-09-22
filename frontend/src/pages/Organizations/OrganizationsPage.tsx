@@ -79,7 +79,8 @@ export function OrganizationsPage() {
                       </Box>
                       <Chip
                         size="small"
-                        label={org.current_user_role ?? 'Superuser'}
+                        label={org.is_personal ? 'Personal' : org.current_user_role ?? 'Shared'}
+                        color={org.is_personal ? 'default' : 'primary'}
                         variant="outlined"
                       />
                     </Stack>

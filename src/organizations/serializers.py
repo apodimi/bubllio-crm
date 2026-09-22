@@ -18,10 +18,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "slug",
+            "is_personal",
             "current_user_role",
             "created_at",
             "updated_at",
         ]
+        read_only_fields = ("id", "is_personal", "created_at", "updated_at")
 
     def get_current_user_role(self, obj):
         request = self.context.get("request")
