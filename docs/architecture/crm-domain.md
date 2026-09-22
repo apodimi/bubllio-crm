@@ -16,6 +16,9 @@ Organization
        -> Contact
   -> Automation
        -> AutomationRun
+
+User
+  -> UserProfile
 ```
 
 ## Organization

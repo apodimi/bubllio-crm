@@ -33,6 +33,8 @@ components with configuration props for hypothetical future screens.
 - React pages compose a screen; they do not call Axios or build API URLs.
 - Feature hooks own TanStack Query keys, fetching, mutations, and invalidation.
 - Zustand owns only client session state and small cross-screen client state.
+- `UserProfile` owns personal onboarding data; `OrganizationMembership` owns
+  workspace role data. Do not put personal fields on membership rows.
 - Material UI theme files own visual tokens and shared component defaults.
 
 When a rule is needed in two layers, the backend remains authoritative. Frontend

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
 
     # local apps
+    'accounts.apps.AccountsConfig',
     'organizations',
     'companies.apps.CompaniesConfig',
     'contacts',

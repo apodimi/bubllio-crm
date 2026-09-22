@@ -18,6 +18,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .email_service import send_invitation_email
 from .models import EmailAccount, InstallationState, OrganizationInvitation, OrganizationMembership
+from accounts.models import UserProfile
 from .permissions import Capability, get_membership, get_organization_for_user
 
 
@@ -40,6 +41,12 @@ class InvitationCreateSerializer(serializers.Serializer):
 class InvitationRegistrationSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True)
+    display_name = serializers.CharField(max_length=255, required=True)
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    timezone = serializers.CharField(max_length=64, default="UTC")
+    locale = serializers.CharField(max_length=20, default="en-us")
 
     def validate_username(self, value):
         user_model = get_user_model()
@@ -162,6 +169,16 @@ class InvitationAcceptAPIView(APIView):
                 username=serializer.validated_data["username"],
                 email=invitation.email,
                 password=serializer.validated_data["password"],
+            )
+            UserProfile.objects.create(
+                user=user,
+                display_name=serializer.validated_data["display_name"],
+                first_name=serializer.validated_data.get("first_name", ""),
+                last_name=serializer.validated_data.get("last_name", ""),
+                date_of_birth=serializer.validated_data.get("date_of_birth"),
+                timezone=serializer.validated_data.get("timezone", "UTC"),
+                locale=serializer.validated_data.get("locale", "en-us"),
+                onboarding_completed_at=timezone.now(),
             )
             refresh = RefreshToken.for_user(user)
             tokens = {"access": str(refresh.access_token), "refresh": str(refresh)}

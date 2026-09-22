@@ -11,6 +11,7 @@ debugging a browser login.
 | POST | `/api/v1/auth/token/` | none | exchange username/password for access and refresh tokens |
 | POST | `/api/v1/auth/token/refresh/` | refresh token in JSON | rotate the refresh token and issue a new access token |
 | GET | `/api/v1/auth/me/` | access Bearer token | return the current user and visible organizations |
+| GET/PATCH | `/api/v1/auth/me/profile/` | access Bearer token | read or complete the personal onboarding profile |
 | POST | `/api/v1/auth/logout/` | access Bearer token | blacklist the submitted refresh token |
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
@@ -56,6 +57,12 @@ the server, and the response includes JWT `tokens` and `organization_id`. An
 existing user signs in and posts an empty JSON body with their Bearer token.
 Their account email must match the invitation. Acceptance creates a membership
 for that workspace only and consumes the link; replay or expiry returns `404`.
+
+New invited users provide a display name, optional first/last names, optional
+date of birth, timezone, and locale during registration. Existing users can
+complete or update the same profile through `/api/v1/auth/me/profile/`. Username
+and email are read-only there; changing email requires a separate verification
+flow.
 
 ## Login with curl
 

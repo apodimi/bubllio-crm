@@ -344,6 +344,10 @@ test('invite-only registration creates an account and opens the invited workspac
     expect(route.request().postDataJSON()).toEqual({
       username: 'new-person',
       password: 'a-strong-unique-password-4938',
+      display_name: 'New Person',
+      first_name: '',
+      last_name: '',
+      date_of_birth: '',
     })
     return route.fulfill({
       status: 201,
@@ -356,6 +360,7 @@ test('invite-only registration creates an account and opens the invited workspac
   })
   await page.goto('/invite/sample-token')
   await expect(page.getByRole('heading', { name: 'Join Alpha Studio' })).toBeVisible()
+  await page.getByLabel('Display name').fill('New Person')
   await page.getByLabel('Username').fill('new-person')
   await page.getByLabel('Password').fill('a-strong-unique-password-4938')
   await page.getByRole('button', { name: 'Create account and join' }).click()

@@ -18,6 +18,10 @@ import { queryClient } from '../../config/queryClient'
 const registrationSchema = z.object({
   username: z.string().trim().min(1, 'Choose a username.'),
   password: z.string().min(8, 'Use at least 8 characters.'),
+  display_name: z.string().trim().min(1, 'Enter the name your teammates should see.'),
+  first_name: z.string().trim(),
+  last_name: z.string().trim(),
+  date_of_birth: z.string(),
 })
 type RegistrationForm = z.infer<typeof registrationSchema>
 
@@ -33,7 +37,14 @@ export function InvitePage() {
   const [password, setPassword] = useState('')
   const registration = useForm<RegistrationForm>({
     resolver: zodResolver(registrationSchema),
-    defaultValues: { username: '', password: '' },
+    defaultValues: {
+      username: '',
+      password: '',
+      display_name: '',
+      first_name: '',
+      last_name: '',
+      date_of_birth: '',
+    },
   })
 
   if (preview.isPending) return <Loading />
@@ -134,9 +145,23 @@ export function InvitePage() {
                   spacing={2}
                 >
                   <Typography variant="body2" color="text.secondary">
-                    Your email is fixed by the invitation. You can create your own workspaces after
-                    joining.
+                    Your invited email is fixed. Add the profile details your teammates will see;
+                    date of birth is optional and can be left blank.
                   </Typography>
+                  <ProfileField
+                    registration={registration}
+                    name="display_name"
+                    label="Display name"
+                    helper="The name shown to teammates."
+                  />
+                  <ProfileField registration={registration} name="first_name" label="First name" />
+                  <ProfileField registration={registration} name="last_name" label="Last name" />
+                  <ProfileField
+                    registration={registration}
+                    name="date_of_birth"
+                    label="Date of birth (optional)"
+                    type="date"
+                  />
                   <Box>
                     <Typography component="label" htmlFor="invite-username" variant="body2">
                       Username
@@ -215,6 +240,38 @@ export function InvitePage() {
           )}
         </Stack>
       </Paper>
+    </Box>
+  )
+}
+
+function ProfileField({
+  registration,
+  name,
+  label,
+  helper,
+  type = 'text',
+}: {
+  registration: ReturnType<typeof useForm<RegistrationForm>>
+  name: 'display_name' | 'first_name' | 'last_name' | 'date_of_birth'
+  label: string
+  helper?: string
+  type?: string
+}) {
+  const error = registration.formState.errors[name]?.message
+  return (
+    <Box>
+      <Typography component="label" htmlFor={`invite-${name}`} variant="body2">
+        {label}
+      </Typography>
+      <TextField
+        id={`invite-${name}`}
+        fullWidth
+        type={type}
+        slotProps={type === 'date' ? { inputLabel: { shrink: true } } : undefined}
+        {...registration.register(name)}
+        error={!!error}
+        helperText={error ?? helper}
+      />
     </Box>
   )
 }

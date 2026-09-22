@@ -46,7 +46,7 @@ class InvitationTests(APITestCase):
         self.assertEqual(preview.data["organization_name"], "Nerds Lab")
         accepted = self.client.post(
             reverse("invitation-accept", kwargs={"token": token}),
-            {"username": "new-person", "password": "a-strong-unique-password-4938"}, format="json",
+            {"username": "new-person", "password": "a-strong-unique-password-4938", "display_name": "New Person"}, format="json",
         )
         self.assertEqual(accepted.status_code, status.HTTP_201_CREATED)
         self.assertIn("access", accepted.data["tokens"])
@@ -107,7 +107,7 @@ class InvitationTests(APITestCase):
         self.client.force_authenticate(user=None)
         accepted = self.client.post(
             reverse("invitation-accept", kwargs={"token": token}),
-            {"username": "new-person", "password": "a-strong-unique-password-4938"}, format="json",
+            {"username": "new-person", "password": "a-strong-unique-password-4938", "display_name": "New Person"}, format="json",
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {accepted.data['tokens']['access']}")
         created = self.client.post(reverse("organization-list"), {"name": "My Studio", "slug": "my-studio"}, format="json")
