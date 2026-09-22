@@ -18,6 +18,23 @@ mkdir -p "$LOG_DIR"
 backend_pid=""
 frontend_pid=""
 
+stop_port_processes() {
+  local port="$1"
+  local pids
+  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+  echo "Stopping existing process on port $port: $pids"
+  while read -r pid; do
+    [[ -z "$pid" ]] || kill "$pid" 2>/dev/null || true
+  done <<< "$pids"
+}
+
+# Keep reruns convenient while limiting cleanup to Bubllio's development ports.
+stop_port_processes 8000
+stop_port_processes 5173
+
 cleanup() {
   local exit_code=$?
   trap - INT TERM EXIT
