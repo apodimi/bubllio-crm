@@ -142,8 +142,8 @@ export function WorkspaceSidebar({
             <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minWidth: 0 }}>
               <Avatar
                 sx={{
-                  width: 28,
-                  height: 28,
+                  width: 24,
+                  height: 24,
                   bgcolor: 'primary.light',
                   color: 'primary.main',
                   fontSize: 11,
@@ -152,14 +152,9 @@ export function WorkspaceSidebar({
               >
                 {organizationInitials(selectedOrganization.name)}
               </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
-                  {selectedOrganization.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Workspace
-                </Typography>
-              </Box>
+              <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 650 }}>
+                {selectedOrganization.name}
+              </Typography>
             </Stack>
           ) : (
             <Typography color="text.secondary">Select workspace</Typography>
@@ -167,13 +162,13 @@ export function WorkspaceSidebar({
         }
         MenuProps={{
           slotProps: {
-            paper: { sx: { mt: 0.75, borderRadius: 2, minWidth: 230, p: 0.75 } },
+            paper: { sx: { mt: 0.5, borderRadius: 1.5, minWidth: 210, p: 0.5 } },
           },
         }}
         sx={{
           mb: 3,
           borderRadius: 2,
-          '& .MuiSelect-select': { py: 1, pr: 5 },
+          '& .MuiSelect-select': { py: 0.75, pr: 4.5 },
         }}
       >
         <MenuItem value="" disabled>
@@ -183,12 +178,12 @@ export function WorkspaceSidebar({
           <MenuItem
             value={organization.id}
             key={organization.id}
-            sx={{ borderRadius: 1.5, mb: 0.25, py: 1 }}
+            sx={{ borderRadius: 1.25, mb: 0.15, py: 0.75 }}
           >
             <Avatar
               sx={{
-                width: 30,
-                height: 30,
+                width: 26,
+                height: 26,
                 mr: 1.25,
                 bgcolor: 'action.selected',
                 color: 'primary.main',
