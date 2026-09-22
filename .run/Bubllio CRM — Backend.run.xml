@@ -1,0 +1,20 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Bubllio CRM — Backend" type="Python.DjangoServer" factoryName="Django server">
+    <module name="bubllio-crm" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="DJANGO_SETTINGS_MODULE" value="bubllio_crm.settings" />
+    </envs>
+    <option name="SDK_HOME" value="$PROJECT_DIR$/.venv/bin/python" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <option name="DEBUG_JUST_MY_CODE" value="false" />
+    <option name="port" value="8000" />
+    <option name="host" value="127.0.0.1" />
+    <option name="runNoReload" value="true" />
+    <method v="2" />
+  </configuration>
+</component>

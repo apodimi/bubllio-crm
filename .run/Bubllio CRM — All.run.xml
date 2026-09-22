@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Bubllio CRM — All" type="CompoundRunConfigurationType">
+    <toRun name="Bubllio CRM — Backend" type="Python.DjangoServer" />
+    <toRun name="Bubllio CRM — Frontend" type="js.build_tools.npm" />
+  </configuration>
+</component>

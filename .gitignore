@@ -29,3 +29,6 @@ htmlcov/
 
 # IDEs
 .idea/
+# JetBrains shared run configurations are intentionally committed.
+!.run/
+!.run/*.run.xml
