@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
+  Avatar,
   Box,
   Button,
   Divider,
@@ -19,6 +20,8 @@ import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
 import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
 import SettingsRounded from '@mui/icons-material/SettingsRounded'
 import BoltRounded from '@mui/icons-material/BoltRounded'
+import CheckRounded from '@mui/icons-material/CheckRounded'
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
 import { BrandLogo } from '../common/BrandLogo'
 
 type SidebarProps = {
@@ -57,6 +60,16 @@ export function WorkspaceSidebar({
 }: SidebarProps) {
   const canManageWorkspace = isSuperuser || currentRole === 'owner' || currentRole === 'admin'
   const basePath = organizationId ? `/organizations/${organizationId}` : ''
+  const selectedOrganization = organizations.find(
+    (organization) => organization.id === organizationId,
+  )
+  const organizationInitials = (name: string) =>
+    name
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
   const navigationItems: NavigationItem[] = [
     {
       text: 'Overview',
@@ -123,14 +136,75 @@ export function WorkspaceSidebar({
         }
         inputProps={{ 'aria-label': 'Select workspace' }}
         onChange={(event) => onOrganizationChange(event.target.value)}
-        sx={{ mb: 3 }}
+        IconComponent={KeyboardArrowDownRounded}
+        renderValue={() =>
+          selectedOrganization ? (
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+              <Avatar
+                sx={{
+                  width: 28,
+                  height: 28,
+                  bgcolor: 'primary.light',
+                  color: 'primary.main',
+                  fontSize: 11,
+                  fontWeight: 800,
+                }}
+              >
+                {organizationInitials(selectedOrganization.name)}
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
+                  {selectedOrganization.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Workspace
+                </Typography>
+              </Box>
+            </Stack>
+          ) : (
+            <Typography color="text.secondary">Select workspace</Typography>
+          )
+        }
+        MenuProps={{
+          slotProps: {
+            paper: { sx: { mt: 0.75, borderRadius: 2, minWidth: 230, p: 0.75 } },
+          },
+        }}
+        sx={{
+          mb: 3,
+          borderRadius: 2,
+          '& .MuiSelect-select': { py: 1, pr: 5 },
+        }}
       >
         <MenuItem value="" disabled>
           Select workspace
         </MenuItem>
         {organizations.map((organization) => (
-          <MenuItem value={organization.id} key={organization.id}>
-            {organization.name}
+          <MenuItem
+            value={organization.id}
+            key={organization.id}
+            sx={{ borderRadius: 1.5, mb: 0.25, py: 1 }}
+          >
+            <Avatar
+              sx={{
+                width: 30,
+                height: 30,
+                mr: 1.25,
+                bgcolor: 'action.selected',
+                color: 'primary.main',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
+              {organizationInitials(organization.name)}
+            </Avatar>
+            <ListItemText
+              primary={organization.name}
+              slotProps={{ primary: { noWrap: true, sx: { fontWeight: 650 } } }}
+            />
+            {organization.id === organizationId && (
+              <CheckRounded color="primary" fontSize="small" />
+            )}
           </MenuItem>
         ))}
       </Select>
