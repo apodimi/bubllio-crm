@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import secrets
 from datetime import timedelta
 
@@ -20,6 +21,8 @@ from .email_service import send_invitation_email
 from .models import EmailAccount, InstallationState, OrganizationInvitation, OrganizationMembership
 from accounts.models import UserProfile
 from .permissions import Capability, get_membership, get_organization_for_user
+
+logger = logging.getLogger(__name__)
 
 
 def token_hash(token):
@@ -120,6 +123,12 @@ class OrganizationInvitationListCreateAPIView(APIView):
                     organization_name=organization.name, invite_url=invite_url,
                 )
         except Exception:
+            logger.exception(
+                "Invitation email delivery failed for organization=%s recipient=%s account=%s",
+                organization.pk,
+                email,
+                account.pk,
+            )
             return Response({"detail": "The invitation email could not be sent. Check the workspace SMTP account."}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({
             "id": str(invitation.id), "email": email, "role": role,

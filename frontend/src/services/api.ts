@@ -92,11 +92,15 @@ apiClient.interceptors.response.use(
 
 export async function request<T>(
   path: string,
-  options: { signal?: AbortSignal; body?: unknown } = {},
+  options: {
+    signal?: AbortSignal
+    body?: unknown
+    method?: AxiosRequestConfig['method']
+  } = {},
 ): Promise<T> {
   const config: AxiosRequestConfig = {
     url: path,
-    method: options.body === undefined ? 'GET' : 'POST',
+    method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
     signal: options.signal,
     data: options.body,
   }

@@ -40,10 +40,12 @@ sanitized. The immediate HTTP failure response is generic and uses status 502.
 Treat stored diagnostics as potentially sensitive. Password fields are write-only
 through the API and encrypted at rest.
 
-An owner or administrator can send a workspace invitation only when an active
-default SMTP account exists. Invitation delivery failure returns `502` and
-rolls back the invitation. The invitation link uses `BUBLLIO_APP_URL`, which
-must be set to the public frontend origin in deployments.
+An owner or administrator can send a workspace invitation when either an active
+workspace default SMTP account exists or the installation fallback configured
+during first setup exists. Workspace SMTP wins; the fallback is used only when
+the workspace has no active default. Invitation delivery failure returns `502`
+and rolls back the invitation. The invitation link uses `BUBLLIO_APP_URL`,
+which must be set to the public frontend origin in deployments.
 
 Set `BUBLLIO_EMAIL_ENCRYPTION_KEY` before storing passwords. Generate a Fernet key:
 
@@ -51,9 +53,14 @@ Set `BUBLLIO_EMAIL_ENCRYPTION_KEY` before storing passwords. Generate a Fernet k
 uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Keep it in a secret manager or ignored `.env`. Losing the key, or replacing it
-without decrypting/re-encrypting accounts, makes existing passwords unusable.
-Never put passwords or encryption keys in version control.
+Keep it in a secret manager or ignored `.env`. The same key must be available
+every time the application reads an existing SMTP account. Losing the key, or
+replacing it without re-entering the SMTP password, makes existing passwords
+unusable because Fernet encryption cannot be reversed without the original key.
+If the original key is lost, generate a new one, restart the application with
+it, then save the SMTP account again from workspace Settings; the new password
+will be encrypted with the new key. Never put passwords or encryption keys in
+version control.
 
 ## Next Integration: Reuse Django SMTP Sending
 

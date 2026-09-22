@@ -31,4 +31,9 @@ export const organizationService = {
     >(`${organizationPath(id)}email-accounts/`, { signal }),
   createEmailAccount: (id: string, body: Record<string, unknown>) =>
     request(`${organizationPath(id)}email-accounts/`, { body }),
+  updateEmailAccount: (id: string, accountId: string, body: Record<string, unknown>) =>
+    request(`${organizationPath(id)}email-accounts/${encodeURIComponent(accountId)}/`, {
+      method: 'PATCH',
+      body,
+    }),
 }

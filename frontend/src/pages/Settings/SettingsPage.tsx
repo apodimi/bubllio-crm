@@ -7,7 +7,8 @@ import { Loading, Failure } from '../../components/common/Feedback'
 
 export function SettingsPage() {
   const { organizationId } = useParams({ from: '/organizations/$organizationId' })
-  const { settings, accounts, createAccount } = useOrganizationSettings(organizationId)
+  const { settings, accounts, createAccount, updateAccount } =
+    useOrganizationSettings(organizationId)
   const [values, setValues] = useState({
     name: 'Workspace SMTP',
     host: '',
@@ -30,14 +31,19 @@ export function SettingsPage() {
   const account = accounts.data.find((item) => item.is_default && item.is_active)
   async function save(event: FormEvent) {
     event.preventDefault()
-    await createAccount.mutateAsync({
+    const body = {
       ...values,
       port: Number(values.port),
       is_default: true,
       is_active: true,
       use_tls: true,
       use_ssl: false,
-    })
+    }
+    if (account) {
+      await updateAccount.mutateAsync({ accountId: account.id, body })
+    } else {
+      await createAccount.mutateAsync(body)
+    }
   }
   return (
     <Stack spacing={3} sx={{ maxWidth: 760 }}>
@@ -66,7 +72,9 @@ export function SettingsPage() {
             </Alert>
           )}
           <Stack component="form" onSubmit={save} spacing={2}>
-            <Typography variant="subtitle2">Add or replace workspace SMTP</Typography>
+            <Typography variant="subtitle2">
+              {account ? 'Replace workspace SMTP credentials' : 'Add workspace SMTP'}
+            </Typography>
             {(['name', 'host', 'port', 'username', 'from_email'] as const).map((field) => (
               <TextField
                 key={field}
@@ -92,10 +100,18 @@ export function SettingsPage() {
               }
               required
             />
-            <Button type="submit" variant="contained" disabled={createAccount.isPending}>
-              {createAccount.isPending ? 'Saving…' : 'Save SMTP account'}
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={createAccount.isPending || updateAccount.isPending}
+            >
+              {createAccount.isPending || updateAccount.isPending ? 'Saving…' : 'Save SMTP account'}
             </Button>
-            {createAccount.isError && <Alert severity="error">{createAccount.error.message}</Alert>}
+            {(createAccount.isError || updateAccount.isError) && (
+              <Alert severity="error">
+                {(createAccount.error ?? updateAccount.error)?.message}
+              </Alert>
+            )}
           </Stack>
         </Stack>
       </Paper>

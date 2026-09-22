@@ -175,4 +175,8 @@ DJANGO_SECRET_KEY
 
 Local development has a non-production fallback. Optional `DATABASE_URL` selects
 the database; `BUBLLIO_EMAIL_ENCRYPTION_KEY` is needed for stored SMTP passwords.
+Keep this key stable across restarts. If it is lost, create a new key and
+re-enter the SMTP password in workspace Settings so the account can be
+encrypted again. The first-setup SMTP account is the installation fallback for
+workspaces that do not define their own active default account.
 See [Database Setup](development/databases.md) and [Email Sending](architecture/email-adapters.md).
