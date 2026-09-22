@@ -85,6 +85,17 @@ Email account encryption is separate from database configuration. If the UI is
 used to create SMTP accounts, set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in `.env` as
 described in `docs/architecture/email-adapters.md`.
 
+## Migration history
+
+The organizations app includes a squashed migration for fresh installations:
+`0001_squashed_0009_backfill_installation_fallback_email_account`. The original
+migrations remain in the repository temporarily so existing installations that
+already recorded those migration names can upgrade safely. Do not delete the
+original files until every deployed database has applied the complete range
+through `0009`; at that point they may be removed in a separate cleanup commit.
+For normal development, run `migrate` and let Django select the appropriate
+history automatically.
+
 ## How configuration works
 
 `src/bubllio_crm/database.py` converts `DATABASE_URL` into Django's `DATABASES`
