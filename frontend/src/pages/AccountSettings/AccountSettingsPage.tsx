@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material'
+import PersonOutlineRounded from '@mui/icons-material/PersonOutlineRounded'
+import ShieldOutlined from '@mui/icons-material/ShieldOutlined'
+import EmailOutlined from '@mui/icons-material/EmailOutlined'
 import { Failure, Loading } from '../../components/common/Feedback'
 import { useInstallationSettings } from '../../features/organizations/hooks/useInstallationSettings'
 import { useAccountSettings } from '../../features/auth/hooks/useAccountSettings'
@@ -101,30 +114,75 @@ export function AccountSettingsPage() {
   }
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 760 }}>
-      <Box>
-        <Typography variant="h4">Account settings</Typography>
-        <Typography color="text.secondary">
-          Manage your profile and security preferences.
-        </Typography>
-      </Box>
-      <Paper variant="outlined" sx={{ p: 3 }}>
+    <Stack spacing={3.5} sx={{ maxWidth: 980 }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2 }}
+      >
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 2 }}>
+          <Avatar
+            sx={{ width: 56, height: 56, bgcolor: 'primary.main', fontSize: 22, fontWeight: 700 }}
+          >
+            {(profile?.display_name || profile?.username || '?').slice(0, 1).toUpperCase()}
+          </Avatar>
+          <Box>
+            <Typography variant="h4">Account settings</Typography>
+            <Typography color="text.secondary">
+              Manage your profile and security preferences.
+            </Typography>
+          </Box>
+        </Stack>
+        <Chip
+          label={isSuperuser ? 'Installation administrator' : 'Workspace member'}
+          color="primary"
+          variant="outlined"
+        />
+      </Stack>
+      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
         <Stack component="form" onSubmit={saveProfile} spacing={2}>
-          <Typography variant="h6">Profile</Typography>
-          {(['display_name', 'first_name', 'last_name', 'email'] as const).map((field) => (
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+            <PersonOutlineRounded color="primary" />
+            <Box>
+              <Typography variant="h6">Profile</Typography>
+              <Typography variant="body2" color="text.secondary">
+                How your name and email appear across Bubllio.
+              </Typography>
+            </Box>
+          </Stack>
+          <TextField
+            label="Email"
+            type="email"
+            value={profileValues.email}
+            onChange={(event) =>
+              setProfileValues((current) => ({ ...current, email: event.target.value }))
+            }
+            required
+          />
+          <TextField
+            label="Display name"
+            value={profileValues.display_name}
+            onChange={(event) =>
+              setProfileValues((current) => ({ ...current, display_name: event.target.value }))
+            }
+          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              key={field}
-              label={
-                field === 'display_name' ? 'Display name' : field[0].toUpperCase() + field.slice(1)
-              }
-              type={field === 'email' ? 'email' : 'text'}
-              value={profileValues[field]}
+              sx={{ flex: 1 }}
+              label="First name"
+              value={profileValues.first_name}
               onChange={(event) =>
-                setProfileValues((current) => ({ ...current, [field]: event.target.value }))
+                setProfileValues((current) => ({ ...current, first_name: event.target.value }))
               }
-              required={field === 'email'}
             />
-          ))}
+            <TextField
+              sx={{ flex: 1 }}
+              label="Last name"
+              value={profileValues.last_name}
+              onChange={(event) =>
+                setProfileValues((current) => ({ ...current, last_name: event.target.value }))
+              }
+            />
+          </Stack>
           <Button type="submit" variant="contained" disabled={accountSettings.save.isPending}>
             {accountSettings.save.isPending ? 'Saving…' : 'Save profile'}
           </Button>
@@ -133,9 +191,17 @@ export function AccountSettingsPage() {
           )}
         </Stack>
       </Paper>
-      <Paper variant="outlined" sx={{ p: 3 }}>
+      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
         <Stack component="form" onSubmit={changePassword} spacing={2}>
-          <Typography variant="h6">Password</Typography>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+            <ShieldOutlined color="primary" />
+            <Box>
+              <Typography variant="h6">Password</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Use a unique password to keep your account secure.
+              </Typography>
+            </Box>
+          </Stack>
           <TextField
             label="Current password"
             type="password"
@@ -189,9 +255,17 @@ export function AccountSettingsPage() {
         </Stack>
       </Paper>
       {isSuperuser && (
-        <Paper variant="outlined" sx={{ p: 3 }}>
+        <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
           <Stack spacing={2}>
-            <Typography variant="h6">Fallback SMTP</Typography>
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+              <EmailOutlined color="primary" />
+              <Box>
+                <Typography variant="h6">Fallback SMTP</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Used by workspaces without their own email account.
+                </Typography>
+              </Box>
+            </Stack>
             {account ? (
               <Alert severity="success">
                 Configured with {account.host} and used when a workspace has no SMTP override.
