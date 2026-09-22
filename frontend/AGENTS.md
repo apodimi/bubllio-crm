@@ -3,6 +3,11 @@
 These rules apply to `frontend/` and are intentionally practical. They keep
 the React client predictable as more contributors and pages are added.
 
+For repository-wide boundaries, read
+[`docs/development/simplicity-rules.md`](../docs/development/simplicity-rules.md).
+The short version is: pages compose, feature hooks fetch, services call the
+API, and backend serializers/models remain authoritative.
+
 ## Requests are hooks at the UI boundary
 
 React pages and reusable UI components must not call `request()` or create their

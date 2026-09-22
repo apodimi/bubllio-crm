@@ -68,7 +68,9 @@ frontend/src/
 │   ├── organizations/ domain hooks and services
 │   ├── companies/      domain hooks and services
 │   ├── contacts/       domain hooks and services
-│   └── automations/    domain hooks and services
+│   ├── automations/    domain hooks and services
+│   ├── invitations/    invitation hooks and services
+│   └── organizations/  workspace, settings, and email account hooks/services
 ├── hooks/               globally reusable hooks
 ├── pages/               route-level screens grouped by page
 ├── routes/              TanStack Router configuration
@@ -82,7 +84,7 @@ frontend/src/
 Login is a two-request flow:
 
 1. `POST /api/v1/auth/token/` with username and password.
-2. Store access and refresh tokens in Zustand memory.
+2. Store access and refresh tokens in Zustand with same-tab `sessionStorage` persistence.
 3. `GET /api/v1/auth/me/` with the access token.
 4. Store the returned user and organizations in the auth context/state.
 
@@ -95,8 +97,9 @@ failure clears the session.
 Logout posts the refresh token to `/api/v1/auth/logout/`, then clears Zustand and
 the TanStack Query cache even if the server call fails.
 
-Tokens are intentionally memory-only. A future HttpOnly-cookie design must be
-an explicit security decision and documented as an API/browser contract change.
+Tokens persist only for the current browser tab through the Zustand store. A
+future HttpOnly-cookie design must be an explicit security decision and
+documented as an API/browser contract change.
 
 ## Theme and brand customization
 
