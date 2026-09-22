@@ -19,7 +19,13 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from organizations.auth_views import CurrentUserAPIView, LogoutAPIView
-from accounts.views import CurrentUserProfileAPIView
+from accounts.views import (
+    CurrentAccountSettingsAPIView,
+    CurrentUserProfileAPIView,
+    PasswordChangeAPIView,
+    PasswordResetConfirmAPIView,
+    PasswordResetRequestAPIView,
+)
 from organizations.setup_views import InstallationSetupAPIView, InstallationSmtpTestAPIView
 from organizations.invitation_views import InvitationAcceptAPIView, InvitationDetailAPIView
 
@@ -34,6 +40,10 @@ urlpatterns = [
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/v1/auth/me/", CurrentUserAPIView.as_view(), name="current-user"),
     path("api/v1/auth/me/profile/", CurrentUserProfileAPIView.as_view(), name="current-user-profile"),
+    path("api/v1/auth/me/settings/", CurrentAccountSettingsAPIView.as_view(), name="current-account-settings"),
+    path("api/v1/auth/me/password/", PasswordChangeAPIView.as_view(), name="password-change"),
+    path("api/v1/auth/password-reset/", PasswordResetRequestAPIView.as_view(), name="password-reset-request"),
+    path("api/v1/auth/password-reset/<uidb64>/<token>/", PasswordResetConfirmAPIView.as_view(), name="password-reset-confirm"),
     path("api/v1/auth/logout/", LogoutAPIView.as_view(), name="logout"),
     path("api/v1/organizations/", include("organizations.urls")),
 ]

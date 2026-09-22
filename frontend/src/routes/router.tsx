@@ -40,6 +40,22 @@ const invite = createRoute({
   path: '/invite/$token',
   component: lazyRouteComponent(() => import('../pages/Invite/InvitePage'), 'InvitePage'),
 })
+const passwordReset = createRoute({
+  getParentRoute: () => root,
+  path: '/reset-password',
+  component: lazyRouteComponent(
+    () => import('../pages/ResetPassword/ResetPasswordPage'),
+    'ResetPasswordPage',
+  ),
+})
+const passwordResetConfirm = createRoute({
+  getParentRoute: () => root,
+  path: '/reset-password/$uid/$token',
+  component: lazyRouteComponent(
+    () => import('../pages/ResetPassword/ResetPasswordPage'),
+    'ResetPasswordPage',
+  ),
+})
 const accountSettings = createRoute({
   getParentRoute: () => root,
   path: '/account/settings',
@@ -97,6 +113,8 @@ export const router = createRouter({
     home,
     login,
     invite,
+    passwordReset,
+    passwordResetConfirm,
     accountSettings,
     workspace.addChildren([overview, companies, contacts, automations, members, settings]),
   ]),

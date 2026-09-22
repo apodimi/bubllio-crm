@@ -29,7 +29,7 @@ export function RootLayout() {
       />
     )
   }
-  if (pathname.startsWith('/invite/')) return <Outlet />
+  if (pathname.startsWith('/invite/') || pathname.startsWith('/reset-password')) return <Outlet />
   return auth.username ? <Shell /> : <LoginPage />
 }
 

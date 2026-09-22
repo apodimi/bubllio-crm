@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { BrandLogo } from '../../components/common/BrandLogo'
 import { useAuth } from '../../features/auth'
 
@@ -98,6 +98,15 @@ export function LoginPage() {
             <Button variant="contained" type="submit" size="large" disabled={pending}>
               {pending ? 'Signing in…' : 'Sign in'}
             </Button>
+            <Typography
+              component={Link}
+              to="/reset-password"
+              variant="body2"
+              color="primary"
+              sx={{ alignSelf: 'center', textDecoration: 'none' }}
+            >
+              Forgot password?
+            </Typography>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
             Use your existing Bubllio account. Need access? Contact your workspace owner.

@@ -25,7 +25,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     def get_current_user_role(self, obj):
         request = self.context.get("request")
-        if not request or request.user.is_superuser:
+        if not request:
             return None
         membership = obj.memberships.filter(user=request.user).only("role").first()
         return membership.role if membership else None

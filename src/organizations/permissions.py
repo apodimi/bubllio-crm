@@ -41,18 +41,14 @@ def roles_with_capability(capability):
 
 
 def get_organization_for_user(*, user, organization_id, capability):
-    organizations = Organization.objects.all()
-    if not user.is_superuser:
-        organizations = organizations.filter(
-            memberships__user=user,
-            memberships__role__in=roles_with_capability(capability),
-        )
+    organizations = Organization.objects.filter(
+        memberships__user=user,
+        memberships__role__in=roles_with_capability(capability),
+    )
     return get_object_or_404(organizations.distinct(), id=organization_id)
 
 
 def get_membership(*, user, organization):
-    if user.is_superuser:
-        return None
     return get_object_or_404(
         OrganizationMembership,
         user=user,

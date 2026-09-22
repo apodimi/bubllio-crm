@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { organizationService } from '../services/organizationService'
 
-export function useInstallationSettings() {
+export function useInstallationSettings(enabled = true) {
   const queryClient = useQueryClient()
   const settings = useQuery({
     queryKey: ['installation-settings'],
     queryFn: ({ signal }) => organizationService.installationSettings(signal),
+    enabled,
   })
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) =>

@@ -14,8 +14,7 @@ class CurrentUserAPIView(APIView):
 
     def get(self, request):
         organizations = Organization.objects.all()
-        if not request.user.is_superuser:
-            organizations = organizations.filter(memberships__user=request.user)
+        organizations = organizations.filter(memberships__user=request.user)
         return Response(
             {
                 "id": request.user.id,

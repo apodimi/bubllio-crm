@@ -55,6 +55,25 @@ class OrganizationAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["id"] for item in response.data], [str(self.organization.id)])
 
+    def test_superuser_cannot_see_unrelated_workspace(self):
+        admin = User.objects.create_superuser(
+            username="installation-admin", email="admin@example.com", password="test-pass"
+        )
+        hidden = Organization.objects.create(name="Hidden", slug="hidden")
+        OrganizationMembership.objects.create(
+            organization=hidden,
+            user=self.other_user,
+            role=OrganizationMembership.Role.OWNER,
+        )
+        self.client.force_authenticate(admin)
+        response = self.client.get(reverse("organization-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+        detail = self.client.get(
+            reverse("organization-detail", kwargs={"organization_id": hidden.id})
+        )
+        self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_only_owner_can_delete_organization(self):
         admin = User.objects.create_user(username="admin")
         OrganizationMembership.objects.create(

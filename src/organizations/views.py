@@ -20,9 +20,7 @@ from .serializers import (
 
 class OrganizationListCreateAPIView(APIView):
     def get(self, request):
-        organizations = Organization.objects.all()
-        if not request.user.is_superuser:
-            organizations = organizations.filter(memberships__user=request.user)
+        organizations = Organization.objects.filter(memberships__user=request.user)
         serializer = OrganizationSerializer(
             organizations.distinct(),
             many=True,

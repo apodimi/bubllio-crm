@@ -151,3 +151,11 @@ For the event-to-action path, read [Automations](automations.md). A future
 `Create contact` action would create a CRM record; a `Contact created` trigger
 would react to one. Neither is currently implemented in the automation system.
 The [workflow roadmap](automation-roadmap.md) explains this distinction.
+## Tenant access boundary
+
+Every authenticated user can access only organizations where they have an
+`OrganizationMembership` with the required capability. Django staff or
+superuser status does not bypass this tenant boundary; installation-level
+administration is exposed only through explicitly scoped installation settings
+endpoints. A pending invitation never creates membership and therefore never
+makes a workspace visible in the organization list.

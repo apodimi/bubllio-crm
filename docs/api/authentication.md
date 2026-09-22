@@ -12,6 +12,10 @@ debugging a browser login.
 | POST | `/api/v1/auth/token/refresh/` | refresh token in JSON | rotate the refresh token and issue a new access token |
 | GET | `/api/v1/auth/me/` | access Bearer token | return the current user and visible organizations |
 | GET/PATCH | `/api/v1/auth/me/profile/` | access Bearer token | read or complete the personal onboarding profile |
+| GET/PATCH | `/api/v1/auth/me/settings/` | access Bearer token | read or update email and profile settings |
+| POST | `/api/v1/auth/me/password/` | access Bearer token | change the current password |
+| POST | `/api/v1/auth/password-reset/` | none | request a generic password-reset email response |
+| POST | `/api/v1/auth/password-reset/<uidb64>/<token>/` | reset token in URL | set a new password from a valid reset link |
 | POST | `/api/v1/auth/logout/` | access Bearer token | blacklist the submitted refresh token |
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
@@ -48,7 +52,7 @@ There is no general public signup endpoint. An owner or admin creates an
 invitation with `{ "email": "person@example.com", "role": "member" }` under
 their organization URL. `owner` is not an invitable role; only an owner may
 invite an `admin`. Sending requires the organization's active default SMTP
-account. The emailed link expires after seven days. Set `BUBLLIO_APP_URL` to
+account or the installation fallback. The emailed link expires after seven days. Set `BUBLLIO_APP_URL` to
 the public React origin so the link points to the correct installation.
 
 The recipient opens the link to preview the workspace and role. A new user
@@ -60,9 +64,11 @@ for that workspace only and consumes the link; replay or expiry returns `404`.
 
 New invited users provide a display name, optional first/last names, optional
 date of birth, timezone, and locale during registration. Existing users can
-complete or update the same profile through `/api/v1/auth/me/profile/`. Username
-and email are read-only there; changing email requires a separate verification
-flow.
+complete or update the same profile through `/api/v1/auth/me/profile/`. Account
+settings use `/api/v1/auth/me/settings/` for email and profile updates and
+`/api/v1/auth/me/password/` for an authenticated password change. Password reset
+requests always return the same generic response whether or not the email
+exists. Reset links are single-use and expire when the user password changes.
 
 ## Login with curl
 
