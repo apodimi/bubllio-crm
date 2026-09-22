@@ -23,6 +23,8 @@ staticfiles/
 # Tooling
 .coverage
 htmlcov/
+.logs/
+.uv-cache/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
