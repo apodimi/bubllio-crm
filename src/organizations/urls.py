@@ -4,7 +4,7 @@ from .views import (
     OrganizationDetailAPIView,
     OrganizationListCreateAPIView,
     OrganizationMembershipDetailAPIView,
-    OrganizationMembershipListCreateAPIView,
+    OrganizationMembershipListAPIView,
     EmailAccountListCreateAPIView,
     EmailAccountDetailAPIView,
     EmailAccountTestAPIView,
@@ -14,17 +14,19 @@ from .views import (
     PersonalWorkspaceAPIView,
 )
 from .invitation_views import OrganizationInvitationListCreateAPIView
+from .installation_admin_views import InstallationAdminInvitationListCreateAPIView
 
 urlpatterns = [
     path("", OrganizationListCreateAPIView.as_view(), name="organization-list"),
     path("installation-settings/", InstallationSettingsAPIView.as_view(), name="installation-settings"),
+    path("installation-admin-invitations/", InstallationAdminInvitationListCreateAPIView.as_view(), name="installation-admin-invitations"),
     path("personal/", PersonalWorkspaceAPIView.as_view(), name="personal-workspace"),
     path("settings/options/", OrganizationSettingsOptionsAPIView.as_view(), name="organization-settings-options"),
     path("<uuid:organization_id>/", OrganizationDetailAPIView.as_view(), name="organization-detail"),
     path("<uuid:organization_id>/invitations/", OrganizationInvitationListCreateAPIView.as_view(), name="organization-invitation-list"),
     path(
         "<uuid:organization_id>/members/",
-        OrganizationMembershipListCreateAPIView.as_view(),
+        OrganizationMembershipListAPIView.as_view(),
         name="organization-membership-list",
     ),
     path(

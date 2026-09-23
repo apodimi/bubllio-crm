@@ -6,6 +6,15 @@ export const organizationPath = (id: string) => '/organizations/' + encodeURICom
 export const organizationService = {
   list: (signal?: AbortSignal) => request<Organization[]>('/organizations/', { signal }),
   createPersonal: () => request<Organization>('/organizations/personal/', { body: {} }),
+  personalPolicy: (signal?: AbortSignal) =>
+    request<{ allowed: boolean; exists: boolean }>('/organizations/personal/', { signal }),
+  installationAdministrators: (signal?: AbortSignal) =>
+    request<{
+      administrators: Array<{ id: number; username: string; email: string }>
+      invitations: Array<{ id: string; email: string; expires_at: string }>
+    }>('/organizations/installation-admin-invitations/', { signal }),
+  inviteInstallationAdministrator: (email: string) =>
+    request('/organizations/installation-admin-invitations/', { body: { email } }),
   get: (id: string, signal?: AbortSignal) =>
     request<Organization>(organizationPath(id), { signal }),
   settings: (id: string, signal?: AbortSignal) =>

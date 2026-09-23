@@ -34,7 +34,6 @@ Bearer token. Use HTTPS outside localhost.
 | `username`, `password` | Local authenticated Django user |
 | `access_token`, `refresh_token` | Tokens populated by the Authentication/Login request |
 | `organization_id` | Created organization UUID |
-| `user_id` | Existing Django user to add as a member |
 | `membership_id` | Membership to update or remove |
 | `company_id` | Created company UUID |
 | `automation_id` | Created automation UUID |
@@ -44,15 +43,16 @@ Bearer token. Use HTTPS outside localhost.
 For UI-managed SMTP testing, also set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in the
 server's ignored `.env` file. Postman never stores that encryption key.
 
-Organization, company, membership, and automation creation requests save returned
+Organization, company, and automation creation requests save returned
 IDs into the environment automatically.
 
 ## Recommended flow
 
-1. Create Organization. The authenticated creator becomes its owner.
+1. Sign in as an installation administrator and create an organization. The
+   creator becomes its owner.
 2. List Organizations and confirm only memberships visible to the user appear.
-3. Optionally create another Django user in `/admin/`, copy its integer ID into
-   `user_id`, then add it under Members.
+3. Invite another person by email under Members and have them accept the link
+   before expecting the workspace to appear in their organization list.
 4. Create and search companies under the organization.
 5. Create and search contacts. A contact's company must belong to the same
    organization.
@@ -182,11 +182,11 @@ Create organization:
 }
 ```
 
-Add an existing user as a member:
+Invite a member by email:
 
 ```json
 {
-  "user_id": 2,
+  "email": "teammate@example.com",
   "role": "member"
 }
 ```

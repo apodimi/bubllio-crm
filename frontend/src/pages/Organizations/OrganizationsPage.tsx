@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Box,
@@ -15,11 +15,17 @@ import AddRounded from '@mui/icons-material/AddRounded'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
 import { organizationKeys, useOrganizations } from '../../features/organizations'
 import { organizationService } from '../../features/organizations/services/organizationService'
+import { useAuthStore } from '../../features/auth/store/authStore'
 import { Loading, Failure, Empty, PageHeading } from '../../components/common/Feedback'
 import { CreateDialog } from '../../components/common/CreateDialog'
 
 export function OrganizationsPage() {
   const query = useOrganizations()
+  const isInstallationAdmin = useAuthStore((state) => state.user?.is_superuser ?? false)
+  const personalPolicy = useQuery({
+    queryKey: ['personal-workspace-policy'],
+    queryFn: ({ signal }) => organizationService.personalPolicy(signal),
+  })
   const queryClient = useQueryClient()
   const personalWorkspace = useMutation({
     mutationFn: organizationService.createPersonal,
@@ -34,7 +40,7 @@ export function OrganizationsPage() {
         description="A home for every team and every relationship."
         action={
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-            {!hasPersonalWorkspace && (
+            {personalPolicy.data?.allowed && !hasPersonalWorkspace && (
               <Button
                 variant="outlined"
                 onClick={() => void personalWorkspace.mutateAsync()}
@@ -43,9 +49,15 @@ export function OrganizationsPage() {
                 {personalWorkspace.isPending ? 'Creating…' : 'Create personal'}
               </Button>
             )}
-            <Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreate(true)}>
-              New shared workspace
-            </Button>
+            {isInstallationAdmin && (
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={() => setCreate(true)}
+              >
+                New shared workspace
+              </Button>
+            )}
           </Stack>
         }
       />
@@ -56,7 +68,7 @@ export function OrganizationsPage() {
       ) : query.data.length === 0 ? (
         <Empty
           title="Start with a workspace"
-          description="Create your first workspace to organize companies and contacts."
+          description="You will see a workspace here after an administrator invites you."
         />
       ) : (
         <Box
@@ -98,7 +110,7 @@ export function OrganizationsPage() {
                       </Box>
                       <Chip
                         size="small"
-                        label={org.is_personal ? 'Personal' : org.current_user_role ?? 'Shared'}
+                        label={org.is_personal ? 'Personal' : (org.current_user_role ?? 'Shared')}
                         color={org.is_personal ? 'default' : 'primary'}
                         variant="outlined"
                       />

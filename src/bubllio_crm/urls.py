@@ -30,12 +30,15 @@ from accounts.views import (
 )
 from organizations.setup_views import InstallationSetupAPIView, InstallationSmtpTestAPIView
 from organizations.invitation_views import InvitationAcceptAPIView, InvitationDetailAPIView
+from organizations.installation_admin_views import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
 urlpatterns = [
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),
     path("api/v1/setup/smtp-test/", InstallationSmtpTestAPIView.as_view(), name="installation-smtp-test"),
     path("api/v1/invitations/<str:token>/", InvitationDetailAPIView.as_view(), name="invitation-detail"),
     path("api/v1/invitations/<str:token>/accept/", InvitationAcceptAPIView.as_view(), name="invitation-accept"),
+    path("api/v1/installation-admin-invitations/<str:token>/", InstallationAdminInvitationDetailAPIView.as_view(), name="installation-admin-invitation-detail"),
+    path("api/v1/installation-admin-invitations/<str:token>/accept/", InstallationAdminInvitationAcceptAPIView.as_view(), name="installation-admin-invitation-accept"),
     path("admin/", admin.site.urls),
     path("api-auth/", include("rest_framework.urls")),
     path("api/v1/auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),

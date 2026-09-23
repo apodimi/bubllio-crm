@@ -25,10 +25,11 @@ const registrationSchema = z.object({
 })
 type RegistrationForm = z.infer<typeof registrationSchema>
 
-export function InvitePage() {
-  const { token } = useParams({ from: '/invite/$token' })
-  const preview = useInvitationPreview(token)
-  const accept = useAcceptInvitation()
+export function InvitePage({ installationAdmin = false }: { installationAdmin?: boolean }) {
+  const params = useParams({ strict: false })
+  const token = 'token' in params ? String(params.token) : ''
+  const preview = useInvitationPreview(token, installationAdmin)
+  const accept = useAcceptInvitation(installationAdmin)
   const auth = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<'register' | 'sign-in'>('register')
@@ -50,9 +51,12 @@ export function InvitePage() {
   if (preview.isPending) return <Loading />
   if (preview.isError) return <Failure error={preview.error} retry={() => void preview.refetch()} />
 
-  async function finish(input: RegistrationForm | Record<string, never>) {
+  async function finish(input?: RegistrationForm) {
     try {
-      const result = await accept.mutateAsync({ token, input })
+      const registrationInput = input
+        ? { ...input, date_of_birth: input.date_of_birth || null }
+        : undefined
+      const result = await accept.mutateAsync({ token, input: registrationInput })
       if (result.tokens) {
         useAuthStore.setState({
           accessToken: result.tokens.access,
@@ -67,11 +71,17 @@ export function InvitePage() {
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['organizations'] })
-      await navigate({
-        to: '/organizations/$organizationId',
-        params: { organizationId: result.organization_id },
-        replace: true,
-      })
+      if (installationAdmin) {
+        const user = await authService.currentUser()
+        useAuthStore.setState({ user })
+        await navigate({ to: '/', replace: true })
+      } else if (result.organization_id) {
+        await navigate({
+          to: '/organizations/$organizationId',
+          params: { organizationId: result.organization_id },
+          replace: true,
+        })
+      }
     } catch {
       /* The mutation error is shown below. */
     }
@@ -81,7 +91,7 @@ export function InvitePage() {
     setLoginError('')
     try {
       await auth.login(username, password)
-      await finish({})
+      await finish()
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Could not sign in.')
     }
@@ -100,10 +110,15 @@ export function InvitePage() {
       <Paper variant="outlined" sx={{ width: '100%', maxWidth: 520, p: { xs: 3, sm: 5 } }}>
         <Stack spacing={2.5}>
           <BrandLogo product="CRM" />
-          <Typography variant="h4">Join {preview.data.organization_name}</Typography>
+          <Typography variant="h4">
+            {installationAdmin
+              ? 'Become an installation administrator'
+              : `Join ${preview.data.organization_name}`}
+          </Typography>
           <Typography color="text.secondary">
-            You've been invited as <strong>{preview.data.role}</strong> using {preview.data.email}.
-            This role applies only to this workspace.
+            {installationAdmin
+              ? `You were invited to manage this Bubllio installation using ${preview.data.email}. Installation administration does not add you to any workspace.`
+              : `You've been invited as ${preview.data.role} using ${preview.data.email}. This role applies only to this workspace.`}
           </Typography>
           {accept.isError && <Alert severity="error">{accept.error.message}</Alert>}
           {auth.username ? (
@@ -112,12 +127,11 @@ export function InvitePage() {
                 Signed in as {auth.username}. Use the account with email {preview.data.email} to
                 accept.
               </Typography>
-              <Button
-                variant="contained"
-                disabled={accept.isPending}
-                onClick={() => void finish({})}
-              >
+              <Button variant="contained" disabled={accept.isPending} onClick={() => void finish()}>
                 Accept invitation
+              </Button>
+              <Button variant="text" onClick={() => void auth.logout()}>
+                Use another account
               </Button>
             </>
           ) : (
@@ -190,7 +204,7 @@ export function InvitePage() {
                     />
                   </Box>
                   <Button variant="contained" type="submit" disabled={accept.isPending}>
-                    Create account and join
+                    {installationAdmin ? 'Create administrator account' : 'Create account and join'}
                   </Button>
                 </Stack>
               ) : (
@@ -232,7 +246,7 @@ export function InvitePage() {
                     />
                   </Box>
                   <Button variant="contained" type="submit" disabled={accept.isPending}>
-                    Sign in and join
+                    {installationAdmin ? 'Sign in and accept' : 'Sign in and join'}
                   </Button>
                 </Stack>
               )}
@@ -242,6 +256,10 @@ export function InvitePage() {
       </Paper>
     </Box>
   )
+}
+
+export function InstallationAdminInvitePage() {
+  return <InvitePage installationAdmin />
 }
 
 function ProfileField({

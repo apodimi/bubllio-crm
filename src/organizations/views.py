@@ -2,14 +2,13 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 from .choices import locale_choices, timezone_choices
 from .email_service import mark_test_failure, mark_test_success, send_test_email
-from .permissions import Capability, get_membership, get_organization_for_user
+from .permissions import Capability, IsInstallationAdmin, get_membership, get_organization_for_user
 from .serializers import (
     EmailAccountSerializer,
     OrganizationMembershipSerializer,
@@ -20,6 +19,13 @@ from .personal_workspace import ensure_personal_workspace
 
 
 class PersonalWorkspaceAPIView(APIView):
+    def get(self, request):
+        state = InstallationState.objects.get(pk=1)
+        return Response({
+            "allowed": state.allow_personal_workspaces,
+            "exists": Organization.objects.filter(personal_owner=request.user).exists(),
+        })
+
     def post(self, request):
         state = InstallationState.objects.get(pk=1)
         if not state.allow_personal_workspaces:
@@ -47,6 +53,11 @@ class OrganizationListCreateAPIView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        if not request.user.is_active or not request.user.is_superuser:
+            return Response(
+                {"detail": "Only an installation administrator can create shared workspaces."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = OrganizationSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         organization = serializer.save()
@@ -88,7 +99,7 @@ class OrganizationDetailAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class OrganizationMembershipListCreateAPIView(APIView):
+class OrganizationMembershipListAPIView(APIView):
     def _organization(self, request, organization_id):
         return get_organization_for_user(
             user=request.user,
@@ -102,36 +113,6 @@ class OrganizationMembershipListCreateAPIView(APIView):
             return Response([])
         memberships = organization.memberships.select_related("user").order_by("created_at")
         return Response(OrganizationMembershipSerializer(memberships, many=True).data)
-
-    def post(self, request, organization_id):
-        organization = self._organization(request, organization_id)
-        if organization.is_personal:
-            return Response(
-                {"detail": "Personal workspaces cannot have additional members."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        requester = get_membership(user=request.user, organization=organization)
-        serializer = OrganizationMembershipSerializer(
-            data=request.data,
-            context={"organization": organization},
-        )
-        serializer.is_valid(raise_exception=True)
-
-        if (
-            requester is not None
-            and requester.role == OrganizationMembership.Role.ADMIN
-            and serializer.validated_data["role"] == OrganizationMembership.Role.ADMIN
-        ):
-            return Response(
-                {"role": "Only an owner can add an administrator."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        membership = serializer.save()
-        return Response(
-            OrganizationMembershipSerializer(membership).data,
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class OrganizationMembershipDetailAPIView(APIView):
@@ -249,7 +230,7 @@ class OrganizationSettingsOptionsAPIView(APIView):
 class InstallationSettingsAPIView(APIView):
     """Manage installation-wide settings reserved for the installation admin."""
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsInstallationAdmin]
 
     def _state(self):
         return InstallationState.objects.select_related("fallback_email_account").get(pk=1)

@@ -1,6 +1,14 @@
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import BasePermission
 
 from .models import Organization, OrganizationMembership
+
+
+class IsInstallationAdmin(BasePermission):
+    """Installation configuration is reserved for active Django superusers."""
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_active and request.user.is_superuser)
 
 
 class Capability:

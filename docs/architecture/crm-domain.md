@@ -45,8 +45,8 @@ Users may opt into one private personal workspace through the workspace
 picker. It is a normal tenant for the user's own companies, contacts and
 automations, but it is marked `is_personal` and has a single owner. Personal
 workspaces cannot be deleted, invited to, or given additional members. Team/shared workspaces remain normal
-organizations: users see them only after an accepted invitation (or when they
-create one themselves) and membership roles control access.
+organizations: users see them only after an accepted invitation (or when an
+installation administrator creates one) and membership roles control access.
 
 ## Company
 
@@ -124,7 +124,7 @@ Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
 Organization 1 -> 1 OrganizationSettings
 Organization 1 -> many EmailAccounts
-User 1 -> 1 personal Organization
+User 1 -> 0 or 1 personal Organization
 ```
 
 ## Business Logic

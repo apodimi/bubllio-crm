@@ -101,7 +101,7 @@ class InvitationTests(APITestCase):
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.post(reverse("invitation-accept", kwargs={"token": second_token})).status_code, 404)
 
-    def test_invited_user_can_own_a_separate_workspace(self):
+    def test_invited_user_cannot_create_a_separate_workspace(self):
         _, sender = self.invite(role="member")
         token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
         self.client.force_authenticate(user=None)
@@ -111,6 +111,5 @@ class InvitationTests(APITestCase):
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {accepted.data['tokens']['access']}")
         created = self.client.post(reverse("organization-list"), {"name": "My Studio", "slug": "my-studio"}, format="json")
-        self.assertEqual(created.status_code, 201)
-        self.assertEqual(created.data["current_user_role"], "owner")
+        self.assertEqual(created.status_code, 403)
         self.assertEqual(OrganizationMembership.objects.get(organization=self.organization, user__username="new-person").role, "member")

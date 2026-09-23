@@ -32,8 +32,9 @@ User 1 -> many OrganizationMemberships <- 1 Organization
 timestamps. The database prevents duplicate membership for the same user and
 organization and permits at most one owner per organization.
 
-Creating an organization automatically creates an `owner` membership for the
-authenticated creator.
+An installation administrator may create an organization. Creation automatically
+gives that administrator an `owner` membership. Other users join only by
+accepting an invitation sent by that organization's owner or administrator.
 
 Organizations created before the membership migration do not have an owner that
 can be inferred safely. After upgrading an existing development database, a
@@ -99,17 +100,8 @@ Only owners and administrators can list memberships:
 GET /api/v1/organizations/<organization_id>/members/
 ```
 
-Add an existing Django user with its integer user ID:
-
-```http
-POST /api/v1/organizations/<organization_id>/members/
-Content-Type: application/json
-
-{
-  "user_id": 12,
-  "role": "member"
-}
-```
+Direct `POST` to the members endpoint is unavailable. Membership creation
+requires the email invitation and acceptance flow below.
 
 Owners and administrators invite by email through
 `POST /api/v1/organizations/<organization_id>/invitations/` with `email` and
@@ -126,8 +118,7 @@ the workspace, invited email, role, and expiry. `POST` to the corresponding
 `accept/` route consumes it once. An existing user must sign in with the
 invited email; a new user supplies a username and password and receives JWTs.
 The invited email cannot be changed at acceptance. No general public signup
-endpoint exists. The account may later create its own organization and becomes
-that organization's owner without changing its role in the invited workspace.
+endpoint exists. Invited users cannot create additional shared organizations.
 
 Set `BUBLLIO_APP_URL` to the public React origin for correct links in emails.
 Local development defaults to `http://127.0.0.1:5173`.
@@ -161,9 +152,17 @@ and the user and organization tables are empty. POST requires that server-side t
 setup closes the flow permanently for that database. An existing installation
 does not gain a public user-creation path. See [Getting Started](../getting-started.md).
 
-Django superusers may access every organization for support and administration.
-They are not a product-level organization role. Ordinary application users must
-always have an `OrganizationMembership`.
+The first setup user is an installation administrator. Installation
+administrators can invite additional IT administrators through a separate,
+email-bound, seven-day invitation. Accepting it grants Django superuser and
+staff privileges, but does not create workspace memberships. In the product
+API, even a superuser sees CRM workspaces only through `OrganizationMembership`.
+Because Django superusers can access data through `/admin/`, this role is
+reserved for trusted IT operators and must not be used as a workspace role.
+
+Only installation administrators can create shared organizations and manage
+installation settings. Organization owners and administrators can invite people
+into their own workspace, but cannot invite installation administrators.
 
 ## Future security work
 

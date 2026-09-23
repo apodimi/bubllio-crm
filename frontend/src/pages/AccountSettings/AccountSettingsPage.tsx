@@ -22,6 +22,7 @@ import ShieldOutlined from '@mui/icons-material/ShieldOutlined'
 import EmailOutlined from '@mui/icons-material/EmailOutlined'
 import { Failure, Loading } from '../../components/common/Feedback'
 import { useInstallationSettings } from '../../features/organizations/hooks/useInstallationSettings'
+import { useInstallationAdministrators } from '../../features/organizations/hooks/useInstallationAdministrators'
 import { useAccountSettings } from '../../features/auth/hooks/useAccountSettings'
 import { authService } from '../../features/auth/services/authService'
 import { useAuthStore } from '../../features/auth/store/authStore'
@@ -30,6 +31,7 @@ export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
   const accountSettings = useAccountSettings()
   const installation = useInstallationSettings(isSuperuser)
+  const administrators = useInstallationAdministrators(isSuperuser)
   const account = installation.settings.data?.smtp
   const profile = accountSettings.settings.data
   const [values, setValues] = useState({
@@ -56,6 +58,7 @@ export function AccountSettingsPage() {
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [allowPersonalWorkspaces, setAllowPersonalWorkspaces] = useState(false)
+  const [administratorEmail, setAdministratorEmail] = useState('')
 
   useEffect(() => {
     if (!account) return
@@ -153,6 +156,12 @@ export function AccountSettingsPage() {
     })
     useAuthStore.getState().clearSession()
     window.location.assign('/')
+  }
+
+  async function inviteAdministrator(event: FormEvent) {
+    event.preventDefault()
+    await administrators.invite.mutateAsync(administratorEmail.trim())
+    setAdministratorEmail('')
   }
 
   return (
@@ -325,6 +334,68 @@ export function AccountSettingsPage() {
           )}
         </Stack>
       </Paper>
+      {isSuperuser && (
+        <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
+          <Stack spacing={2}>
+            <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+              <ShieldOutlined color="primary" />
+              <Box>
+                <Typography variant="h6">Installation administrators</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Invite trusted IT colleagues to manage this installation. Workspace data still
+                  requires a separate membership in the application.
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack
+              component="form"
+              onSubmit={inviteAdministrator}
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1.5}
+            >
+              <TextField
+                label="Administrator email"
+                type="email"
+                value={administratorEmail}
+                onChange={(event) => setAdministratorEmail(event.target.value)}
+                required
+                sx={{ flex: 1 }}
+              />
+              <Button type="submit" variant="contained" disabled={administrators.invite.isPending}>
+                {administrators.invite.isPending ? 'Sending…' : 'Send invitation'}
+              </Button>
+            </Stack>
+            {administrators.invite.isError && (
+              <Alert severity="error">{administrators.invite.error.message}</Alert>
+            )}
+            {administrators.invite.isSuccess && <Alert severity="success">Invitation sent.</Alert>}
+            {administrators.list.data && (
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle2">Active administrators</Typography>
+                {administrators.list.data.administrators.map((admin) => (
+                  <Typography key={admin.id} variant="body2">
+                    {admin.username} · {admin.email}
+                  </Typography>
+                ))}
+                <Typography variant="subtitle2" sx={{ pt: 1 }}>
+                  Pending invitations
+                </Typography>
+                {administrators.list.data.invitations.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    None
+                  </Typography>
+                ) : (
+                  administrators.list.data.invitations.map((invitation) => (
+                    <Typography key={invitation.id} variant="body2">
+                      {invitation.email}
+                    </Typography>
+                  ))
+                )}
+              </Stack>
+            )}
+          </Stack>
+        </Paper>
+      )}
       {isSuperuser && (
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
           <Stack spacing={2}>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invitationService } from '../services/invitationService'
-import type { InvitationRole } from '../services/invitationService'
+import type { InvitationRegistration, InvitationRole } from '../services/invitationService'
 
 export const useInvitations = (organizationId: string) =>
   useQuery({
@@ -14,10 +14,10 @@ export const useWorkspaceMembers = (organizationId: string) =>
     queryFn: ({ signal }) => invitationService.members(organizationId, signal),
   })
 
-export const useInvitationPreview = (token: string) =>
+export const useInvitationPreview = (token: string, installationAdmin = false) =>
   useQuery({
-    queryKey: ['invitation', token],
-    queryFn: ({ signal }) => invitationService.preview(token, signal),
+    queryKey: ['invitation', installationAdmin, token],
+    queryFn: ({ signal }) => invitationService.preview(token, signal, installationAdmin),
     retry: false,
   })
 
@@ -31,13 +31,8 @@ export function useCreateInvitation(organizationId: string) {
   })
 }
 
-export const useAcceptInvitation = () =>
+export const useAcceptInvitation = (installationAdmin = false) =>
   useMutation({
-    mutationFn: ({
-      token,
-      input,
-    }: {
-      token: string
-      input: { username: string; password: string } | Record<string, never>
-    }) => invitationService.accept(token, input),
+    mutationFn: ({ token, input }: { token: string; input?: InvitationRegistration }) =>
+      invitationService.accept(token, input, installationAdmin),
   })

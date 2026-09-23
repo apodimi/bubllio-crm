@@ -22,7 +22,12 @@ debugging a browser login.
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
 | POST | `/api/v1/setup/smtp-test/` | server-side setup token in JSON | send a real test email with unsaved SMTP settings |
+| POST | `/api/v1/organizations/` | installation admin Bearer token | create a shared organization and become its owner |
 | GET/POST | `/api/v1/organizations/<organization_id>/invitations/` | owner/admin Bearer token | list pending invitations or email a new invitation |
+| GET | `/api/v1/organizations/<organization_id>/members/` | owner/admin Bearer token | list members; direct membership creation is unavailable |
+| GET/POST | `/api/v1/organizations/installation-admin-invitations/` | installation admin Bearer token | list IT admins and pending invitations, or invite another IT admin |
+| GET | `/api/v1/installation-admin-invitations/<token>/` | invitation token in URL | preview an IT admin invitation |
+| POST | `/api/v1/installation-admin-invitations/<token>/accept/` | invitation token; Bearer token for existing users | accept once and become an installation administrator |
 | GET | `/api/v1/invitations/<token>/` | invitation token in URL | preview a valid invitation |
 | POST | `/api/v1/invitations/<token>/accept/` | invitation token; Bearer token for existing users | accept once and join the workspace |
 
@@ -68,6 +73,16 @@ the server, and the response includes JWT `tokens` and `organization_id`. An
 existing user signs in and posts an empty JSON body with their Bearer token.
 Their account email must match the invitation. Acceptance creates a membership
 for that workspace only and consumes the link; replay or expiry returns `404`.
+An ordinary workspace user cannot create another shared organization. Only
+installation administrators can create shared organizations; they become the
+owner of organizations they create.
+
+IT administrator invitations use installation fallback SMTP and the separate
+`/installation-admin-invite/<token>` browser route. An existing account must
+sign in with the invited email; a new account supplies registration details.
+Acceptance grants Django superuser/staff status without adding any workspace
+membership. Reserve this privilege for trusted operators because Django's
+`/admin/` grants broad access outside the normal tenant-scoped product API.
 
 New invited users provide a display name, optional first/last names, optional
 date of birth, timezone, and locale during registration. Existing users can
@@ -80,8 +95,8 @@ exists. Reset links are single-use and expire when the user password changes.
 After an installation is initialized, users may explicitly create one private
 personal workspace. Shared/team workspaces are separate organizations and are
 visible only through an accepted membership. Personal workspaces cannot invite
-other users, add members, or be deleted; create a regular workspace when a team
-needs shared CRM data.
+other users, add members, or be deleted; an installation administrator creates
+a regular workspace when a team needs shared CRM data.
 
 Account settings also expose an explicit personal-data export and account
 deletion flow. The export contains account/profile/membership metadata only;

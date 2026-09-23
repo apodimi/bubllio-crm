@@ -73,7 +73,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {"mode": "raw", "raw": "{\n  \"name\": \"Nerds Lab\",\n  \"slug\": \"nerds-lab\"\n}"},
             "url": "{{base_url}}/api/{{api_version}}/organizations/",
-            "description": "Creates an organization and makes the authenticated user its owner."
+            "description": "Installation administrator only. Creates an organization and makes the administrator its owner."
           }
         },
         {
@@ -91,6 +91,25 @@
       ]
     },
     {
+      "name": "Installation Administrators",
+      "item": [
+        {
+          "name": "List Installation Administrators and Invitations",
+          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/installation-admin-invitations/"}
+        },
+        {
+          "name": "Invite Installation Administrator",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"it-colleague@example.com\"\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/organizations/installation-admin-invitations/",
+            "description": "Installation administrator only. Sends a seven-day invitation through fallback SMTP. Acceptance grants installation privileges without workspace membership."
+          }
+        }
+      ]
+    },
+    {
       "name": "Members",
       "item": [
         {
@@ -98,21 +117,13 @@
           "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/members/"}
         },
         {
-          "name": "Add Member",
-          "event": [{
-            "listen": "test",
-            "script": {"type": "text/javascript", "exec": [
-              "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
-              "const data = pm.response.json();",
-              "if (data.id) pm.environment.set(\"membership_id\", data.id);"
-            ]}
-          }],
+          "name": "Invite Member",
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\n  \"user_id\": {{user_id}},\n  \"role\": \"member\"\n}"},
-            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/members/",
-            "description": "Adds an existing Django user by integer user ID."
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"member\"\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/invitations/",
+            "description": "Sends an email invitation; the recipient must accept it before membership exists."
           }
         },
         {

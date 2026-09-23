@@ -86,6 +86,38 @@ def send_invitation_email(*, account: EmailAccount, recipient: str, organization
         raise RuntimeError("Invitation email was not accepted for delivery.")
 
 
+def send_installation_admin_invitation_email(*, account: EmailAccount, recipient: str, invite_url: str):
+    """Send an explicit invitation to administer this Bubllio installation."""
+    connection = get_connection(
+        backend="django.core.mail.backends.smtp.EmailBackend",
+        host=account.host,
+        port=account.port,
+        username=account.username,
+        password=decrypt_secret(account.encrypted_password),
+        use_tls=account.use_tls,
+        use_ssl=account.use_ssl,
+        timeout=10,
+        fail_silently=False,
+    )
+    sender = f"{account.from_name} <{account.from_email}>" if account.from_name else account.from_email
+    message = EmailMessage(
+        subject="Bubllio CRM installation administrator invitation",
+        body=(
+            "You have been invited to administer this Bubllio CRM installation. "
+            "This grants access to installation settings and the ability to create workspaces "
+            "and invite other installation administrators. It does not automatically grant "
+            "access to workspace CRM data.\n\n"
+            f"Accept your invitation: {invite_url}\n\n"
+            "This link expires in 7 days. If you were not expecting it, ignore this email."
+        ),
+        from_email=sender,
+        to=[recipient],
+        connection=connection,
+    )
+    if message.send(fail_silently=False) != 1:
+        raise RuntimeError("Installation administrator invitation email was not accepted for delivery.")
+
+
 def send_password_reset_email(*, account: EmailAccount, recipient: str, reset_url: str):
     connection = get_connection(
         backend="django.core.mail.backends.smtp.EmailBackend",

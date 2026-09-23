@@ -40,6 +40,14 @@ const invite = createRoute({
   path: '/invite/$token',
   component: lazyRouteComponent(() => import('../pages/Invite/InvitePage'), 'InvitePage'),
 })
+const installationAdminInvite = createRoute({
+  getParentRoute: () => root,
+  path: '/installation-admin-invite/$token',
+  component: lazyRouteComponent(
+    () => import('../pages/Invite/InvitePage'),
+    'InstallationAdminInvitePage',
+  ),
+})
 const passwordReset = createRoute({
   getParentRoute: () => root,
   path: '/reset-password',
@@ -113,6 +121,7 @@ export const router = createRouter({
     home,
     login,
     invite,
+    installationAdminInvite,
     passwordReset,
     passwordResetConfirm,
     accountSettings,

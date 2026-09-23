@@ -11,17 +11,27 @@ export type WorkspaceMember = {
 }
 export type InvitationPreview = {
   email: string
-  organization_name: string
-  role: InvitationRole
+  organization_name?: string
+  role?: InvitationRole
   expires_at: string
 }
 export type InvitationAcceptance = {
-  organization_id: string
-  role: InvitationRole
+  organization_id?: string
+  role?: InvitationRole
   tokens: { access: string; refresh: string } | null
+}
+export type InvitationRegistration = {
+  username: string
+  password: string
+  display_name: string
+  first_name?: string
+  last_name?: string
+  date_of_birth?: string | null
 }
 
 const invitationPath = (token: string) => `/invitations/${encodeURIComponent(token)}/`
+const adminInvitationPath = (token: string) =>
+  `/installation-admin-invitations/${encodeURIComponent(token)}/`
 
 export const invitationService = {
   list: (organizationId: string, signal?: AbortSignal) =>
@@ -30,8 +40,16 @@ export const invitationService = {
     request<WorkspaceMember[]>(`${organizationPath(organizationId)}members/`, { signal }),
   create: (organizationId: string, input: { email: string; role: InvitationRole }) =>
     request<Invitation>(`${organizationPath(organizationId)}invitations/`, { body: input }),
-  preview: (token: string, signal?: AbortSignal) =>
-    request<InvitationPreview>(invitationPath(token), { signal }),
-  accept: (token: string, input: { username: string; password: string } | Record<string, never>) =>
-    request<InvitationAcceptance>(`${invitationPath(token)}accept/`, { body: input }),
+  preview: (token: string, signal?: AbortSignal, installationAdmin = false) =>
+    request<InvitationPreview>(
+      installationAdmin ? adminInvitationPath(token) : invitationPath(token),
+      {
+        signal,
+      },
+    ),
+  accept: (token: string, input: InvitationRegistration | undefined, installationAdmin = false) =>
+    request<InvitationAcceptance>(
+      `${installationAdmin ? adminInvitationPath(token) : invitationPath(token)}accept/`,
+      { body: input ?? {} },
+    ),
 }

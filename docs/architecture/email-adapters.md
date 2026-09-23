@@ -49,8 +49,8 @@ which must be set to the public frontend origin in deployments.
 
 The installation administrator can view or replace the fallback account from
 Account settings in the React application. This uses
-`/api/v1/organizations/installation-settings/` and is restricted to Django
-staff users. It never returns the stored password. Saving a new password
+`/api/v1/organizations/installation-settings/` and is restricted to active Django
+superusers. It never returns the stored password. Saving a new password
 re-encrypts it with the current `BUBLLIO_EMAIL_ENCRYPTION_KEY`.
 
 Set `BUBLLIO_EMAIL_ENCRYPTION_KEY` before storing passwords. Generate a Fernet key:

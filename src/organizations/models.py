@@ -162,3 +162,25 @@ class OrganizationInvitation(models.Model):
                 name="unique_pending_invitation_per_email",
             ),
         ]
+
+
+class InstallationAdminInvitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField()
+    token_hash = models.CharField(max_length=64, unique=True)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name="installation_admin_invitations_sent",
+    )
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("email",),
+                condition=models.Q(accepted_at__isnull=True),
+                name="unique_pending_installation_admin_invitation_per_email",
+            ),
+        ]

@@ -30,7 +30,10 @@ class OrganizationAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_creating_organization_makes_request_user_owner(self):
-        self.client.force_authenticate(self.other_user)
+        administrator = User.objects.create_superuser(
+            username="installation-admin", email="admin@example.com", password="test-pass"
+        )
+        self.client.force_authenticate(administrator)
         response = self.client.post(
             reverse("organization-list"),
             {"name": "Acme", "slug": "acme"},
@@ -38,10 +41,18 @@ class OrganizationAccessTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         membership = OrganizationMembership.objects.get(
-            organization_id=response.data["id"], user=self.other_user
+            organization_id=response.data["id"], user=administrator
         )
         self.assertEqual(membership.role, OrganizationMembership.Role.OWNER)
         self.assertEqual(response.data["current_user_role"], "owner")
+
+    def test_workspace_owner_cannot_create_another_organization(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            reverse("organization-list"), {"name": "Private", "slug": "private"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(Organization.objects.filter(slug="private").exists())
 
     def test_list_contains_only_users_organizations(self):
         hidden = Organization.objects.create(name="Hidden", slug="hidden")
@@ -127,26 +138,13 @@ class MembershipManagementTests(APITestCase):
         self.client.force_authenticate(self.member)
         self.assertEqual(self.client.get(self.list_url()).status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_owner_can_add_member(self):
+    def test_membership_cannot_be_created_without_invitation(self):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.list_url(), {"user_id": self.new_user.id, "role": "viewer"}, format="json"
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(
-            OrganizationMembership.objects.filter(
-                organization=self.organization,
-                user=self.new_user,
-                role=OrganizationMembership.Role.VIEWER,
-            ).exists()
-        )
-
-    def test_admin_cannot_add_another_admin(self):
-        self.client.force_authenticate(self.admin)
-        response = self.client.post(
-            self.list_url(), {"user_id": self.new_user.id, "role": "admin"}, format="json"
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertFalse(OrganizationMembership.objects.filter(organization=self.organization, user=self.new_user).exists())
 
     def test_owner_can_transfer_ownership(self):
         self.client.force_authenticate(self.owner)
