@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from .serializers import EmailAccountSerializer
+from ..serializers import EmailAccountSerializer
 
 
 class InstallationSetupSerializer(serializers.Serializer):

@@ -3,7 +3,7 @@ import uuid
 from django.db import transaction
 from django.utils.text import slugify
 
-from .models import Organization, OrganizationMembership, OrganizationSettings
+from ..models import Organization, OrganizationMembership, OrganizationSettings
 
 
 @transaction.atomic

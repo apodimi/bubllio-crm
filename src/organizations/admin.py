@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.db import transaction
 
-from .email_security import encrypt_secret
+from .services.email_security import encrypt_secret
 from .choices import locale_choices, timezone_choices
 from .models import (
     EmailAccount, InstallationAdminInvitation, Organization, OrganizationInvitation,

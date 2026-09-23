@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Organization
-from .permissions import can_create_workspace
-from .serializers import OrganizationSerializer
+from organizations.models import Organization
+from organizations.permissions import can_create_workspace
+from organizations.serializers import OrganizationSerializer
 
 
 class CurrentUserAPIView(APIView):

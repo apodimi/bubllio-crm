@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import EmailAccount, Organization, OrganizationInvitation, OrganizationMembership
+from ..models import EmailAccount, Organization, OrganizationInvitation, OrganizationMembership
 
 
 User = get_user_model()
@@ -29,7 +29,7 @@ class InvitationTests(APITestCase):
 
     def invite(self, email="new@example.com", role="viewer"):
         self.client.force_authenticate(self.owner)
-        with patch("organizations.invitation_views.send_invitation_email") as sender:
+        with patch("organizations.api.invitations.send_invitation_email") as sender:
             response = self.client.post(self.url, {"email": email, "role": role}, format="json")
         return response, sender
 
@@ -83,7 +83,7 @@ class InvitationTests(APITestCase):
         self.account.is_active = True
         self.account.save(update_fields=("is_active",))
         self.client.force_authenticate(self.owner)
-        with patch("organizations.invitation_views.send_invitation_email", side_effect=RuntimeError("SMTP down")):
+        with patch("organizations.api.invitations.send_invitation_email", side_effect=RuntimeError("SMTP down")):
             response = self.client.post(self.url, {"email": "new@example.com", "role": "viewer"}, format="json")
         self.assertEqual(response.status_code, 502)
         self.assertFalse(OrganizationInvitation.objects.exists())

@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from organizations.auth_views import CurrentUserAPIView, LogoutAPIView
+from accounts.auth_views import CurrentUserAPIView, LogoutAPIView
 from accounts.views import (
     CurrentAccountSettingsAPIView,
     CurrentUserProfileAPIView,
@@ -28,9 +28,9 @@ from accounts.views import (
     PasswordResetConfirmAPIView,
     PasswordResetRequestAPIView,
 )
-from organizations.setup_views import InstallationSetupAPIView, InstallationSmtpTestAPIView
-from organizations.invitation_views import InvitationAcceptAPIView, InvitationDetailAPIView
-from organizations.installation_admin_views import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
+from organizations.api.setup import InstallationSetupAPIView, InstallationSmtpTestAPIView
+from organizations.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
+from organizations.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
 urlpatterns = [
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),

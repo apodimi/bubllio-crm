@@ -7,8 +7,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import EmailAccount, Organization, OrganizationMembership, OrganizationSettings
-from .admin import EmailAccountAdminForm
+from ..models import EmailAccount, Organization, OrganizationMembership, OrganizationSettings
+from ..admin import EmailAccountAdminForm
 
 
 User = get_user_model()
@@ -323,7 +323,7 @@ class OrganizationSettingsAndEmailTests(APITestCase):
             "email-account-test",
             kwargs={"organization_id": self.organization.id, "account_id": account.id},
         )
-        with patch("organizations.views.send_test_email") as send:
+        with patch("organizations.api.email_accounts.send_test_email") as send:
             with patch.dict(os.environ, {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key}):
                 tested = self.client.post(test_url, {"recipient": "owner@example.com"}, format="json")
         self.assertEqual(tested.status_code, status.HTTP_200_OK)
@@ -340,7 +340,7 @@ class OrganizationSettingsAndEmailTests(APITestCase):
             "email-account-test",
             kwargs={"organization_id": self.organization.id, "account_id": account.id},
         )
-        with patch("organizations.views.send_test_email", side_effect=RuntimeError("SMTP unavailable")):
+        with patch("organizations.api.email_accounts.send_test_email", side_effect=RuntimeError("SMTP unavailable")):
             tested = self.client.post(test_url, {"recipient": "owner@example.com"}, format="json")
         self.assertEqual(tested.status_code, status.HTTP_502_BAD_GATEWAY)
         self.assertEqual(tested.data["status"], "failed")

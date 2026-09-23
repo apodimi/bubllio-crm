@@ -198,7 +198,7 @@ contacts/
 automations/
 ```
 
-An app usually has:
+Simple apps usually have:
 
 ```text
 models.py       -> database models
@@ -232,7 +232,12 @@ which selects same-organization active rules, executes the email action, and
 records results. Views provide authorized list/create, run history, and manual
 execution endpoints. See the [file-by-file map](architecture/automations.md).
 
-Organization SMTP tests use `organizations/email_service.py`; automation emails
+The `organizations` app is larger than the simple example. Its
+[file-by-file map](../src/organizations/README.md) separates HTTP handlers in
+`api/`, reusable workflows in `services/`, and regression tests in `tests/`.
+The app label and migrations remain unchanged.
+
+Organization SMTP tests use `organizations/services/email_service.py`; automation emails
 still use Django's global backend. The two paths are not connected yet.
 
 Current route ownership:

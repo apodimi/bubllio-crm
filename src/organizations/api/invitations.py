@@ -17,13 +17,13 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .email_service import send_invitation_email
-from .models import (
+from ..services.email_service import send_invitation_email
+from ..models import (
     EmailAccount, InstallationState, Organization, OrganizationInvitation,
     OrganizationMembership, OrganizationProvisioning, WorkspaceAccessEvent,
 )
 from accounts.models import UserProfile
-from .permissions import Capability, get_membership, get_organization_for_user
+from ..permissions import Capability, get_membership, get_organization_for_user
 
 logger = logging.getLogger(__name__)
 

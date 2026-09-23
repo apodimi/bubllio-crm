@@ -15,10 +15,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import UserProfile
-from .email_service import send_installation_admin_invitation_email
-from .invitation_views import InvitationRegistrationSerializer, token_hash
-from .models import EmailAccount, InstallationAdminInvitation, InstallationState
-from .permissions import IsInstallationAdmin
+from ..services.email_service import send_installation_admin_invitation_email
+from .invitations import InvitationRegistrationSerializer, token_hash
+from ..models import EmailAccount, InstallationAdminInvitation, InstallationState
+from ..permissions import IsInstallationAdmin
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

@@ -2,7 +2,7 @@ from django.core.mail import EmailMessage, get_connection
 from django.utils import timezone
 
 from .email_security import decrypt_secret
-from .models import EmailAccount
+from ..models import EmailAccount
 
 
 def send_setup_test_email(*, smtp, recipient):

@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .models import (
+from ..models import (
     Organization,
     OrganizationInvitation,
     OrganizationMembership,
@@ -16,8 +16,8 @@ from .models import (
     WorkspaceAccessEvent,
     WorkspaceCreatorGrant,
 )
-from .permissions import IsInstallationAdmin
-from .provisioning import send_owner_invitation
+from ..permissions import IsInstallationAdmin
+from ..services.provisioning import send_owner_invitation
 
 logger = logging.getLogger(__name__)
 

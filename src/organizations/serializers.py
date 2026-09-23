@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .email_security import encrypt_secret
+from .services.email_security import encrypt_secret
 from .choices import locale_choices, timezone_choices
 from .models import EmailAccount, Organization, OrganizationMembership, OrganizationSettings
 

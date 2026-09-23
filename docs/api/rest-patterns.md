@@ -71,7 +71,7 @@ Views define API behavior.
 Example file:
 
 ```text
-src/organizations/views.py
+src/organizations/api/workspaces.py
 ```
 
 Organization-owned collection views first resolve the organization through the

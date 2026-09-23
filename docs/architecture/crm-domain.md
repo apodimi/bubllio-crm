@@ -149,10 +149,10 @@ role rules.
 Where business logic should live:
 
 ```text
-serializers.py -> input validation related to API data
-services.py    -> reusable domain behavior
-models.py      -> core data constraints and simple model behavior
-views.py       -> HTTP request/response coordination
+serializers.py (or api/*_serializers.py) -> API input validation
+services/*.py                           -> reusable domain behavior
+models.py                                -> core data constraints and simple model behavior
+api/*.py                                 -> HTTP request/response coordination
 ```
 
 Views should not become the place where all product rules live.

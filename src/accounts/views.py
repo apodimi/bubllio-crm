@@ -15,7 +15,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 from rest_framework.views import APIView
 
-from organizations.email_service import send_password_reset_email
+from organizations.services.email_service import send_password_reset_email
 from organizations.models import EmailAccount, InstallationState
 from .models import UserProfile
 from .serializers import (

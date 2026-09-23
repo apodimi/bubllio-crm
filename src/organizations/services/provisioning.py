@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .email_service import send_invitation_email
-from .models import (
+from ..models import (
     EmailAccount,
     InstallationState,
     OrganizationInvitation,

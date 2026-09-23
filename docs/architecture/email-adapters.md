@@ -6,9 +6,9 @@ account does not switch automation emails to that account.
 | Caller | Implementation | Transport |
 |---|---|---|
 | Automation action and manual automation test | `automations/services.py` calls Django `send_mail` | Global backend, currently console |
-| Email account test endpoint | `organizations/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
-| First-run setup test email | `organizations/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
-| Workspace invitation | `organizations/email_service.py` sends the invitation link | Active default SMTP account of the inviting organization |
+| Email account test endpoint | `organizations/services/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
+| First-run setup test email | `organizations/services/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
+| Workspace invitation | `organizations/services/email_service.py` sends the invitation link | Active default SMTP account of the inviting organization |
 
 The first path prints email in the terminal with checked-in settings. The second
 attempts a real network send. Tests use mocked or test email boundaries.

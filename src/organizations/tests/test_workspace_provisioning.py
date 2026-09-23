@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from .models import (
+from ..models import (
     EmailAccount, InstallationState, Organization, OrganizationInvitation,
     OrganizationMembership, OrganizationProvisioning, WorkspaceCreatorGrant,
     WorkspaceAccessEvent,
@@ -45,7 +45,7 @@ class WorkspaceProvisioningTests(APITestCase):
 
     def create_pending(self, email="owner@example.com"):
         self.client.force_authenticate(self.creator)
-        with patch("organizations.provisioning.send_invitation_email") as send:
+        with patch("organizations.services.provisioning.send_invitation_email") as send:
             response = self.client.post(
                 reverse("organization-list"),
                 {"name": "Client", "slug": "client", "owner_email": email},
@@ -142,7 +142,7 @@ class WorkspaceProvisioningTests(APITestCase):
         self.assertFalse(self.client.get(reverse("current-user")).data["can_create_workspaces"])
         self.assertEqual(len(self.client.get(reverse("workspace-provisioning-list")).data), 1)
         url = reverse("workspace-provisioning-detail", kwargs={"organization_id": response.data["id"]})
-        with patch("organizations.provisioning.send_invitation_email"):
+        with patch("organizations.services.provisioning.send_invitation_email"):
             self.assertEqual(self.client.post(url).status_code, 200)
 
     def test_delegated_creator_must_nominate_valid_owner_email(self):
@@ -166,7 +166,7 @@ class WorkspaceProvisioningTests(APITestCase):
         self.assertFalse(Organization.objects.filter(slug="client").exists())
         state.fallback_email_account = EmailAccount.objects.get(name="Fallback")
         state.save(update_fields=("fallback_email_account",))
-        with patch("organizations.provisioning.send_invitation_email", side_effect=RuntimeError("SMTP failed")):
+        with patch("organizations.services.provisioning.send_invitation_email", side_effect=RuntimeError("SMTP failed")):
             self.assertEqual(self.client.post(reverse("organization-list"), body, format="json").status_code, 502)
         self.assertFalse(Organization.objects.filter(slug="client").exists())
         self.assertFalse(OrganizationInvitation.objects.filter(email=self.owner.email).exists())
@@ -180,7 +180,7 @@ class WorkspaceProvisioningTests(APITestCase):
         self.assertEqual(self.client.post(url).status_code, 404)
         self.assertEqual(self.client.delete(url).status_code, 404)
         self.client.force_authenticate(self.creator)
-        with patch("organizations.provisioning.send_invitation_email") as send:
+        with patch("organizations.services.provisioning.send_invitation_email") as send:
             self.assertEqual(self.client.post(url).status_code, 200)
         new_token = send.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
         self.assertNotEqual(old_token, new_token)
@@ -194,7 +194,7 @@ class WorkspaceProvisioningTests(APITestCase):
         response, token = self.create_pending()
         url = reverse("workspace-provisioning-detail", kwargs={"organization_id": response.data["id"]})
         self.client.force_authenticate(self.creator)
-        with patch("organizations.provisioning.send_invitation_email", side_effect=RuntimeError("SMTP failed")):
+        with patch("organizations.services.provisioning.send_invitation_email", side_effect=RuntimeError("SMTP failed")):
             self.assertEqual(self.client.post(url).status_code, 502)
         self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": token})).status_code, 200)
         self.assertFalse(

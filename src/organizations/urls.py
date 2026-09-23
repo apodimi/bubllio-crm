@@ -1,24 +1,16 @@
 from django.urls import include, path
 
-from .views import (
-    OrganizationDetailAPIView,
-    OrganizationListCreateAPIView,
-    OrganizationMembershipDetailAPIView,
-    OrganizationMembershipListAPIView,
-    EmailAccountListCreateAPIView,
-    EmailAccountDetailAPIView,
-    EmailAccountTestAPIView,
-    OrganizationSettingsAPIView,
-    OrganizationSettingsOptionsAPIView,
-    InstallationSettingsAPIView,
-    PersonalWorkspaceAPIView,
-)
-from .invitation_views import OrganizationInvitationListCreateAPIView
-from .installation_admin_views import InstallationAdminInvitationListCreateAPIView
-from .provisioning_views import (
+from .api.email_accounts import EmailAccountDetailAPIView, EmailAccountListCreateAPIView, EmailAccountTestAPIView
+from .api.installation_admins import InstallationAdminInvitationListCreateAPIView
+from .api.installation_settings import InstallationSettingsAPIView
+from .api.invitations import OrganizationInvitationListCreateAPIView
+from .api.memberships import OrganizationMembershipDetailAPIView, OrganizationMembershipListAPIView
+from .api.provisioning import (
     WorkspaceCreatorGrantAPIView, WorkspaceCreatorGrantDetailAPIView,
     WorkspaceProvisioningListAPIView, WorkspaceProvisioningDetailAPIView,
 )
+from .api.workspace_settings import OrganizationSettingsAPIView, OrganizationSettingsOptionsAPIView
+from .api.workspaces import OrganizationDetailAPIView, OrganizationListCreateAPIView, PersonalWorkspaceAPIView
 
 urlpatterns = [
     path("", OrganizationListCreateAPIView.as_view(), name="organization-list"),

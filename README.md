@@ -252,7 +252,7 @@ Done:
 - Django project setup
 - Django REST Framework enabled
 - global `/api/v1/` URL prefix
-- `organizations` app
+- `organizations` app ([backend code map](src/organizations/README.md))
 - `companies` app
 - `contacts` app
 - `automations` app
