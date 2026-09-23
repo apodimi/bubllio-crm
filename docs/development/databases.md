@@ -119,5 +119,5 @@ Run the same checks against SQLite and a configured PostgreSQL database:
 ```bash
 uv run python src/manage.py check
 uv run python src/manage.py migrate
-uv run python src/manage.py test bubllio_crm organizations companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
 ```

@@ -28,9 +28,9 @@ from accounts.views import (
     PasswordResetConfirmAPIView,
     PasswordResetRequestAPIView,
 )
-from organizations.api.setup import InstallationSetupAPIView, InstallationSmtpTestAPIView
-from organizations.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
-from organizations.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
+from onboarding.api.setup import InstallationSetupAPIView, InstallationSmtpTestAPIView
+from access.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
+from onboarding.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
 urlpatterns = [
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),

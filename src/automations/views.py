@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from organizations.permissions import Capability, get_organization_for_user
+from access.permissions import Capability, get_organization_for_user
 
 from .models import Automation, AutomationRun
 from .serializers import AutomationRunSerializer, AutomationSerializer

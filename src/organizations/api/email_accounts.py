@@ -4,9 +4,9 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import EmailAccount
-from ..permissions import Capability, get_organization_for_user
-from ..serializers import EmailAccountSerializer
+from organizations.models import EmailAccount
+from access.permissions import Capability, get_organization_for_user
+from organizations.serializers import EmailAccountSerializer
 from ..services.email_service import mark_test_failure, mark_test_success, send_test_email
 
 

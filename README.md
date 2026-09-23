@@ -238,7 +238,7 @@ uv run python src/manage.py check
 uv run python src/manage.py makemigrations
 uv run python src/manage.py migrate
 uv run python src/manage.py showmigrations
-uv run python src/manage.py test bubllio_crm organizations companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
 uv run python src/manage.py runserver
 uv run python src/manage.py createsuperuser
 docker compose up -d postgres

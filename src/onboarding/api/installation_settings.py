@@ -6,9 +6,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import EmailAccount, InstallationState, Organization
-from ..permissions import IsInstallationAdmin
-from ..serializers import EmailAccountSerializer
+from organizations.models import EmailAccount, InstallationState, Organization
+from access.permissions import IsInstallationAdmin
+from organizations.serializers import EmailAccountSerializer
 
 
 class InstallationSettingsAPIView(APIView):

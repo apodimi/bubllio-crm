@@ -7,9 +7,9 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from ..services.email_security import decrypt_secret
-from ..services.email_service import send_setup_test_email
-from ..models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
+from organizations.services.email_security import decrypt_secret
+from organizations.services.email_service import send_setup_test_email
+from organizations.models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 
 
 class InstallationSetupTests(APITestCase):
@@ -165,7 +165,7 @@ class InstallationSetupTests(APITestCase):
             "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
             "use_tls": True, "use_ssl": False,
         }
-        with patch("organizations.api.setup.send_setup_test_email") as send:
+        with patch("onboarding.api.setup.send_setup_test_email") as send:
             response = self.client.post(
                 self.smtp_test_url,
                 {"setup_token": self.setup_token, "smtp": smtp, "recipient": "admin@example.com"},
@@ -218,7 +218,7 @@ class InstallationSetupTests(APITestCase):
                 send_setup_test_email(smtp=smtp, recipient="admin@example.com")
 
     def test_setup_test_email_rejects_invalid_token_without_sending(self):
-        with patch("organizations.api.setup.send_setup_test_email") as send:
+        with patch("onboarding.api.setup.send_setup_test_email") as send:
             response = self.client.post(self.smtp_test_url, {"setup_token": "wrong"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         send.assert_not_called()
@@ -228,7 +228,7 @@ class InstallationSetupTests(APITestCase):
             "name": "Primary", "host": "smtp.example.com", "port": 587,
             "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
         }
-        with patch("organizations.api.setup.send_setup_test_email") as send:
+        with patch("onboarding.api.setup.send_setup_test_email") as send:
             response = self.client.post(
                 self.smtp_test_url,
                 {"setup_token": self.setup_token, "smtp": smtp, "recipient": "not-an-email"}, format="json",
@@ -241,7 +241,7 @@ class InstallationSetupTests(APITestCase):
             "name": "Primary", "host": "smtp.example.com", "port": 587,
             "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
         }
-        with patch("organizations.api.setup.send_setup_test_email", side_effect=RuntimeError("secret-details")):
+        with patch("onboarding.api.setup.send_setup_test_email", side_effect=RuntimeError("secret-details")):
             response = self.client.post(
                 self.smtp_test_url,
                 {"setup_token": self.setup_token, "smtp": smtp, "recipient": "admin@example.com"}, format="json",
@@ -252,7 +252,7 @@ class InstallationSetupTests(APITestCase):
 
     def test_setup_test_email_closes_after_setup(self):
         self.assertEqual(self.client.post(self.url, self.payload, format="json").status_code, status.HTTP_201_CREATED)
-        with patch("organizations.api.setup.send_setup_test_email") as send:
+        with patch("onboarding.api.setup.send_setup_test_email") as send:
             response = self.client.post(self.smtp_test_url, {"setup_token": self.setup_token}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         send.assert_not_called()

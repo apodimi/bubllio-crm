@@ -4,9 +4,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..choices import locale_choices, timezone_choices
-from ..models import OrganizationSettings
-from ..permissions import Capability, get_organization_for_user
-from ..serializers import OrganizationSettingsSerializer
+from organizations.models import OrganizationSettings
+from access.permissions import Capability, get_organization_for_user
+from organizations.serializers import OrganizationSettingsSerializer
 
 
 class OrganizationSettingsAPIView(APIView):

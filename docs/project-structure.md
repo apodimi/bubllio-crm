@@ -192,6 +192,9 @@ Each business domain should usually be a separate Django app.
 Current apps:
 
 ```text
+accounts/
+access/
+onboarding/
 organizations/
 companies/
 contacts/
@@ -213,8 +216,11 @@ tests.py        -> tests
 
 ## Current App Responsibilities
 
-`organizations` represents the CRM workspace or tenant. It also owns membership,
-role, and capability-based access rules in `permissions.py`.
+`organizations` represents the CRM workspace or tenant. Membership and
+capability-based access rules live in the separate `access` app. Installation
+setup and installation-wide administration live in the separate `onboarding`
+app. Their existing models remain in `organizations/models.py` temporarily so
+the migration history and database tables stay stable.
 
 It also contains the general organization settings and SMTP email account
 configuration used by the Django admin fallback dashboard.

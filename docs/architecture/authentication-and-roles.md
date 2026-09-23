@@ -91,7 +91,7 @@ company/contact update or delete endpoint. Account-level profile/password
 settings belong to the authenticated individual, independently of workspace role.
 
 Authorization is expressed as capabilities in
-`src/organizations/permissions.py`. This avoids scattering role comparisons
+`src/access/permissions.py`. This avoids scattering role comparisons
 through every view.
 
 Administrators may invite, update, and remove members or viewers. They cannot create,

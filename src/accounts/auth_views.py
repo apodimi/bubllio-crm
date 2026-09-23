@@ -6,7 +6,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from organizations.models import Organization
-from organizations.permissions import can_create_workspace
+from access.permissions import can_create_workspace
 from organizations.serializers import OrganizationSerializer
 
 

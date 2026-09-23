@@ -78,7 +78,7 @@ Use this decision table before adding a function:
 | Does it coordinate HTTP methods/status codes? | `views.py` |
 | Is it reusable business behavior across views/signals? | a domain service, for example `services.py` |
 | Is it a URL-to-view mapping? | the app's `urls.py` |
-| Is it tenant/capability authorization? | `organizations/permissions.py` and its resolver helpers |
+| Is it tenant/capability authorization? | `access/permissions.py` and its resolver helpers |
 | Is it a React domain request/cache? | the owning `frontend/src/features/<feature>/api.ts` |
 | Is it visual composition or navigation? | `frontend/src/pages/`, `components/`, or `routes/` |
 | Is it a token/session state transition? | `frontend/src/features/auth/` |
@@ -139,7 +139,7 @@ opening a pull request:
 # Backend
 uv run python src/manage.py check
 uv run python src/manage.py makemigrations --check --dry-run
-uv run python src/manage.py test bubllio_crm organizations companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
 
 # Frontend
 cd frontend

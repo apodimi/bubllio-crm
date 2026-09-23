@@ -8,7 +8,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from ..models import InstallationState, Organization
-from ..permissions import Capability, can_create_workspace, get_organization_for_user
+from access.permissions import Capability, can_create_workspace, get_organization_for_user
 from ..serializers import OrganizationSerializer
 from ..services.personal_workspace import ensure_personal_workspace
 from ..services.provisioning import create_workspace

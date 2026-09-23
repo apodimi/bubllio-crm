@@ -16,7 +16,7 @@ from ..models import (
     WorkspaceAccessEvent,
     WorkspaceCreatorGrant,
 )
-from ..permissions import IsInstallationAdmin
+from access.permissions import IsInstallationAdmin
 from ..services.provisioning import send_owner_invitation
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from ..models import EmailAccount, InstallationAdminInvitation, InstallationState, Organization, OrganizationMembership
+from organizations.models import EmailAccount, InstallationAdminInvitation, InstallationState, Organization, OrganizationMembership
 
 User = get_user_model()
 
@@ -34,7 +34,7 @@ class InstallationAdminInvitationTests(APITestCase):
 
     def invite(self, email="it-two@example.com"):
         self.client.force_authenticate(self.administrator)
-        with patch("organizations.api.installation_admins.send_installation_admin_invitation_email") as send:
+        with patch("onboarding.api.installation_admins.send_installation_admin_invitation_email") as send:
             response = self.client.post(self.url, {"email": email}, format="json")
         return response, send
 
@@ -105,7 +105,7 @@ class InstallationAdminInvitationTests(APITestCase):
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.post(reverse("installation-admin-invitation-accept", kwargs={"token": token})).status_code, 404)
         self.client.force_authenticate(self.administrator)
-        with patch("organizations.api.installation_admins.send_installation_admin_invitation_email", side_effect=RuntimeError("SMTP down")):
+        with patch("onboarding.api.installation_admins.send_installation_admin_invitation_email", side_effect=RuntimeError("SMTP down")):
             response = self.client.post(self.url, {"email": "other@example.com"}, format="json")
         self.assertEqual(response.status_code, 502)
         self.assertFalse(InstallationAdminInvitation.objects.filter(email="other@example.com").exists())

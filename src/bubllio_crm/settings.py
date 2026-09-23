@@ -58,6 +58,8 @@ INSTALLED_APPS = [
 
     # local apps
     'accounts.apps.AccountsConfig',
+    'access.apps.AccessConfig',
+    'onboarding.apps.OnboardingConfig',
     'organizations',
     'companies.apps.CompaniesConfig',
     'contacts',

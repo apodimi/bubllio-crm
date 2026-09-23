@@ -108,7 +108,7 @@ switch automation delivery to that account.
 | Symptom | Start here |
 |---|---|
 | 401 during login or API use | `settings.py`, `urls.py`, `accounts/auth_views.py`, `frontend/src/services/api.ts` |
-| 403/404 for a tenant route | `organizations/permissions.py`, organization resolver, view queryset |
+| 403/404 for a tenant route | `access/permissions.py`, organization resolver, view queryset |
 | Wrong JSON shape or validation | the app's `serializers.py` |
 | Data missing from a list | view queryset, tenant filter, TanStack Query key |
 | Automation not firing | `companies/signals.py`, `automations/apps.py`, `automations/services.py` |

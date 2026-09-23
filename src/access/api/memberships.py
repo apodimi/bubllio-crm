@@ -6,9 +6,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import OrganizationMembership
-from ..permissions import Capability, get_membership, get_organization_for_user
-from ..serializers import OrganizationMembershipSerializer
+from organizations.models import OrganizationMembership
+from access.permissions import Capability, get_membership, get_organization_for_user
+from organizations.serializers import OrganizationMembershipSerializer
 
 
 class OrganizationMembershipListAPIView(APIView):

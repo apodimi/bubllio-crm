@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import BasePermission
 
-from .models import Organization, OrganizationMembership, WorkspaceCreatorGrant
+from organizations.models import Organization, OrganizationMembership, WorkspaceCreatorGrant
 
 
 class IsInstallationAdmin(BasePermission):

@@ -1,10 +1,10 @@
 from django.urls import include, path
 
 from .api.email_accounts import EmailAccountDetailAPIView, EmailAccountListCreateAPIView, EmailAccountTestAPIView
-from .api.installation_admins import InstallationAdminInvitationListCreateAPIView
-from .api.installation_settings import InstallationSettingsAPIView
-from .api.invitations import OrganizationInvitationListCreateAPIView
-from .api.memberships import OrganizationMembershipDetailAPIView, OrganizationMembershipListAPIView
+from onboarding.api.installation_admins import InstallationAdminInvitationListCreateAPIView
+from onboarding.api.installation_settings import InstallationSettingsAPIView
+from access.api.invitations import OrganizationInvitationListCreateAPIView
+from access.api.memberships import OrganizationMembershipDetailAPIView, OrganizationMembershipListAPIView
 from .api.provisioning import (
     WorkspaceCreatorGrantAPIView, WorkspaceCreatorGrantDetailAPIView,
     WorkspaceProvisioningListAPIView, WorkspaceProvisioningDetailAPIView,

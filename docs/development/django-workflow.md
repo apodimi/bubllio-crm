@@ -140,7 +140,7 @@ Run:
 ```bash
 uv run python src/manage.py check
 uv run python src/manage.py makemigrations --check --dry-run
-uv run python src/manage.py test bubllio_crm organizations companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
 ```
 
 Use `makemigrations --check --dry-run` when you want to verify there are no model changes missing migrations.

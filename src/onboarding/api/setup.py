@@ -11,9 +11,9 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
-from ..services.email_security import encrypt_secret
-from ..services.email_service import send_setup_test_email
-from ..models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
+from organizations.services.email_security import encrypt_secret
+from organizations.services.email_service import send_setup_test_email
+from organizations.models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 from .setup_serializers import InstallationSetupSerializer, InstallationSmtpTestSerializer
 
 
