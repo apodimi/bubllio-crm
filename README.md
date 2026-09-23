@@ -1,8 +1,31 @@
-# Bubllio CRM API
+<p align="center">
+  <img src="frontend/src/assets/brand/bubllio-mark.png" alt="Bubllio logo" width="104" />
+</p>
 
-Bubllio CRM API is an open-source CRM backend built with Django and Django REST Framework.
+# Bubllio CRM
+
+Bubllio CRM is an open-source CRM with a Django REST API and a React frontend.
 
 The project is intentionally documented as a learning project too: the code should grow step by step, with clear reasoning about where each piece belongs and why it exists.
+
+## Roles at a glance
+
+Installation access and workspace access are separate. One person can have a
+different role in each workspace; creating a workspace does not grant access to
+every other workspace.
+
+| Role | Scope | Main responsibility |
+| --- | --- | --- |
+| Installation administrator | Whole installation | Configure installation settings, invite other IT admins, and grant workspace-creator access. |
+| Workspace creator | Whole installation, limited | Create shared workspaces and nominate their first owner; no automatic access to other workspaces or Django admin. |
+| Owner | One workspace | Full workspace management, including administrator appointments, ownership transfer, and deletion. |
+| Admin | One workspace | Manage workspace settings, SMTP, automations, members, and CRM data, but not ownership. |
+| Member | One workspace | Read and add CRM data. |
+| Viewer | One workspace | Read-only access to CRM data and automation history. |
+
+The first setup user is an installation administrator **and** owner of the
+first workspace. For the exact permission matrix, invitation flow, and security
+limits, see [Roles and Access](docs/guides/roles-and-access.md).
 
 ## Current Stack
 
@@ -175,6 +198,7 @@ Start here:
 - [Postman Guide](docs/api-postman.md)
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Authentication and Roles](docs/architecture/authentication-and-roles.md)
+- [Roles and Access — Plain-language Guide](docs/guides/roles-and-access.md)
 - [Workspace Access Model: Research and Proposed Direction](docs/research/access-model-comparison.md)
 - [Automations Architecture](docs/architecture/automations.md)
 - [Try Your First Automation](docs/guides/first-automation.md)
