@@ -4,7 +4,12 @@ from django.db import transaction
 
 from .email_security import encrypt_secret
 from .choices import locale_choices, timezone_choices
-from .models import EmailAccount, InstallationAdminInvitation, Organization, OrganizationInvitation, OrganizationMembership, OrganizationSettings
+from .models import (
+    EmailAccount, InstallationAdminInvitation, Organization, OrganizationInvitation,
+    OrganizationMembership, OrganizationProvisioning, OrganizationSettings,
+    WorkspaceCreatorGrant,
+    WorkspaceAccessEvent,
+)
 
 
 class OrganizationSettingsAdminForm(forms.ModelForm):
@@ -63,6 +68,51 @@ class OrganizationMembershipAdmin(admin.ModelAdmin):
     list_display = ("id", "organization", "user", "role", "created_at", "updated_at")
     search_fields = ("organization__name", "user__username", "user__email")
     list_filter = ("organization", "role")
+
+
+@admin.register(WorkspaceCreatorGrant)
+class WorkspaceCreatorGrantAdmin(admin.ModelAdmin):
+    list_display = ("user", "granted_by", "created_at")
+    search_fields = ("user__username", "user__email")
+    readonly_fields = ("user", "granted_by", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(OrganizationProvisioning)
+class OrganizationProvisioningAdmin(admin.ModelAdmin):
+    list_display = ("organization", "creator", "owner_email", "created_at")
+    search_fields = ("organization__name", "creator__email", "owner_email")
+    readonly_fields = ("organization", "creator", "owner_email", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(WorkspaceAccessEvent)
+class WorkspaceAccessEventAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "action", "actor", "target_user", "organization_id")
+    list_filter = ("action",)
+    readonly_fields = ("action", "actor", "target_user", "organization_id", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(OrganizationInvitation)

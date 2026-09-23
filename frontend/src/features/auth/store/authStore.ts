@@ -32,6 +32,7 @@ export interface AuthUser {
   username: string
   email: string
   is_superuser: boolean
+  can_create_workspaces?: boolean
 }
 
 interface AuthState {

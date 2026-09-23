@@ -114,9 +114,19 @@ POST /api/v1/organizations/
 DELETE /api/v1/organizations/<id>/
 
 GET  /api/v1/organizations/<id>/members/
-POST /api/v1/organizations/<id>/members/
+GET  /api/v1/organizations/<id>/invitations/
+POST /api/v1/organizations/<id>/invitations/
 PATCH /api/v1/organizations/<id>/members/<membership-id>/
 DELETE /api/v1/organizations/<id>/members/<membership-id>/
+
+GET  /api/v1/organizations/installation-admin-invitations/
+POST /api/v1/organizations/installation-admin-invitations/
+GET  /api/v1/organizations/workspace-creators/
+POST /api/v1/organizations/workspace-creators/
+DELETE /api/v1/organizations/workspace-creators/<grant-id>/
+GET  /api/v1/organizations/provisioning/
+POST /api/v1/organizations/provisioning/<organization-id>/
+DELETE /api/v1/organizations/provisioning/<organization-id>/
 
 GET  /api/v1/organizations/<id>/settings/
 PATCH /api/v1/organizations/<id>/settings/
@@ -142,6 +152,12 @@ timezone available to the Python runtime and every locale configured in Django's
 `LANGUAGES` setting. The frontend can use these directly for dropdowns; only the
 selected values are stored in `OrganizationSettings`.
 
+Installation admins can grant an existing user workspace-creator access without
+making them a Django superuser. Workspace creation accepts `owner_email`. A
+workspace nominated for somebody else stays inaccessible until that person
+accepts the emailed owner invitation; its creator can resend or cancel the
+pending handoff. See [Authentication and Roles](docs/architecture/authentication-and-roles.md).
+
 ## Documentation
 
 Start here:
@@ -159,6 +175,7 @@ Start here:
 - [Postman Guide](docs/api-postman.md)
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Authentication and Roles](docs/architecture/authentication-and-roles.md)
+- [Workspace Access Model: Research and Proposed Direction](docs/research/access-model-comparison.md)
 - [Automations Architecture](docs/architecture/automations.md)
 - [Try Your First Automation](docs/guides/first-automation.md)
 - [Workflow Roadmap — Planned, Not Implemented](docs/architecture/automation-roadmap.md)

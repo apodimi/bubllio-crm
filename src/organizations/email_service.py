@@ -57,7 +57,10 @@ def send_test_email(*, account: EmailAccount, recipient: str):
     message.send(fail_silently=False)
 
 
-def send_invitation_email(*, account: EmailAccount, recipient: str, organization_name: str, invite_url: str):
+def send_invitation_email(
+    *, account: EmailAccount, recipient: str, organization_name: str,
+    invite_url: str, initial_owner: bool = False,
+):
     """Send an invitation through the organization's default SMTP account."""
     connection = get_connection(
         backend="django.core.mail.backends.smtp.EmailBackend",
@@ -71,10 +74,18 @@ def send_invitation_email(*, account: EmailAccount, recipient: str, organization
         fail_silently=False,
     )
     sender = f"{account.from_name} <{account.from_email}>" if account.from_name else account.from_email
+    invitation_line = (
+        f"You have been invited to become the owner of {organization_name} on Bubllio CRM."
+        if initial_owner
+        else f"You have been invited to join {organization_name} on Bubllio CRM."
+    )
     message = EmailMessage(
-        subject=f"Join {organization_name} on Bubllio CRM",
+        subject=(
+            f"Own {organization_name} on Bubllio CRM"
+            if initial_owner else f"Join {organization_name} on Bubllio CRM"
+        ),
         body=(
-            f"You have been invited to join {organization_name} on Bubllio CRM.\n\n"
+            f"{invitation_line}\n\n"
             f"Accept your invitation: {invite_url}\n\n"
             "This link expires in 7 days. If you were not expecting this invitation, ignore this email."
         ),

@@ -89,9 +89,64 @@ test('login, tenant switch, permissions and logout isolate data', async ({ page 
   await expect(page.getByRole('cell', { name: 'Beta Only' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Acme Ltd' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Add company' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  await page.getByRole('button', { name: 'Open account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0])
+})
+test('delegated creator nominates a business owner and sees the pending handoff', async ({
+  page,
+}) => {
+  let pending: Array<{
+    organization_id: string
+    name: string
+    slug: string
+    owner_email: string
+    created_at: string
+  }> = []
+  await page.route('**/api/v1/auth/me/', (route) =>
+    route.fulfill({
+      json: {
+        id: 2,
+        username: 'creator',
+        email: 'creator@example.com',
+        is_superuser: false,
+        can_create_workspaces: true,
+        organizations: [],
+      },
+    }),
+  )
+  await page.route('**/api/v1/organizations/', (route) => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({
+        name: 'Client Team',
+        slug: 'client-team',
+        owner_email: 'owner@example.com',
+      })
+      pending = [
+        {
+          organization_id: '00000000-0000-0000-0000-000000000001',
+          name: 'Client Team',
+          slug: 'client-team',
+          owner_email: 'owner@example.com',
+          created_at: '2030-01-01T00:00:00Z',
+        },
+      ]
+      return route.fulfill({ status: 201, json: { ...pending[0], owner_invitation_pending: true } })
+    }
+    return route.fulfill({ json: [] })
+  })
+  await page.route('**/api/v1/organizations/provisioning/', (route) =>
+    route.fulfill({ json: pending }),
+  )
+  await login(page)
+  await page.getByRole('button', { name: 'New shared workspace' }).click()
+  await page.getByLabel('Workspace name').fill('Client Team')
+  await page.getByLabel('Slug', { exact: false }).fill('client-team')
+  await page.getByLabel('Business owner email', { exact: false }).fill('owner@example.com')
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  await expect(page.getByText('Awaiting workspace owners')).toBeVisible()
+  await expect(page.getByText('Owner invitation: owner@example.com')).toBeVisible()
 })
 test('creates company, handles validation and refreshes list', async ({ page }) => {
   await login(page)
@@ -347,7 +402,7 @@ test('invite-only registration creates an account and opens the invited workspac
       display_name: 'New Person',
       first_name: '',
       last_name: '',
-      date_of_birth: '',
+      date_of_birth: null,
     })
     return route.fulfill({
       status: 201,

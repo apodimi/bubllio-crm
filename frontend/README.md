@@ -51,7 +51,9 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
   account; a four-step wizard can send a real SMTP test email to a chosen
   recipient before final confirmation. Each step validates its visible fields
   and shows errors inline. Setup is hidden after initialization.
-- Organization listing, creation, selection and direct workspace URLs.
+- Organization listing, selection and direct workspace URLs. Installation admins
+  can grant existing accounts workspace-creator access. Creators nominate an
+  initial owner; pending handoffs can be resent or cancelled before acceptance.
 - Invite-only account registration and workspace invitations through the
   workspace's default SMTP account. Owners/admins can view people and pending
   invitations; acceptance adds a role only to that workspace.
@@ -60,7 +62,9 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
 - Read-only automation rules and run history.
 - Responsive MUI shell, loading/error/empty states and server validation messages.
 - Viewer roles cannot see create-company/contact controls; backend authorization
-  remains authoritative. Null current_user_role represents superuser in the current API.
+  remains authoritative. Workspace roles come from membership; the independent
+  `can_create_workspaces` flag controls the creation UI. A superuser does not
+  receive an implicit workspace role.
 
 There are no fake production records or dashboard statistics. Browser tests use
 isolated mocked API responses. Editing/deleting CRM records, member management,

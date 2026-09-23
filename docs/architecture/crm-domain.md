@@ -44,9 +44,11 @@ An organization owns its CRM data:
 Users may opt into one private personal workspace through the workspace
 picker. It is a normal tenant for the user's own companies, contacts and
 automations, but it is marked `is_personal` and has a single owner. Personal
-workspaces cannot be deleted, invited to, or given additional members. Team/shared workspaces remain normal
-organizations: users see them only after an accepted invitation (or when an
-installation administrator creates one) and membership roles control access.
+workspaces cannot be deleted, invited to, or given additional members.
+Team/shared workspaces remain normal organizations: users see them after an
+accepted invitation or when they create one for themselves. A workspace
+awaiting its nominated owner is hidden from normal CRM endpoints. Membership
+roles control access after provisioning.
 
 ## Company
 
@@ -161,9 +163,10 @@ would react to one. Neither is currently implemented in the automation system.
 The [workflow roadmap](automation-roadmap.md) explains this distinction.
 ## Tenant access boundary
 
-Every authenticated user can access only organizations where they have an
-`OrganizationMembership` with the required capability. Django staff or
-superuser status does not bypass this tenant boundary; installation-level
-administration is exposed only through explicitly scoped installation settings
-endpoints. A pending invitation never creates membership and therefore never
-makes a workspace visible in the organization list.
+Every authenticated user can access normal REST resources only in organizations
+where they have an `OrganizationMembership` with the required capability. Django
+staff or superuser status does not bypass this REST boundary; however, a Django
+superuser has broad access through `/admin/`. Installation administration uses
+explicit endpoints. A normal pending invitation does not create membership;
+provisioning creates a temporary owner membership but keeps the workspace
+inaccessible until the nominated owner accepts.

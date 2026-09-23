@@ -49,7 +49,7 @@ IDs into the environment automatically.
 ## Recommended flow
 
 1. Sign in as an installation administrator and create an organization. The
-   creator becomes its owner.
+   creator becomes its owner when no other `owner_email` is supplied.
 2. List Organizations and confirm only memberships visible to the user appear.
 3. Invite another person by email under Members and have them accept the link
    before expecting the workspace to appear in their organization list.
@@ -66,6 +66,15 @@ IDs into the environment automatically.
 
 For expected results at each step, follow [Your First Automation](guides/first-automation.md).
 
+To test delegated provisioning instead, grant an existing account access with
+`POST /api/v1/organizations/workspace-creators/` and its email. Sign in as that
+account, create a workspace with a different `owner_email`, then inspect
+`GET /api/v1/organizations/provisioning/`. The normal organization list does
+not include it until the nominated owner accepts the email invitation. The
+creator may resend (`POST`) or cancel (`DELETE`) the pending provisioning URL.
+This flow needs working installation fallback SMTP; unlike a mocked Postman
+request, it sends a real invitation email.
+
 ## Authentication
 
 Obtain tokens with `POST /api/v1/auth/token/` and JSON username/password. Use the
@@ -74,8 +83,10 @@ returned `access` value in `Authorization: Bearer <access>` headers. Refresh wit
 
 ## Authentication responses
 
-Every API route requires authentication. With the JWT DRF configuration, an anonymous
-request returns `401 Unauthorized`. A user who
+Protected API routes require authentication; setup, token issuance, invitation
+preview/acceptance, and password reset are intentional exceptions. With JWT
+authentication, an anonymous request to a protected route returns
+`401 Unauthorized`. A user who
 is authenticated but lacks membership or the required capability normally sees
 `404 Not Found`, preventing disclosure of inaccessible organizations.
 

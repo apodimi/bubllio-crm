@@ -1,13 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Box,
+  Alert,
   Button,
   Card,
   CardActionArea,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Stack,
   Typography,
 } from '@mui/material'
@@ -16,12 +21,28 @@ import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
 import { organizationKeys, useOrganizations } from '../../features/organizations'
 import { organizationService } from '../../features/organizations/services/organizationService'
 import { useAuthStore } from '../../features/auth/store/authStore'
+import { authService } from '../../features/auth/services/authService'
+import {
+  pendingWorkspaceKey,
+  usePendingWorkspaces,
+} from '../../features/organizations/hooks/useWorkspaceProvisioning'
 import { Loading, Failure, Empty, PageHeading } from '../../components/common/Feedback'
 import { CreateDialog } from '../../components/common/CreateDialog'
 
 export function OrganizationsPage() {
   const query = useOrganizations()
-  const isInstallationAdmin = useAuthStore((state) => state.user?.is_superuser ?? false)
+  const canCreate = useAuthStore(
+    (state) => state.user?.can_create_workspaces ?? state.user?.is_superuser ?? false,
+  )
+  const currentUser = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: authService.currentUser,
+    refetchOnMount: 'always',
+  })
+  useEffect(() => {
+    if (currentUser.data) useAuthStore.setState({ user: currentUser.data })
+  }, [currentUser.data])
+  const pending = usePendingWorkspaces(true)
   const personalPolicy = useQuery({
     queryKey: ['personal-workspace-policy'],
     queryFn: ({ signal }) => organizationService.personalPolicy(signal),
@@ -32,6 +53,7 @@ export function OrganizationsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
   })
   const [create, setCreate] = useState(false)
+  const [cancelPendingId, setCancelPendingId] = useState<string | null>(null)
   const hasPersonalWorkspace = query.data?.some((org) => org.is_personal) ?? false
   return (
     <>
@@ -49,7 +71,7 @@ export function OrganizationsPage() {
                 {personalWorkspace.isPending ? 'Creating…' : 'Create personal'}
               </Button>
             )}
-            {isInstallationAdmin && (
+            {canCreate && (
               <Button
                 variant="contained"
                 startIcon={<AddRounded />}
@@ -135,12 +157,65 @@ export function OrganizationsPage() {
           ))}
         </Box>
       )}
+      {pending.list.isError && (
+        <Alert severity="error" sx={{ mt: 3 }}>
+          Could not load pending workspaces: {pending.list.error.message}
+        </Alert>
+      )}
+      {pending.list.data && pending.list.data.length > 0 && (
+        <Stack spacing={2} sx={{ mt: 4 }}>
+          <Typography variant="h6">Awaiting workspace owners</Typography>
+          <Typography color="text.secondary">
+            These workspaces are not accessible until the nominated owner accepts the invitation.
+          </Typography>
+          {(pending.resend.isError || pending.cancel.isError) && (
+            <Alert severity="error">
+              {(pending.resend.error ?? pending.cancel.error)?.message}
+            </Alert>
+          )}
+          {pending.resend.isSuccess && <Alert severity="success">Invitation sent again.</Alert>}
+          {pending.list.data.map((item) => (
+            <Card key={item.organization_id} variant="outlined" sx={{ p: 2.5 }}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2 }}
+              >
+                <Box>
+                  <Typography sx={{ fontWeight: 700 }}>{item.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Owner invitation: {item.owner_email}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    disabled={pending.resend.isPending}
+                    onClick={() => pending.resend.mutate(item.organization_id)}
+                  >
+                    Resend
+                  </Button>
+                  <Button
+                    color="error"
+                    disabled={pending.cancel.isPending}
+                    onClick={() => setCancelPendingId(item.organization_id)}
+                  >
+                    Cancel
+                  </Button>
+                </Stack>
+              </Stack>
+            </Card>
+          ))}
+        </Stack>
+      )}
       {create && (
         <CreateDialog
           title="Create workspace"
           path="/organizations/"
           invalidate={organizationKeys.all}
-          onClose={() => setCreate(false)}
+          onClose={() => {
+            void queryClient.invalidateQueries({ queryKey: pendingWorkspaceKey })
+            setCreate(false)
+          }}
           fields={[
             { name: 'name', label: 'Workspace name', required: true, maxLength: 255 },
             {
@@ -149,9 +224,45 @@ export function OrganizationsPage() {
               required: true,
               maxLength: 50,
             },
+            {
+              name: 'owner_email',
+              label: 'Business owner email (use your own email to own it yourself)',
+              required: true,
+              type: 'email',
+            },
           ]}
         />
       )}
+      <Dialog
+        open={cancelPendingId !== null}
+        onClose={() => setCancelPendingId(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Cancel pending workspace?</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary">
+            This deletes the pending workspace and invalidates its owner invitation. You cannot undo
+            this action.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelPendingId(null)}>Keep workspace</Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={pending.cancel.isPending}
+            onClick={() => {
+              if (!cancelPendingId) return
+              pending.cancel.mutate(cancelPendingId, {
+                onSuccess: () => setCancelPendingId(null),
+              })
+            }}
+          >
+            Cancel workspace
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

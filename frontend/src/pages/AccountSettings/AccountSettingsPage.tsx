@@ -23,15 +23,18 @@ import EmailOutlined from '@mui/icons-material/EmailOutlined'
 import { Failure, Loading } from '../../components/common/Feedback'
 import { useInstallationSettings } from '../../features/organizations/hooks/useInstallationSettings'
 import { useInstallationAdministrators } from '../../features/organizations/hooks/useInstallationAdministrators'
+import { useWorkspaceCreators } from '../../features/organizations/hooks/useWorkspaceProvisioning'
 import { useAccountSettings } from '../../features/auth/hooks/useAccountSettings'
 import { authService } from '../../features/auth/services/authService'
 import { useAuthStore } from '../../features/auth/store/authStore'
 
 export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
+  const canCreateWorkspaces = useAuthStore((state) => state.user?.can_create_workspaces ?? false)
   const accountSettings = useAccountSettings()
   const installation = useInstallationSettings(isSuperuser)
   const administrators = useInstallationAdministrators(isSuperuser)
+  const workspaceCreators = useWorkspaceCreators(isSuperuser)
   const account = installation.settings.data?.smtp
   const profile = accountSettings.settings.data
   const [values, setValues] = useState({
@@ -59,6 +62,7 @@ export function AccountSettingsPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [allowPersonalWorkspaces, setAllowPersonalWorkspaces] = useState(false)
   const [administratorEmail, setAdministratorEmail] = useState('')
+  const [creatorEmail, setCreatorEmail] = useState('')
 
   useEffect(() => {
     if (!account) return
@@ -164,6 +168,13 @@ export function AccountSettingsPage() {
     setAdministratorEmail('')
   }
 
+  function grantCreator(event: FormEvent) {
+    event.preventDefault()
+    workspaceCreators.grant.mutate(creatorEmail.trim(), {
+      onSuccess: () => setCreatorEmail(''),
+    })
+  }
+
   return (
     <Stack spacing={3.5} sx={{ maxWidth: 980 }}>
       <Stack
@@ -184,7 +195,13 @@ export function AccountSettingsPage() {
           </Box>
         </Stack>
         <Chip
-          label={isSuperuser ? 'Installation administrator' : 'Workspace member'}
+          label={
+            isSuperuser
+              ? 'Installation administrator'
+              : canCreateWorkspaces
+                ? 'Workspace creator'
+                : 'Workspace member'
+          }
           color="primary"
           variant="outlined"
         />
@@ -334,6 +351,66 @@ export function AccountSettingsPage() {
           )}
         </Stack>
       </Paper>
+      {isSuperuser && (
+        <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="h6">Workspace creators</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Let an existing account create shared workspaces without granting installation
+                administrator or Django admin access. Each new workspace needs a nominated owner.
+              </Typography>
+            </Box>
+            <Stack
+              component="form"
+              onSubmit={grantCreator}
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1.5}
+            >
+              <TextField
+                label="Existing account email"
+                type="email"
+                value={creatorEmail}
+                onChange={(event) => setCreatorEmail(event.target.value)}
+                required
+                sx={{ flex: 1 }}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={workspaceCreators.grant.isPending}
+              >
+                Grant creator access
+              </Button>
+            </Stack>
+            {workspaceCreators.grant.isError && (
+              <Alert severity="error">{workspaceCreators.grant.error.message}</Alert>
+            )}
+            {workspaceCreators.revoke.isError && (
+              <Alert severity="error">{workspaceCreators.revoke.error.message}</Alert>
+            )}
+            {workspaceCreators.list.data?.map((creator) => (
+              <Stack
+                key={creator.id}
+                direction={{ xs: 'column', sm: 'row' }}
+                sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 1 }}
+              >
+                <Typography variant="body2">
+                  {creator.username} · {creator.email}
+                </Typography>
+                <Button
+                  color="error"
+                  size="small"
+                  disabled={workspaceCreators.revoke.isPending}
+                  onClick={() => workspaceCreators.revoke.mutate(creator.id)}
+                >
+                  Revoke
+                </Button>
+              </Stack>
+            ))}
+          </Stack>
+        </Paper>
+      )}
       {isSuperuser && (
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
           <Stack spacing={2}>

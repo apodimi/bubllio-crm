@@ -1,14 +1,21 @@
+import logging
+
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 from .choices import locale_choices, timezone_choices
 from .email_service import mark_test_failure, mark_test_success, send_test_email
 from .permissions import Capability, IsInstallationAdmin, get_membership, get_organization_for_user
+from .permissions import can_create_workspace
+from .provisioning import create_workspace
+
+logger = logging.getLogger(__name__)
 from .serializers import (
     EmailAccountSerializer,
     OrganizationMembershipSerializer,
@@ -42,8 +49,15 @@ class PersonalWorkspaceAPIView(APIView):
 
 
 class OrganizationListCreateAPIView(APIView):
+    throttle_scope = "workspace_provisioning"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()] if self.request.method == "POST" else []
+
     def get(self, request):
-        organizations = Organization.objects.filter(memberships__user=request.user)
+        organizations = Organization.objects.filter(
+            memberships__user=request.user, provisioning__isnull=True
+        )
         serializer = OrganizationSerializer(
             organizations.distinct(),
             many=True,
@@ -51,24 +65,41 @@ class OrganizationListCreateAPIView(APIView):
         )
         return Response(serializer.data)
 
-    @transaction.atomic
     def post(self, request):
-        if not request.user.is_active or not request.user.is_superuser:
+        if not can_create_workspace(request.user):
             return Response(
-                {"detail": "Only an installation administrator can create shared workspaces."},
+                {"detail": "Workspace creator permission is required."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        owner_email = request.data.get("owner_email")
+        if not owner_email and request.user.is_superuser:
+            owner_email = request.user.email or ""
+        if owner_email:
+            try:
+                owner_email = serializers.EmailField().run_validation(owner_email).strip().lower()
+            except serializers.ValidationError as error:
+                return Response({"owner_email": error.detail}, status=status.HTTP_400_BAD_REQUEST)
+        elif not request.user.is_superuser:
+            return Response({"owner_email": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST)
         serializer = OrganizationSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        organization = serializer.save()
-        OrganizationMembership.objects.create(
-            organization=organization,
-            user=request.user,
-            role=OrganizationMembership.Role.OWNER,
-        )
-        OrganizationSettings.objects.create(organization=organization)
+        try:
+            organization = create_workspace(
+                serializer=serializer, creator=request.user, owner_email=owner_email, request=request
+            )
+        except ValueError as error:
+            return Response({"owner_email": [str(error)]}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Workspace creation or owner invitation failed for user=%s", request.user.pk)
+            return Response(
+                {"detail": "The owner invitation could not be sent. Check installation SMTP."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
         return Response(
-            OrganizationSerializer(organization, context={"request": request}).data,
+            {
+                **OrganizationSerializer(organization, context={"request": request}).data,
+                "owner_invitation_pending": owner_email.casefold() != request.user.email.casefold(),
+            },
             status=status.HTTP_201_CREATED,
         )
 

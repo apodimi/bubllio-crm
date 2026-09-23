@@ -12,12 +12,12 @@ export type WorkspaceMember = {
 export type InvitationPreview = {
   email: string
   organization_name?: string
-  role?: InvitationRole
+  role?: InvitationRole | 'owner'
   expires_at: string
 }
 export type InvitationAcceptance = {
   organization_id?: string
-  role?: InvitationRole
+  role?: InvitationRole | 'owner'
   tokens: { access: string; refresh: string } | null
 }
 export type InvitationRegistration = {

@@ -22,7 +22,11 @@ debugging a browser login.
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
 | POST | `/api/v1/setup/smtp-test/` | server-side setup token in JSON | send a real test email with unsaved SMTP settings |
-| POST | `/api/v1/organizations/` | installation admin Bearer token | create a shared organization and become its owner |
+| POST | `/api/v1/organizations/` | installation admin or workspace creator Bearer token | create a shared workspace with `owner_email`; a different owner receives an email invitation |
+| GET/POST | `/api/v1/organizations/workspace-creators/` | installation admin Bearer token | list grants or grant an existing active user provisioning access |
+| DELETE | `/api/v1/organizations/workspace-creators/<grant_id>/` | installation admin Bearer token | revoke a creator grant |
+| GET | `/api/v1/organizations/provisioning/` | authenticated Bearer token | list own pending handoffs; installation admins see all |
+| POST/DELETE | `/api/v1/organizations/provisioning/<organization_id>/` | provisioning creator or installation admin Bearer token | resend owner invitation or cancel pending workspace |
 | GET/POST | `/api/v1/organizations/<organization_id>/invitations/` | owner/admin Bearer token | list pending invitations or email a new invitation |
 | GET | `/api/v1/organizations/<organization_id>/members/` | owner/admin Bearer token | list members; direct membership creation is unavailable |
 | GET/POST | `/api/v1/organizations/installation-admin-invitations/` | installation admin Bearer token | list IT admins and pending invitations, or invite another IT admin |
@@ -62,8 +66,9 @@ The endpoint closes as soon as installation setup closes.
 
 There is no general public signup endpoint. An owner or admin creates an
 invitation with `{ "email": "person@example.com", "role": "member" }` under
-their organization URL. `owner` is not an invitable role; only an owner may
-invite an `admin`. Sending requires the organization's active default SMTP
+their organization URL. `owner` is not an invitable role through the ordinary
+workspace invitation endpoint; the provisioning flow sends initial owner
+invitations. Only an owner may invite an `admin`. Sending requires the organization's active default SMTP
 account or the installation fallback. The emailed link expires after seven days. Set `BUBLLIO_APP_URL` to
 the public React origin so the link points to the correct installation.
 
@@ -73,9 +78,15 @@ the server, and the response includes JWT `tokens` and `organization_id`. An
 existing user signs in and posts an empty JSON body with their Bearer token.
 Their account email must match the invitation. Acceptance creates a membership
 for that workspace only and consumes the link; replay or expiry returns `404`.
-An ordinary workspace user cannot create another shared organization. Only
-installation administrators can create shared organizations; they become the
-owner of organizations they create.
+An ordinary workspace membership alone does not permit creating another shared
+organization. An installation administrator may grant a separate
+workspace-creator right to an existing account. That creator must supply
+`owner_email` when creating a workspace. If it differs from their own email,
+the workspace remains hidden until the invited owner accepts; the creator's
+temporary membership is then removed. Installation administrators may still
+create a workspace for themselves by omitting `owner_email`. See the
+[role guide](../architecture/authentication-and-roles.md) for the handoff and
+recovery flow.
 
 IT administrator invitations use installation fallback SMTP and the separate
 `/installation-admin-invite/<token>` browser route. An existing account must
@@ -96,7 +107,8 @@ After an installation is initialized, users may explicitly create one private
 personal workspace. Shared/team workspaces are separate organizations and are
 visible only through an accepted membership. Personal workspaces cannot invite
 other users, add members, or be deleted; an installation administrator creates
-a regular workspace when a team needs shared CRM data.
+a regular workspace when a team needs shared CRM data, or delegates that
+provisioning right to a selected account.
 
 Account settings also expose an explicit personal-data export and account
 deletion flow. The export contains account/profile/membership metadata only;

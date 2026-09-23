@@ -18,7 +18,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .email_service import send_invitation_email
-from .models import EmailAccount, InstallationState, OrganizationInvitation, OrganizationMembership
+from .models import (
+    EmailAccount, InstallationState, Organization, OrganizationInvitation,
+    OrganizationMembership, OrganizationProvisioning, WorkspaceAccessEvent,
+)
 from accounts.models import UserProfile
 from .permissions import Capability, get_membership, get_organization_for_user
 
@@ -165,11 +168,27 @@ class InvitationAcceptAPIView(APIView):
 
     @transaction.atomic
     def post(self, request, token):
+        token_digest = token_hash(token)
+        organization_id = get_object_or_404(
+            OrganizationInvitation,
+            token_hash=token_digest,
+            accepted_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).organization_id
+        get_object_or_404(Organization.objects.select_for_update(), id=organization_id)
         invitation = get_object_or_404(
             OrganizationInvitation.objects.select_for_update().select_related("organization"),
-            token_hash=token_hash(token), accepted_at__isnull=True,
+            token_hash=token_digest, accepted_at__isnull=True,
             expires_at__gt=timezone.now(),
         )
+        provisioning = OrganizationProvisioning.objects.select_for_update().filter(
+            organization=invitation.organization
+        ).first()
+        if invitation.role == OrganizationMembership.Role.OWNER:
+            if provisioning is None or provisioning.owner_email.casefold() != invitation.email.casefold():
+                return Response({"detail": "This owner invitation is no longer valid."}, status=404)
+        elif provisioning is not None:
+            return Response({"detail": "The workspace is awaiting its owner."}, status=409)
         user_model = get_user_model()
         if request.user.is_authenticated:
             if request.user.email.lower() != invitation.email:
@@ -198,11 +217,33 @@ class InvitationAcceptAPIView(APIView):
             )
             refresh = RefreshToken.for_user(user)
             tokens = {"access": str(refresh.access_token), "refresh": str(refresh)}
-        membership, created = OrganizationMembership.objects.get_or_create(
-            organization=invitation.organization,
-            user=user,
-            defaults={"role": invitation.role},
-        )
+        if provisioning is not None:
+            OrganizationMembership.objects.filter(
+                organization=invitation.organization,
+                user=provisioning.creator,
+                role=OrganizationMembership.Role.OWNER,
+            ).delete()
+            membership, created = OrganizationMembership.objects.get_or_create(
+                organization=invitation.organization,
+                user=user,
+                defaults={"role": OrganizationMembership.Role.OWNER},
+            )
+            if not created and membership.role != OrganizationMembership.Role.OWNER:
+                membership.role = OrganizationMembership.Role.OWNER
+                membership.save(update_fields=("role", "updated_at"))
+            provisioning.delete()
+            WorkspaceAccessEvent.objects.create(
+                action=WorkspaceAccessEvent.Action.ACCEPT_OWNER_INVITATION,
+                actor=user,
+                target_user=user,
+                organization_id=invitation.organization_id,
+            )
+        else:
+            membership, created = OrganizationMembership.objects.get_or_create(
+                organization=invitation.organization,
+                user=user,
+                defaults={"role": invitation.role},
+            )
         invitation.accepted_at = timezone.now()
         invitation.save(update_fields=("accepted_at",))
         return Response({

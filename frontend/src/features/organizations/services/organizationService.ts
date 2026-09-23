@@ -15,6 +15,30 @@ export const organizationService = {
     }>('/organizations/installation-admin-invitations/', { signal }),
   inviteInstallationAdministrator: (email: string) =>
     request('/organizations/installation-admin-invitations/', { body: { email } }),
+  workspaceCreators: (signal?: AbortSignal) =>
+    request<
+      Array<{ id: string; user_id: number; username: string; email: string; granted_at: string }>
+    >('/organizations/workspace-creators/', { signal }),
+  grantWorkspaceCreator: (email: string) =>
+    request('/organizations/workspace-creators/', { body: { email } }),
+  revokeWorkspaceCreator: (grantId: string) =>
+    request(`/organizations/workspace-creators/${encodeURIComponent(grantId)}/`, {
+      method: 'DELETE',
+    }),
+  pendingWorkspaces: (signal?: AbortSignal) =>
+    request<
+      Array<{
+        organization_id: string
+        name: string
+        slug: string
+        owner_email: string
+        created_at: string
+      }>
+    >('/organizations/provisioning/', { signal }),
+  resendOwnerInvitation: (id: string) =>
+    request(`/organizations/provisioning/${encodeURIComponent(id)}/`, { body: {} }),
+  cancelPendingWorkspace: (id: string) =>
+    request(`/organizations/provisioning/${encodeURIComponent(id)}/`, { method: 'DELETE' }),
   get: (id: string, signal?: AbortSignal) =>
     request<Organization>(organizationPath(id), { signal }),
   settings: (id: string, signal?: AbortSignal) =>

@@ -23,6 +23,55 @@ class Organization(models.Model):
         return self.name
 
 
+class WorkspaceCreatorGrant(models.Model):
+    """Installation-scoped provisioning right without Django staff privileges."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workspace_creator_grant"
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL,
+        related_name="workspace_creator_grants_given",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrganizationProvisioning(models.Model):
+    """An isolated workspace awaiting acceptance by its nominated owner."""
+
+    organization = models.OneToOneField(
+        Organization, on_delete=models.CASCADE, related_name="provisioning"
+    )
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="workspaces_provisioned"
+    )
+    owner_email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class WorkspaceAccessEvent(models.Model):
+    """Append-only operational history for provisioning privilege changes."""
+
+    class Action(models.TextChoices):
+        GRANT_CREATOR = "grant_creator", "Grant workspace creator"
+        REVOKE_CREATOR = "revoke_creator", "Revoke workspace creator"
+        CREATE_WORKSPACE = "create_workspace", "Create workspace"
+        RESEND_OWNER_INVITATION = "resend_owner_invitation", "Resend owner invitation"
+        CANCEL_WORKSPACE = "cancel_workspace", "Cancel pending workspace"
+        ACCEPT_OWNER_INVITATION = "accept_owner_invitation", "Accept owner invitation"
+
+    action = models.CharField(max_length=40, choices=Action.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="workspace_access_actions"
+    )
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="workspace_access_targets"
+    )
+    organization_id = models.UUIDField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class InstallationState(models.Model):
     """A single database row serializes and permanently closes first-run setup."""
 

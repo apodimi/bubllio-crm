@@ -6,6 +6,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Organization
+from .permissions import can_create_workspace
 from .serializers import OrganizationSerializer
 
 
@@ -14,13 +15,14 @@ class CurrentUserAPIView(APIView):
 
     def get(self, request):
         organizations = Organization.objects.all()
-        organizations = organizations.filter(memberships__user=request.user)
+        organizations = organizations.filter(memberships__user=request.user, provisioning__isnull=True)
         return Response(
             {
                 "id": request.user.id,
                 "username": request.user.get_username(),
                 "email": request.user.email,
                 "is_superuser": request.user.is_superuser,
+                "can_create_workspaces": can_create_workspace(request.user),
                 "organizations": OrganizationSerializer(
                     organizations.distinct(),
                     many=True,

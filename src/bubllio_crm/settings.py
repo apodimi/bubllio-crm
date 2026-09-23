@@ -78,6 +78,7 @@ REST_FRAMEWORK = {
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "installation_setup": "5/min",
     "organization_invitation": "20/day",
+    "workspace_provisioning": "20/day",
     "installation_admin_invitation": "10/day",
     "password_reset": "5/hour",
 }
