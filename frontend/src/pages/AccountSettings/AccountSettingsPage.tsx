@@ -27,6 +27,7 @@ import { useWorkspaceCreators } from '../../features/organizations/hooks/useWork
 import { useAccountSettings } from '../../features/auth/hooks/useAccountSettings'
 import { authService } from '../../features/auth/services/authService'
 import { useAuthStore } from '../../features/auth/store/authStore'
+import { ProductionReadinessCard } from '../../features/installation/components/ProductionReadinessCard'
 
 export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
@@ -206,6 +207,7 @@ export function AccountSettingsPage() {
           variant="outlined"
         />
       </Stack>
+      {isSuperuser && <ProductionReadinessCard />}
       <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
         <Stack component="form" onSubmit={saveProfile} spacing={2}>
           <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>

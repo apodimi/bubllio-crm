@@ -7,3 +7,5 @@ export interface Company {
   website: string
   lifecycle_stage: 'lead' | 'prospect' | 'customer' | 'inactive'
 }
+
+export type CompanyInput = Omit<Company, 'id' | 'organization'>

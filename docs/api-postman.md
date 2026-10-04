@@ -163,6 +163,9 @@ Companies and contacts:
 GET  /api/v1/organizations/<organization_id>/companies/
 GET  /api/v1/organizations/<organization_id>/companies/?search=<term>
 POST /api/v1/organizations/<organization_id>/companies/
+GET  /api/v1/organizations/<organization_id>/companies/<company_id>/
+PATCH /api/v1/organizations/<organization_id>/companies/<company_id>/
+DELETE /api/v1/organizations/<organization_id>/companies/<company_id>/
 
 GET  /api/v1/organizations/<organization_id>/contacts/
 GET  /api/v1/organizations/<organization_id>/contacts/?search=<term>

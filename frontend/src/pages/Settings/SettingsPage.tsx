@@ -1,22 +1,274 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useParams } from '@tanstack/react-router'
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useOrganizationSettings } from '../../features/organizations/hooks/useOrganizationSettings'
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material'
+import { Controller, useForm } from 'react-hook-form'
 import { Loading, Failure } from '../../components/common/Feedback'
+import {
+  emailAccountSchema,
+  testRecipientSchema,
+} from '../../features/organizations/emailAccountSchema'
+import type { EmailAccountFormValues } from '../../features/organizations/emailAccountSchema'
+import { useOrganizationSettings } from '../../features/organizations/hooks/useOrganizationSettings'
+import type { EmailAccount } from '../../types/organization.types'
+
+function EmailSettings({
+  organizationId,
+  account,
+}: {
+  organizationId: string
+  account?: EmailAccount
+}) {
+  const { createAccount, updateAccount, testAccount } = useOrganizationSettings(organizationId)
+  const mutation = account ? updateAccount : createAccount
+  const [saved, setSaved] = useState(false)
+  const [testRecipient, setTestRecipient] = useState('')
+  const [recipientError, setRecipientError] = useState('')
+  const {
+    control,
+    handleSubmit,
+    setError,
+    resetField,
+    formState: { errors, isDirty },
+  } = useForm<EmailAccountFormValues>({
+    resolver: zodResolver(emailAccountSchema),
+    defaultValues: {
+      name: account?.name ?? 'Workspace SMTP',
+      host: account?.host ?? '',
+      port: String(account?.port ?? 587),
+      username: account?.username ?? '',
+      password: '',
+      from_email: account?.from_email ?? '',
+      from_name: account?.from_name ?? '',
+      security: account?.use_ssl ? 'ssl' : 'starttls',
+    },
+  })
+
+  const save = handleSubmit(async (values) => {
+    if (!account && !values.password) {
+      setError('password', { message: 'SMTP password is required for a new connection.' })
+      return
+    }
+    const body: Record<string, unknown> = {
+      name: values.name,
+      host: values.host,
+      port: Number(values.port),
+      username: values.username,
+      from_email: values.from_email,
+      from_name: values.from_name,
+      use_tls: values.security === 'starttls',
+      use_ssl: values.security === 'ssl',
+      is_default: true,
+      is_active: true,
+    }
+    if (values.password) body.password = values.password
+    try {
+      if (account) await updateAccount.mutateAsync({ accountId: account.id, body })
+      else await createAccount.mutateAsync(body)
+      resetField('password', { defaultValue: '' })
+      setSaved(true)
+    } catch {
+      setSaved(false)
+    }
+  })
+
+  async function sendTest() {
+    const parsed = testRecipientSchema.safeParse(testRecipient)
+    if (!parsed.success) {
+      setRecipientError(parsed.error.issues[0]?.message ?? 'Enter a valid recipient.')
+      return
+    }
+    if (!account) return
+    setRecipientError('')
+    try {
+      await testAccount.mutateAsync({ accountId: account.id, recipient: parsed.data })
+    } catch {
+      // The mutation error is rendered beside the test controls.
+    }
+  }
+
+  return (
+    <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
+      <Stack spacing={3}>
+        <Box>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="h6">Workspace invitation email</Typography>
+            {account && (
+              <Chip
+                size="small"
+                color={account.last_test_error ? 'error' : 'success'}
+                label={account.last_test_error ? 'Needs attention' : 'Configured'}
+              />
+            )}
+          </Stack>
+          <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+            Used for workspace invitations. Automation emails do not use this connection yet.
+          </Typography>
+        </Box>
+
+        {account ? (
+          <Alert severity={account.last_test_error ? 'warning' : 'success'}>
+            {account.last_test_error
+              ? 'The last test failed. Review the connection and try again.'
+              : account.last_tested_at
+                ? `Last tested successfully ${new Date(account.last_tested_at).toLocaleString()}.`
+                : 'Connection saved but not tested yet.'}
+          </Alert>
+        ) : (
+          <Alert severity="info">
+            No workspace connection is configured. Invitations use the installation fallback when
+            available.
+          </Alert>
+        )}
+
+        <Stack component="form" onSubmit={(event) => void save(event)} spacing={2.25}>
+          <Typography variant="subtitle2">Connection details</Typography>
+          {(['name', 'host', 'username', 'from_email', 'from_name'] as const).map((name) => (
+            <Controller
+              key={name}
+              name={name}
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label={
+                    {
+                      name: 'Connection name',
+                      host: 'SMTP hostname',
+                      username: 'SMTP username',
+                      from_email: 'Sender email address',
+                      from_name: 'Sender display name',
+                    }[name]
+                  }
+                  type={name === 'from_email' ? 'email' : 'text'}
+                  required={name !== 'from_name'}
+                  error={Boolean(errors[name])}
+                  helperText={errors[name]?.message}
+                  disabled={mutation.isPending}
+                />
+              )}
+            />
+          ))}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Controller
+              name="port"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Port"
+                  type="number"
+                  required
+                  error={Boolean(errors.port)}
+                  helperText={errors.port?.message}
+                  disabled={mutation.isPending}
+                  sx={{ flex: 1 }}
+                />
+              )}
+            />
+            <Controller
+              name="security"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Connection security"
+                  select
+                  required
+                  disabled={mutation.isPending}
+                  sx={{ flex: 2 }}
+                >
+                  <MenuItem value="starttls">STARTTLS</MenuItem>
+                  <MenuItem value="ssl">SSL/TLS</MenuItem>
+                </TextField>
+              )}
+            />
+          </Stack>
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label={account ? 'New SMTP password' : 'SMTP password'}
+                type="password"
+                required={!account}
+                autoComplete="new-password"
+                error={Boolean(errors.password)}
+                helperText={
+                  errors.password?.message ??
+                  (account ? 'Leave blank to keep the current password.' : undefined)
+                }
+                disabled={mutation.isPending}
+              />
+            )}
+          />
+          {saved && <Alert severity="success">Email connection saved.</Alert>}
+          {mutation.isError && <Alert severity="error">{mutation.error.message}</Alert>}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={mutation.isPending || (account ? !isDirty : false)}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            {mutation.isPending ? 'Saving…' : 'Save connection'}
+          </Button>
+        </Stack>
+
+        {account && (
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="subtitle2">Test delivery</Typography>
+            <Typography color="text.secondary">
+              Send a real message to confirm that the SMTP server accepts mail.
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Test recipient"
+                type="email"
+                value={testRecipient}
+                onChange={(event) => {
+                  setTestRecipient(event.target.value)
+                  setRecipientError('')
+                }}
+                error={Boolean(recipientError)}
+                helperText={recipientError}
+                disabled={testAccount.isPending}
+                sx={{ flex: 1 }}
+              />
+              <Button
+                variant="outlined"
+                onClick={() => void sendTest()}
+                disabled={testAccount.isPending}
+              >
+                {testAccount.isPending ? 'Sending…' : 'Send test email'}
+              </Button>
+            </Stack>
+            {testAccount.isSuccess && (
+              <Alert severity="success">
+                Test email accepted by the SMTP server. Check the recipient inbox.
+              </Alert>
+            )}
+            {testAccount.isError && <Alert severity="error">{testAccount.error.message}</Alert>}
+          </Stack>
+        )}
+      </Stack>
+    </Paper>
+  )
+}
 
 export function SettingsPage() {
   const { organizationId } = useParams({ from: '/organizations/$organizationId' })
-  const { settings, accounts, createAccount, updateAccount } =
-    useOrganizationSettings(organizationId)
-  const [values, setValues] = useState({
-    name: 'Workspace SMTP',
-    host: '',
-    port: '587',
-    username: '',
-    password: '',
-    from_email: '',
-  })
+  const { settings, accounts } = useOrganizationSettings(organizationId)
   if (settings.isPending || accounts.isPending) return <Loading />
   if (settings.isError || accounts.isError)
     return (
@@ -28,93 +280,16 @@ export function SettingsPage() {
         }}
       />
     )
-  const account = accounts.data.find((item) => item.is_default && item.is_active)
-  async function save(event: FormEvent) {
-    event.preventDefault()
-    const body = {
-      ...values,
-      port: Number(values.port),
-      is_default: true,
-      is_active: true,
-      use_tls: true,
-      use_ssl: false,
-    }
-    if (account) {
-      await updateAccount.mutateAsync({ accountId: account.id, body })
-    } else {
-      await createAccount.mutateAsync(body)
-    }
-  }
+  const account = accounts.data.find((item) => item.is_default) ?? accounts.data[0]
   return (
     <Stack spacing={3} sx={{ maxWidth: 760 }}>
       <Box>
         <Typography variant="h4">Workspace settings</Typography>
         <Typography color="text.secondary">
-          Configure this workspace's identity and email delivery.
+          Manage this workspace's regional preferences and invitation delivery.
         </Typography>
       </Box>
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack spacing={2}>
-          <Typography variant="h6">Email delivery</Typography>
-          <Typography color="text.secondary">
-            A workspace SMTP account is used first. If none is configured, invitations use the
-            installation fallback SMTP from first setup.
-          </Typography>
-          {account && (
-            <Alert severity="success">
-              Using {account.name} ({account.host}) as this workspace's default SMTP.
-            </Alert>
-          )}{' '}
-          {!account && (
-            <Alert severity="info">
-              This workspace has no SMTP override and will use the installation fallback when
-              available.
-            </Alert>
-          )}
-          <Stack component="form" onSubmit={save} spacing={2}>
-            <Typography variant="subtitle2">
-              {account ? 'Replace workspace SMTP credentials' : 'Add workspace SMTP'}
-            </Typography>
-            {(['name', 'host', 'port', 'username', 'from_email'] as const).map((field) => (
-              <TextField
-                key={field}
-                label={
-                  field === 'from_email'
-                    ? 'Sender email address'
-                    : field[0].toUpperCase() + field.slice(1)
-                }
-                type={field === 'port' ? 'number' : field === 'from_email' ? 'email' : 'text'}
-                value={values[field]}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, [field]: event.target.value }))
-                }
-                required
-              />
-            ))}
-            <TextField
-              label="SMTP password"
-              type="password"
-              value={values.password}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, password: event.target.value }))
-              }
-              required
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={createAccount.isPending || updateAccount.isPending}
-            >
-              {createAccount.isPending || updateAccount.isPending ? 'Saving…' : 'Save SMTP account'}
-            </Button>
-            {(createAccount.isError || updateAccount.isError) && (
-              <Alert severity="error">
-                {(createAccount.error ?? updateAccount.error)?.message}
-              </Alert>
-            )}
-          </Stack>
-        </Stack>
-      </Paper>
+      <EmailSettings key={account?.id ?? 'new'} organizationId={organizationId} account={account} />
     </Stack>
   )
 }

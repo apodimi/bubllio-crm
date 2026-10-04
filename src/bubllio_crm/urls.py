@@ -29,12 +29,24 @@ from accounts.views import (
     PasswordResetRequestAPIView,
 )
 from onboarding.api.setup import InstallationSetupAPIView, InstallationSmtpTestAPIView
+from onboarding.api.update_status import InstallationUpdateStatusAPIView
+from onboarding.api.production_readiness import InstallationProductionReadinessAPIView
 from access.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
 from onboarding.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
 urlpatterns = [
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),
     path("api/v1/setup/smtp-test/", InstallationSmtpTestAPIView.as_view(), name="installation-smtp-test"),
+    path(
+        "api/v1/installation/update-status/",
+        InstallationUpdateStatusAPIView.as_view(),
+        name="installation-update-status",
+    ),
+    path(
+        "api/v1/installation/production-readiness/",
+        InstallationProductionReadinessAPIView.as_view(),
+        name="installation-production-readiness",
+    ),
     path("api/v1/invitations/<str:token>/", InvitationDetailAPIView.as_view(), name="invitation-detail"),
     path("api/v1/invitations/<str:token>/accept/", InvitationAcceptAPIView.as_view(), name="invitation-accept"),
     path("api/v1/installation-admin-invitations/<str:token>/", InstallationAdminInvitationDetailAPIView.as_view(), name="installation-admin-invitation-detail"),

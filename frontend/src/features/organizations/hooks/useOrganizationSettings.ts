@@ -27,5 +27,11 @@ export function useOrganizationSettings(id: string) {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['organizations', id, 'email-accounts'] }),
   })
-  return { settings, accounts, saveSettings, createAccount, updateAccount }
+  const testAccount = useMutation({
+    mutationFn: ({ accountId, recipient }: { accountId: string; recipient: string }) =>
+      organizationService.testEmailAccount(id, accountId, recipient),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['organizations', id, 'email-accounts'] }),
+  })
+  return { settings, accounts, saveSettings, createAccount, updateAccount, testAccount }
 }

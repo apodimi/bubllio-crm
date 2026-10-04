@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import {
+  Alert,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -10,18 +16,27 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
+  Typography,
 } from '@mui/material'
 import AddRounded from '@mui/icons-material/AddRounded'
-import { companyKeys, useCompanies } from '../../features/companies'
-import { organizationPath, useWorkspace, canCreateRecords } from '../../features/organizations'
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded'
+import EditRounded from '@mui/icons-material/EditRounded'
+import { useCompanies, useDeleteCompany } from '../../features/companies'
+import { useWorkspace, canCreateRecords } from '../../features/organizations'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
-import { CreateDialog } from '../../components/common/CreateDialog'
+import { CompanyDialog } from '../../features/companies/components/CompanyDialog'
+import type { Company } from '../../types/company.types'
 
 export function CompaniesPage() {
   const org = useWorkspace()
   const query = useCompanies(org.id)
   const [search, setSearch] = useState('')
   const [create, setCreate] = useState(false)
+  const [editing, setEditing] = useState<Company | null>(null)
+  const [deleting, setDeleting] = useState<Company | null>(null)
+  const remove = useDeleteCompany(org.id)
+  const canManage = canCreateRecords(org)
   const rows = (query.data ?? []).filter((company) =>
     [company.name, company.email].some((value) =>
       value.toLowerCase().includes(search.toLowerCase()),
@@ -68,6 +83,7 @@ export function CompaniesPage() {
                     <TableCell>Email</TableCell>
                     <TableCell>Phone</TableCell>
                     <TableCell>Stage</TableCell>
+                    {canManage && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -84,6 +100,26 @@ export function CompaniesPage() {
                           variant="outlined"
                         />
                       </TableCell>
+                      {canManage && (
+                        <TableCell align="right">
+                          <Tooltip title="Edit company">
+                            <IconButton
+                              aria-label={`Edit ${company.name}`}
+                              onClick={() => setEditing(company)}
+                            >
+                              <EditRounded />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete company">
+                            <IconButton
+                              aria-label={`Delete ${company.name}`}
+                              onClick={() => setDeleting(company)}
+                            >
+                              <DeleteOutlineRounded />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -92,29 +128,43 @@ export function CompaniesPage() {
           )}
         </Paper>
       )}
-      {create && (
-        <CreateDialog
-          title="Add company"
-          path={organizationPath(org.id) + 'companies/'}
-          invalidate={companyKeys.byOrganization(org.id)}
-          onClose={() => setCreate(false)}
-          fields={[
-            { name: 'name', label: 'Company name', required: true, maxLength: 255 },
-            { name: 'email', label: 'Email', type: 'email' },
-            { name: 'phone_number', label: 'Phone', maxLength: 20 },
-            { name: 'website', label: 'Website', type: 'url' },
-            {
-              name: 'lifecycle_stage',
-              label: 'Stage',
-              required: true,
-              options: ['lead', 'prospect', 'customer', 'inactive'].map((value) => ({
-                value,
-                label: value[0].toUpperCase() + value.slice(1),
-              })),
-            },
-          ]}
-        />
+      {create && <CompanyDialog organizationId={org.id} onClose={() => setCreate(false)} />}
+      {editing && (
+        <CompanyDialog organizationId={org.id} company={editing} onClose={() => setEditing(null)} />
       )}
+      <Dialog
+        open={Boolean(deleting)}
+        onClose={remove.isPending ? undefined : () => setDeleting(null)}
+      >
+        <DialogTitle>Delete company?</DialogTitle>
+        <DialogContent>
+          {remove.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {remove.error.message}
+            </Alert>
+          )}
+          <Typography>
+            {deleting?.name} and all of its contacts will be permanently deleted. This cannot be
+            undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setDeleting(null)} disabled={remove.isPending}>
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={remove.isPending}
+            onClick={() => {
+              if (!deleting) return
+              remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })
+            }}
+          >
+            {remove.isPending ? 'Deleting…' : 'Delete company'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

@@ -7,6 +7,7 @@ import { useOrganization, useOrganizations, WorkspaceContext } from '../../featu
 import { LoginPage } from '../../pages/Login/LoginPage'
 import { SetupPage } from '../../pages/Setup/SetupPage'
 import { useSetupStatus } from '../../features/setup/hooks/useSetup'
+import { UpdateBanner } from '../../features/updates/components/UpdateBanner'
 import { Failure, Loading } from '../common/Feedback'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { WorkspaceSidebar } from './WorkspaceSidebar'
@@ -107,6 +108,7 @@ function Shell() {
           component="main"
           sx={{ px: { xs: 2, sm: 3, lg: 5 }, py: { xs: 3, md: 5 }, maxWidth: 1500, mx: 'auto' }}
         >
+          <UpdateBanner isInstallationAdmin={isSuperuser} />
           <Outlet />
         </Box>
       </Box>

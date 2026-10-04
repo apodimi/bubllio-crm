@@ -205,6 +205,23 @@
             "body": {"mode": "raw", "raw": "{\n  \"name\": \"Acme Inc\",\n  \"email\": \"hello@acme.test\",\n  \"phone_number\": \"+306900000000\",\n  \"website\": \"https://acme.test\",\n  \"lifecycle_stage\": \"lead\"\n}"},
             "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/companies/"
           }
+        },
+        {
+          "name": "Get Company",
+          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/companies/{{company_id}}/"}
+        },
+        {
+          "name": "Update Company",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Acme Partner\",\n  \"lifecycle_stage\": \"customer\"\n}"},
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/companies/{{company_id}}/"
+          }
+        },
+        {
+          "name": "Delete Company",
+          "request": {"method": "DELETE", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/companies/{{company_id}}/"}
         }
       ]
     },

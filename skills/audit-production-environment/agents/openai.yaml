@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Production Environment"
+  short_description: "Evidence-based production readiness verdict"
+  default_prompt: "Audit this environment for production readiness and return GO, NO-GO, or UNKNOWN with evidence."

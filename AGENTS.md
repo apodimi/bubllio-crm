@@ -43,6 +43,15 @@ Load the matching skill before performing one of these workflows:
 - `skills/add-automation-action/SKILL.md`: implement an action executor.
 - `skills/write-api-tests/SKILL.md`: add Django/DRF API tests.
 - `skills/verify-django-project/SKILL.md`: verify a completed change.
+- `skills/audit-tenant-boundaries/SKILL.md`: audit organization isolation and
+  cross-tenant authorization risks.
+- `skills/add-frontend-feature/SKILL.md`: add or expand a React API feature.
+- `skills/verify-fullstack-feature/SKILL.md`: verify a completed cross-stack
+  change before handoff or release.
+- `skills/review-django-migration/SKILL.md`: review model and migration changes
+  for safety and database portability.
+- `skills/audit-production-environment/SKILL.md`: produce an evidence-based
+  production GO, NO-GO, or UNKNOWN verdict.
 
 Use only the skills relevant to the requested work. They guide implementation but
 do not broaden the user's requested scope or authorize unrelated changes.

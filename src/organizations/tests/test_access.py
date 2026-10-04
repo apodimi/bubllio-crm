@@ -315,6 +315,27 @@ class OrganizationSettingsAndEmailTests(APITestCase):
         self.assertFalse(EmailAccount.objects.get(id=first.data["id"]).is_default)
         self.assertTrue(EmailAccount.objects.get(id=second.data["id"]).is_default)
 
+    def test_email_account_metadata_can_be_updated_without_replacing_password(self):
+        self.client.force_authenticate(self.owner)
+        response = self.create_account()
+        account = EmailAccount.objects.get(id=response.data["id"])
+        encrypted_password = account.encrypted_password
+        patch_url = reverse(
+            "email-account-detail",
+            kwargs={"organization_id": self.organization.id, "account_id": account.id},
+        )
+
+        updated = self.client.patch(
+            patch_url,
+            {"from_name": "Nerds Lab CRM"},
+            format="json",
+        )
+
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+        account.refresh_from_db()
+        self.assertEqual(account.from_name, "Nerds Lab CRM")
+        self.assertEqual(account.encrypted_password, encrypted_password)
+
     def test_test_email_marks_account_as_tested(self):
         self.client.force_authenticate(self.owner)
         response = self.create_account()

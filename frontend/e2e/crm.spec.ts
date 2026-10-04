@@ -53,6 +53,20 @@ async function mockApi(page: Page) {
       }
       return route.fulfill({ json: companies })
     }
+    if (path.startsWith('/api/v1/organizations/alpha/companies/')) {
+      const companyId = path.split('/').at(-2)
+      const index = companies.findIndex((company) => company.id === companyId)
+      if (index === -1) return route.fulfill({ status: 404, json: { detail: 'Not found' } })
+      if (route.request().method() === 'PATCH') {
+        companies[index] = { ...companies[index], ...route.request().postDataJSON() }
+        return route.fulfill({ json: companies[index] })
+      }
+      if (route.request().method() === 'DELETE') {
+        companies.splice(index, 1)
+        return route.fulfill({ status: 204 })
+      }
+      return route.fulfill({ json: companies[index] })
+    }
     if (path === '/api/v1/organizations/beta/companies/')
       return route.fulfill({
         json: [{ ...companies[0], id: 'co-b', organization: 'beta', name: 'Beta Only' }],
@@ -81,13 +95,13 @@ test('login, tenant switch, permissions and logout isolate data', async ({ page 
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
-  await expect(page.getByRole('cell', { name: 'Acme Ltd' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Acme Ltd', exact: true })).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('companies-desktop.png'), fullPage: true })
   await page.getByRole('combobox', { name: 'Select workspace' }).click()
   await page.getByRole('option', { name: 'Beta Studio' }).click()
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
   await expect(page.getByRole('cell', { name: 'Beta Only' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Acme Ltd' })).toHaveCount(0)
+  await expect(page.getByRole('cell', { name: 'Acme Ltd', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Add company' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Open account menu' }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
@@ -160,8 +174,28 @@ test('creates company, handles validation and refreshes list', async ({ page }) 
   await expect(page.getByRole('alert')).toContainText('Please choose another name.')
   await page.getByLabel('Company name', { exact: false }).fill('New partner')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await expect(page.getByRole('cell', { name: 'New partner' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'New partner', exact: true })).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('edits and deletes a company', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('link', { name: 'Companies', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Edit Acme Ltd' }).click()
+  await page.getByLabel('Company name', { exact: false }).fill('Acme Partner')
+  await page.getByRole('combobox', { name: 'Stage' }).click()
+  await page.getByRole('option', { name: 'Customer', exact: true }).click()
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByRole('cell', { name: 'Acme Partner', exact: true })).toBeVisible()
+  await expect(page.getByText('customer', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Delete Acme Partner' }).click()
+  await expect(page.getByText(/all of its contacts will be permanently deleted/)).toBeVisible()
+  await page.getByRole('button', { name: 'Delete company' }).click()
+  await expect(page.getByRole('cell', { name: 'Acme Partner', exact: true })).toHaveCount(0)
+  await expect(page.getByText('Your next partnership awaits')).toBeVisible()
 })
 test('contact creation uses a company from the selected workspace', async ({ page }) => {
   await login(page)
@@ -178,6 +212,60 @@ test('contact creation uses a company from the selected workspace', async ({ pag
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   expect((await sent).postDataJSON()).toMatchObject({ company: 'co-a', first_name: 'Maria' })
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('workspace owner safely updates and tests invitation email', async ({ page }) => {
+  const account = {
+    id: 'smtp-a',
+    name: 'Workspace SMTP',
+    provider: 'smtp',
+    host: 'smtp.example.com',
+    port: 587,
+    username: 'mailer@example.com',
+    use_tls: true,
+    use_ssl: false,
+    from_email: 'hello@example.com',
+    from_name: 'Alpha Studio',
+    is_default: true,
+    is_active: true,
+    last_tested_at: null,
+    last_test_error: '',
+    created_at: '2030-01-01T00:00:00Z',
+    updated_at: '2030-01-01T00:00:00Z',
+  }
+  await page.route('**/api/v1/organizations/alpha/settings/', (route) =>
+    route.fulfill({ json: { timezone: 'UTC', locale: 'en-us', default_from_name: '' } }),
+  )
+  await page.route('**/api/v1/organizations/alpha/email-accounts/', (route) =>
+    route.fulfill({ json: [account] }),
+  )
+  await page.route('**/api/v1/organizations/alpha/email-accounts/smtp-a/', (route) => {
+    expect(route.request().method()).toBe('PATCH')
+    expect(route.request().postDataJSON()).toMatchObject({
+      host: 'smtp.example.com',
+      from_name: 'Alpha CRM',
+      use_tls: true,
+      use_ssl: false,
+    })
+    expect(route.request().postDataJSON()).not.toHaveProperty('password')
+    return route.fulfill({ json: { ...account, from_name: 'Alpha CRM' } })
+  })
+  await page.route('**/api/v1/organizations/alpha/email-accounts/smtp-a/test/', (route) => {
+    expect(route.request().postDataJSON()).toEqual({ recipient: 'owner@example.com' })
+    return route.fulfill({ json: { detail: 'Test email sent.', status: 'success' } })
+  })
+
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByLabel('SMTP hostname')).toHaveValue('smtp.example.com')
+  await expect(page.getByLabel('New SMTP password')).toHaveValue('')
+  await page.getByLabel('Sender display name').fill('Alpha CRM')
+  await page.getByRole('button', { name: 'Save connection' }).click()
+  await expect(page.getByText('Email connection saved.')).toBeVisible()
+  await page.getByLabel('Test recipient').fill('owner@example.com')
+  await page.getByRole('button', { name: 'Send test email' }).click()
+  await expect(page.getByText(/Test email accepted by the SMTP server/)).toBeVisible()
 })
 test('mobile navigation works without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
@@ -380,6 +468,112 @@ test('first installation superuser can reach workspace invitations', async ({ pa
   await openAlpha(page)
   await page.getByRole('link', { name: 'People' }).click()
   await expect(page.getByRole('heading', { name: 'People & invitations' })).toBeVisible()
+})
+
+test('installation admin sees a new release banner', async ({ page }) => {
+  await page.route('**/api/v1/auth/me/', (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: 'first-admin',
+        email: 'admin@example.com',
+        is_superuser: true,
+        organizations: orgs,
+      },
+    }),
+  )
+  await page.route('**/api/v1/installation/update-status/', (route) =>
+    route.fulfill({
+      json: {
+        status: 'ok',
+        enabled: true,
+        current_version: '0.1.0',
+        latest_version: '0.2.0',
+        update_available: true,
+        release_name: 'Bubllio CRM 0.2.0',
+        release_url: 'https://github.com/apodimi/bubllio-crm-api/releases/tag/v0.2.0',
+        published_at: '2026-10-04T10:00:00Z',
+      },
+    }),
+  )
+
+  await login(page)
+
+  const banner = page.getByRole('alert').filter({ hasText: 'Bubllio CRM 0.2.0 is available' })
+  await expect(banner).toContainText('You are running 0.1.0')
+  await expect(banner.getByRole('link', { name: 'View release' })).toHaveAttribute(
+    'href',
+    'https://github.com/apodimi/bubllio-crm-api/releases/tag/v0.2.0',
+  )
+})
+
+test('installation admin can review production readiness checks', async ({ page }) => {
+  await page.route('**/api/v1/auth/me/', (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: 'first-admin',
+        email: 'admin@example.com',
+        is_superuser: true,
+        organizations: orgs,
+      },
+    }),
+  )
+  await page.route('**/api/v1/auth/me/settings/', (route) =>
+    route.fulfill({
+      json: {
+        username: 'first-admin',
+        email: 'admin@example.com',
+        display_name: 'First Admin',
+        first_name: 'First',
+        last_name: 'Admin',
+        marketing_consent: false,
+      },
+    }),
+  )
+  await page.route('**/api/v1/organizations/installation-settings/', (route) =>
+    route.fulfill({
+      json: { smtp: null, configured: false, allow_personal_workspaces: false },
+    }),
+  )
+  await page.route('**/api/v1/organizations/installation-admin-invitations/', (route) =>
+    route.fulfill({ json: { administrators: [], invitations: [] } }),
+  )
+  await page.route('**/api/v1/organizations/workspace-creators/', (route) =>
+    route.fulfill({ json: [] }),
+  )
+  await page.route('**/api/v1/installation/production-readiness/', (route) =>
+    route.fulfill({
+      json: {
+        ready: false,
+        passed: 7,
+        total: 9,
+        checks: [
+          {
+            key: 'debug_disabled',
+            label: 'Debug mode is disabled',
+            status: 'pass',
+            guidance: 'Set DEBUG=false in the production Django settings.',
+          },
+          {
+            key: 'secure_session_cookie',
+            label: 'Session cookies require HTTPS',
+            status: 'fail',
+            guidance: 'Set SESSION_COOKIE_SECURE=true in production.',
+          },
+        ],
+      },
+    }),
+  )
+
+  await login(page)
+  await page.getByRole('button', { name: 'Open account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Account settings' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Production readiness' })).toBeVisible()
+  await expect(page.getByText('7 of 9 checks passed')).toBeVisible()
+  await expect(page.getByText('Session cookies require HTTPS')).toBeVisible()
+  await expect(page.getByText('Set SESSION_COOKIE_SECURE=true in production.')).toBeVisible()
 })
 
 test('invite-only registration creates an account and opens the invited workspace', async ({

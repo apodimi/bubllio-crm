@@ -27,6 +27,10 @@ PROJECT_ROOT = BASE_DIR.parent
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 
+def env_bool(name, default=False):
+    return os.environ.get(name, str(default)).lower() in {"1", "true", "yes", "on"}
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -37,11 +41,26 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
 BUBLLIO_APP_URL = os.environ.get("BUBLLIO_APP_URL", "http://127.0.0.1:5173" if DEBUG else "").rstrip("/")
 BUBLLIO_PRIVACY_POLICY_VERSION = os.environ.get("BUBLLIO_PRIVACY_POLICY_VERSION", "2026-09-22")
+BUBLLIO_UPDATE_CHECK_ENABLED = os.environ.get("BUBLLIO_UPDATE_CHECK_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+BUBLLIO_UPDATE_REPOSITORY = os.environ.get(
+    "BUBLLIO_UPDATE_REPOSITORY",
+    "apodimi/bubllio-crm-api",
+)
+BUBLLIO_UPDATE_CHECK_TTL = int(os.environ.get("BUBLLIO_UPDATE_CHECK_TTL", "21600"))
 
 
 # Application definition
@@ -164,3 +183,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Production transport security. Enable the proxy header only when requests can
+# reach Django exclusively through a trusted reverse proxy that overwrites it.
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT")
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE")
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE")
+SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS")
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD")
+if env_bool("DJANGO_TRUST_X_FORWARDED_PROTO"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

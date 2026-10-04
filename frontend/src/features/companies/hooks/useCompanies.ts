@@ -1,4 +1,5 @@
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { CompanyInput } from '../../../types/company.types'
 import { companyService } from '../services/companyService'
 
 export const companyKeys = {
@@ -13,3 +14,33 @@ const companiesQuery = (organizationId: string) =>
   })
 
 export const useCompanies = (organizationId: string) => useQuery(companiesQuery(organizationId))
+
+const useCompanyMutation = (organizationId: string) => {
+  const queryClient = useQueryClient()
+  return () =>
+    queryClient.invalidateQueries({ queryKey: companyKeys.byOrganization(organizationId) })
+}
+
+export const useCreateCompany = (organizationId: string) => {
+  const invalidate = useCompanyMutation(organizationId)
+  return useMutation({
+    mutationFn: (body: CompanyInput) => companyService.create(organizationId, body),
+    onSuccess: invalidate,
+  })
+}
+
+export const useUpdateCompany = (organizationId: string, companyId: string) => {
+  const invalidate = useCompanyMutation(organizationId)
+  return useMutation({
+    mutationFn: (body: CompanyInput) => companyService.update(organizationId, companyId, body),
+    onSuccess: invalidate,
+  })
+}
+
+export const useDeleteCompany = (organizationId: string) => {
+  const invalidate = useCompanyMutation(organizationId)
+  return useMutation({
+    mutationFn: (companyId: string) => companyService.remove(organizationId, companyId),
+    onSuccess: invalidate,
+  })
+}

@@ -111,6 +111,11 @@ GET  /api/v1/auth/me/
 POST /api/v1/auth/logout/
 ```
 
+Self-hosted installation administrators receive a read-only banner when a newer
+stable GitHub Release is available. See [Updating a self-hosted
+installation](docs/development/updating.md) for configuration, privacy, release,
+upgrade, and rollback guidance.
+
 ## Environment Variables
 
 Production secrets must not be committed to git.
@@ -136,6 +141,9 @@ GET  /api/v1/organizations/
 POST /api/v1/organizations/
 DELETE /api/v1/organizations/<id>/
 
+GET  /api/v1/installation/update-status/
+GET  /api/v1/installation/production-readiness/
+
 GET  /api/v1/organizations/<id>/members/
 GET  /api/v1/organizations/<id>/invitations/
 POST /api/v1/organizations/<id>/invitations/
@@ -160,6 +168,9 @@ POST /api/v1/organizations/<id>/email-accounts/<account-id>/test/
 
 GET  /api/v1/organizations/<id>/companies/
 POST /api/v1/organizations/<id>/companies/
+GET  /api/v1/organizations/<id>/companies/<company-id>/
+PATCH /api/v1/organizations/<id>/companies/<company-id>/
+DELETE /api/v1/organizations/<id>/companies/<company-id>/
 
 GET  /api/v1/organizations/<id>/contacts/
 POST /api/v1/organizations/<id>/contacts/
@@ -192,6 +203,8 @@ Start here:
 - [Django Workflow](docs/development/django-workflow.md)
 - [Frontend Workflow](docs/development/frontend-workflow.md)
 - [Database Setup](docs/development/databases.md)
+- [Pilot Production Readiness](docs/development/pilot-production-readiness.md)
+- [Updating a Self-hosted Installation](docs/development/updating.md)
 - [Migrations](docs/development/migrations.md)
 - [REST API Patterns](docs/api/rest-patterns.md)
 - [REST Authentication](docs/api/authentication.md)

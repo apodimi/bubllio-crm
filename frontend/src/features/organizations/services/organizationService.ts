@@ -1,5 +1,5 @@
 import { request } from '../../../services/api'
-import type { Organization } from '../../../types/organization.types'
+import type { EmailAccount, Organization } from '../../../types/organization.types'
 
 export const organizationPath = (id: string) => '/organizations/' + encodeURIComponent(id) + '/'
 
@@ -51,18 +51,7 @@ export const organizationService = {
     body: { timezone?: string; locale?: string; default_from_name?: string },
   ) => request(`${organizationPath(id)}settings/`, { body }),
   emailAccounts: (id: string, signal?: AbortSignal) =>
-    request<
-      Array<{
-        id: string
-        name: string
-        host: string
-        port: number
-        username: string
-        from_email: string
-        is_default: boolean
-        is_active: boolean
-      }>
-    >(`${organizationPath(id)}email-accounts/`, { signal }),
+    request<EmailAccount[]>(`${organizationPath(id)}email-accounts/`, { signal }),
   createEmailAccount: (id: string, body: Record<string, unknown>) =>
     request(`${organizationPath(id)}email-accounts/`, { body }),
   updateEmailAccount: (id: string, accountId: string, body: Record<string, unknown>) =>
@@ -70,6 +59,11 @@ export const organizationService = {
       method: 'PATCH',
       body,
     }),
+  testEmailAccount: (id: string, accountId: string, recipient: string) =>
+    request<{ detail: string; status: 'success' }>(
+      `${organizationPath(id)}email-accounts/${encodeURIComponent(accountId)}/test/`,
+      { body: { recipient } },
+    ),
   installationSettings: (signal?: AbortSignal) =>
     request<{
       configured: boolean
