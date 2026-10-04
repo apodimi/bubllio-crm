@@ -34,17 +34,17 @@ export function DashboardPage() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: '1.15fr .9fr .9fr' },
           gap: 3,
           mb: 4,
         }}
       >
         {stats.map((stat) => (
-          <Paper variant="outlined" key={stat.label} sx={{ p: 3 }}>
+          <Paper variant="outlined" key={stat.label} sx={{ p: 3.25, position: 'relative', overflow: 'hidden', '&::after': { content: '""', position: 'absolute', width: 80, height: 80, borderRadius: '50%', right: -28, top: -32, bgcolor: 'action.selected' } }}>
             <Typography color="text.secondary" variant="body2">
               {stat.label}
             </Typography>
-            <Typography variant="h3" sx={{ my: 2 }}>
+            <Typography variant="h3" sx={{ my: 2, fontSize: 44, fontVariantNumeric: 'tabular-nums', color: 'primary.dark' }}>
               {stat.value}
             </Typography>
             <Typography color="text.secondary" variant="body2">
@@ -56,10 +56,14 @@ export function DashboardPage() {
       <Paper
         sx={{
           p: { xs: 3, md: 5 },
-          bgcolor: 'primary.dark',
+          background: 'linear-gradient(125deg, #0f1f38 0%, #005bef 62%, #1473ff 125%)',
           color: 'primary.contrastText',
           mb: 4,
           overflow: 'hidden',
+          borderRadius: 3.5,
+          boxShadow: '0 24px 64px rgba(15,31,56,.18)',
+          position: 'relative',
+          '&::after': { content: '""', position: 'absolute', width: 360, height: 360, borderRadius: '50%', right: -110, top: -230, bgcolor: 'rgba(255,255,255,.07)' },
         }}
       >
         <Chip

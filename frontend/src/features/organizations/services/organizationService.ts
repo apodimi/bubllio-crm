@@ -1,5 +1,10 @@
-import { request } from '../../../services/api'
-import type { EmailAccount, Organization } from '../../../types/organization.types'
+import { apiClient, request } from '../../../services/api'
+import type {
+  EmailAccount,
+  Organization,
+  WorkspaceActivityEvent,
+  WorkspaceSettings,
+} from '../../../types/organization.types'
 
 export const organizationPath = (id: string) => '/organizations/' + encodeURIComponent(id) + '/'
 
@@ -41,15 +46,16 @@ export const organizationService = {
     request(`/organizations/provisioning/${encodeURIComponent(id)}/`, { method: 'DELETE' }),
   get: (id: string, signal?: AbortSignal) =>
     request<Organization>(organizationPath(id), { signal }),
+  remove: (id: string) => request<void>(organizationPath(id), { method: 'DELETE' }),
   settings: (id: string, signal?: AbortSignal) =>
-    request<{ timezone: string; locale: string; default_from_name: string }>(
-      `${organizationPath(id)}settings/`,
-      { signal },
-    ),
-  patchSettings: (
-    id: string,
-    body: { timezone?: string; locale?: string; default_from_name?: string },
-  ) => request(`${organizationPath(id)}settings/`, { body }),
+    request<WorkspaceSettings>(`${organizationPath(id)}settings/`, { signal }),
+  settingsOptions: (signal?: AbortSignal) =>
+    request<{
+      timezones: Array<{ value: string; label: string }>
+      locales: Array<{ value: string; label: string }>
+    }>('/organizations/settings/options/', { signal }),
+  patchSettings: (id: string, body: Partial<WorkspaceSettings>) =>
+    request<WorkspaceSettings>(`${organizationPath(id)}settings/`, { method: 'PATCH', body }),
   emailAccounts: (id: string, signal?: AbortSignal) =>
     request<EmailAccount[]>(`${organizationPath(id)}email-accounts/`, { signal }),
   createEmailAccount: (id: string, body: Record<string, unknown>) =>
@@ -59,11 +65,19 @@ export const organizationService = {
       method: 'PATCH',
       body,
     }),
+  deleteEmailAccount: (id: string, accountId: string) =>
+    request<void>(`${organizationPath(id)}email-accounts/${encodeURIComponent(accountId)}/`, {
+      method: 'DELETE',
+    }),
   testEmailAccount: (id: string, accountId: string, recipient: string) =>
     request<{ detail: string; status: 'success' }>(
       `${organizationPath(id)}email-accounts/${encodeURIComponent(accountId)}/test/`,
       { body: { recipient } },
     ),
+  activity: (id: string, signal?: AbortSignal) =>
+    request<WorkspaceActivityEvent[]>(`${organizationPath(id)}activity/`, { signal }),
+  downloadExport: (id: string) =>
+    apiClient.get<Blob>(`${organizationPath(id)}data-export/`, { responseType: 'blob' }),
   installationSettings: (signal?: AbortSignal) =>
     request<{
       configured: boolean

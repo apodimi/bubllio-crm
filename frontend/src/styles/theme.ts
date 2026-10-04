@@ -1,4 +1,5 @@
 import { alpha, createTheme, darken } from '@mui/material/styles'
+import type { Theme } from '@mui/material/styles'
 import { brand } from './brand'
 import { components } from './components'
 
@@ -56,10 +57,19 @@ const baseTheme = createTheme({
       letterSpacing: 0,
     },
     overline: { fontFamily: brand.typography.display, fontWeight: 700 },
+    allVariants: { textWrap: 'pretty' },
   },
   shape: {
     borderRadius: brand.shape.borderRadius,
   },
+  shadows: [
+    'none',
+    '0 2px 8px rgba(15,31,56,.05)',
+    '0 6px 20px rgba(15,31,56,.07)',
+    '0 10px 32px rgba(15,31,56,.08)',
+    '0 16px 44px rgba(15,31,56,.09)',
+    ...Array(20).fill('0 18px 54px rgba(15,31,56,.11)'),
+  ] as Theme['shadows'],
 })
 
 export const theme = createTheme(baseTheme, {

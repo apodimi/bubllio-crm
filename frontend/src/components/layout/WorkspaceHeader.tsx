@@ -40,10 +40,13 @@ export function WorkspaceHeader({
         alignItems: 'center',
         justifyContent: 'space-between',
         px: { xs: 2, md: 5 },
-        py: 2.5,
-        bgcolor: 'background.paper',
-        borderBottom: 1,
-        borderColor: 'divider',
+        py: 1.75,
+        position: 'sticky',
+        top: 0,
+        zIndex: 'appBar',
+        bgcolor: 'rgba(255,255,255,.78)',
+        backdropFilter: 'blur(18px)',
+        boxShadow: 'inset 0 -1px rgba(15,31,56,.08)',
       }}
     >
       <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
@@ -55,7 +58,7 @@ export function WorkspaceHeader({
           <MenuRounded />
         </IconButton>
         <Typography variant="body2" color="text.secondary">
-          Workspace <span style={{ margin: '0 12px', opacity: 0.4 }}>/</span>{' '}
+          Workspace <span style={{ margin: '0 10px', opacity: 0.35 }}>/</span>{' '}
           {workspaceName ?? 'All workspaces'}
         </Typography>
       </Stack>
@@ -77,10 +80,11 @@ export function WorkspaceHeader({
               sx={{
                 width: 36,
                 height: 36,
-                bgcolor: 'primary.main',
+                background: 'linear-gradient(135deg, #005bef, #1473ff)',
                 color: 'primary.contrastText',
                 fontSize: 14,
-                fontWeight: 700,
+                fontWeight: 800,
+                boxShadow: '0 8px 18px rgba(0,91,239,.22)',
               }}
             >
               {initials}

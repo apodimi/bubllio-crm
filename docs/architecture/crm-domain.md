@@ -41,6 +41,12 @@ An organization owns its CRM data:
 - pending invitations to users who are not members yet
 - organization settings and encrypted SMTP email accounts
 
+Organization settings also hold the workspace's business identity, regional
+preferences, and ERP defaults. Business identity includes legal/trading names,
+tax and registration references, contact details, and postal address. ERP
+defaults currently prepare currency, fiscal-year start, tax rate, payment terms,
+and document numbering; they do not create accounting documents by themselves.
+
 Users may opt into one private personal workspace through the workspace
 picker. It is a normal tenant for the user's own companies, contacts and
 automations, but it is marked `is_personal` and has a single owner. Personal

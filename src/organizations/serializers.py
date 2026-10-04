@@ -52,6 +52,33 @@ class OrganizationSettingsSerializer(serializers.ModelSerializer):
     timezone = serializers.ChoiceField(choices=timezone_choices())
     locale = serializers.ChoiceField(choices=locale_choices())
 
+    def validate_currency(self, value):
+        value = value.strip().upper()
+        if len(value) != 3 or not value.isalpha():
+            raise serializers.ValidationError("Use a three-letter currency code such as EUR.")
+        return value
+
+    def validate_country(self, value):
+        value = value.strip().upper()
+        if value and (len(value) != 2 or not value.isalpha()):
+            raise serializers.ValidationError("Use a two-letter country code such as GR.")
+        return value
+
+    def validate_fiscal_year_start_month(self, value):
+        if not 1 <= value <= 12:
+            raise serializers.ValidationError("Choose a month from 1 to 12.")
+        return value
+
+    def validate_default_tax_rate(self, value):
+        if not 0 <= value <= 100:
+            raise serializers.ValidationError("Tax rate must be between 0 and 100.")
+        return value
+
+    def validate_next_document_number(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Next document number must be at least 1.")
+        return value
+
     class Meta:
         model = OrganizationSettings
         fields = [
@@ -59,6 +86,11 @@ class OrganizationSettingsSerializer(serializers.ModelSerializer):
             "timezone",
             "locale",
             "default_from_name",
+            "legal_name", "trading_name", "tax_id", "tax_office",
+            "registration_number", "business_email", "phone", "website",
+            "address_line_1", "address_line_2", "city", "postal_code", "country",
+            "currency", "fiscal_year_start_month", "default_tax_rate",
+            "default_payment_terms_days", "document_prefix", "next_document_number",
             "created_at",
             "updated_at",
         ]

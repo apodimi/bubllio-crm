@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..choices import locale_choices, timezone_choices
-from organizations.models import OrganizationSettings
+from organizations.models import OrganizationSettings, WorkspaceAccessEvent
 from access.permissions import Capability, get_organization_for_user
 from organizations.serializers import OrganizationSettingsSerializer
 
@@ -28,6 +28,12 @@ class OrganizationSettingsAPIView(APIView):
         serializer = OrganizationSettingsSerializer(settings, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.UPDATE_WORKSPACE_SETTINGS,
+            actor=request.user,
+            organization_id=organization.id,
+            details={"changed_fields": sorted(serializer.validated_data.keys())},
+        )
         return Response(serializer.data)
 
 

@@ -78,13 +78,18 @@ function Shell() {
   )
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
       <Drawer
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
-          width: 248,
-          '& .MuiDrawer-paper': { width: 248, bgcolor: 'background.paper' },
+          width: 264,
+          '& .MuiDrawer-paper': {
+            width: 264,
+            bgcolor: '#eef4ff',
+            backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,.86), rgba(234,242,255,.92))',
+            boxShadow: '8px 0 32px rgba(15,31,56,.045)',
+          },
         }}
       >
         {sidebar}
@@ -92,11 +97,11 @@ function Shell() {
       <Drawer
         open={mobileOpen}
         onClose={closeMobileNavigation}
-        sx={{ '& .MuiDrawer-paper': { width: 270 } }}
+        sx={{ '& .MuiDrawer-paper': { width: 286, bgcolor: '#eef4ff' } }}
       >
         {sidebar}
       </Drawer>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ flex: 1, minWidth: 0, position: 'relative' }}>
         <WorkspaceHeader
           workspaceName={currentOrganization?.name}
           onOpenNavigation={() => setMobileOpen(true)}
@@ -106,7 +111,7 @@ function Shell() {
         />
         <Box
           component="main"
-          sx={{ px: { xs: 2, sm: 3, lg: 5 }, py: { xs: 3, md: 5 }, maxWidth: 1500, mx: 'auto' }}
+          sx={{ px: { xs: 2, sm: 3.5, lg: 6 }, pt: { xs: 3, md: 5 }, pb: { xs: 6, md: 8 }, maxWidth: 1500, mx: 'auto' }}
         >
           <UpdateBanner isInstallationAdmin={isSuperuser} />
           <Outlet />

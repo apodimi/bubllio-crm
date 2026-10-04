@@ -84,6 +84,9 @@ Email account passwords are encrypted at rest and never returned by the API.
 The account list returns account configuration (excluding passwords) to every workspace role;
 editing it requires owner/admin. A workspace uses its active default SMTP
 account for invitations, falling back to installation SMTP if it has none.
+Owners and administrators can also view a tenant-scoped activity history and
+download a portable JSON export for their workspace. Neither endpoint exposes
+another workspace, SMTP passwords, authentication secrets, or invitation tokens.
 
 The table describes current endpoints; it is not a promise of per-record CRUD.
 For example, the current API can create/list companies and contacts, but has no

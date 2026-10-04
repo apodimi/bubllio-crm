@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { organizationService } from '../services/organizationService'
+import type { WorkspaceSettings } from '../../../types/organization.types'
 
-export function useOrganizationSettings(id: string) {
+export function useOrganizationSettings(id: string, canManage = true) {
   const queryClient = useQueryClient()
   const settings = useQuery({
     queryKey: ['organizations', id, 'settings'],
@@ -11,8 +12,17 @@ export function useOrganizationSettings(id: string) {
     queryKey: ['organizations', id, 'email-accounts'],
     queryFn: ({ signal }) => organizationService.emailAccounts(id, signal),
   })
+  const options = useQuery({
+    queryKey: ['organization-settings-options'],
+    queryFn: ({ signal }) => organizationService.settingsOptions(signal),
+  })
+  const activity = useQuery({
+    queryKey: ['organizations', id, 'activity'],
+    queryFn: ({ signal }) => organizationService.activity(id, signal),
+    enabled: canManage,
+  })
   const saveSettings = useMutation({
-    mutationFn: (body: { timezone?: string; locale?: string; default_from_name?: string }) =>
+    mutationFn: (body: Partial<WorkspaceSettings>) =>
       organizationService.patchSettings(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['organizations', id, 'settings'] }),
   })
@@ -33,5 +43,27 @@ export function useOrganizationSettings(id: string) {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['organizations', id, 'email-accounts'] }),
   })
-  return { settings, accounts, saveSettings, createAccount, updateAccount, testAccount }
+  const deleteAccount = useMutation({
+    mutationFn: (accountId: string) => organizationService.deleteEmailAccount(id, accountId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['organizations', id, 'email-accounts'] }),
+  })
+  const downloadExport = useMutation({
+    mutationFn: () => organizationService.downloadExport(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['organizations', id, 'activity'] }),
+  })
+  const deleteOrganization = useMutation({ mutationFn: () => organizationService.remove(id) })
+  return {
+    settings,
+    accounts,
+    options,
+    activity,
+    saveSettings,
+    createAccount,
+    updateAccount,
+    testAccount,
+    deleteAccount,
+    downloadExport,
+    deleteOrganization,
+  }
 }

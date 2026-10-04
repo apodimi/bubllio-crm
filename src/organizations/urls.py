@@ -10,6 +10,7 @@ from .api.provisioning import (
     WorkspaceProvisioningListAPIView, WorkspaceProvisioningDetailAPIView,
 )
 from .api.workspace_settings import OrganizationSettingsAPIView, OrganizationSettingsOptionsAPIView
+from .api.workspace_operations import WorkspaceActivityAPIView, WorkspaceDataExportAPIView
 from .api.workspaces import OrganizationDetailAPIView, OrganizationListCreateAPIView, PersonalWorkspaceAPIView
 
 urlpatterns = [
@@ -35,6 +36,8 @@ urlpatterns = [
         name="organization-membership-detail",
     ),
     path("<uuid:organization_id>/settings/", OrganizationSettingsAPIView.as_view(), name="organization-settings"),
+    path("<uuid:organization_id>/activity/", WorkspaceActivityAPIView.as_view(), name="workspace-activity"),
+    path("<uuid:organization_id>/data-export/", WorkspaceDataExportAPIView.as_view(), name="workspace-data-export"),
     path("<uuid:organization_id>/email-accounts/", EmailAccountListCreateAPIView.as_view(), name="email-account-list"),
     path("<uuid:organization_id>/email-accounts/<uuid:account_id>/", EmailAccountDetailAPIView.as_view(), name="email-account-detail"),
     path("<uuid:organization_id>/email-accounts/<uuid:account_id>/test/", EmailAccountTestAPIView.as_view(), name="email-account-test"),

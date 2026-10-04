@@ -40,6 +40,10 @@ export const invitationService = {
     request<WorkspaceMember[]>(`${organizationPath(organizationId)}members/`, { signal }),
   create: (organizationId: string, input: { email: string; role: InvitationRole }) =>
     request<Invitation>(`${organizationPath(organizationId)}invitations/`, { body: input }),
+  updateMember: (organizationId: string, memberId: string, role: InvitationRole | 'owner') =>
+    request<WorkspaceMember>(`${organizationPath(organizationId)}members/${encodeURIComponent(memberId)}/`, { method: 'PATCH', body: { role } }),
+  removeMember: (organizationId: string, memberId: string) =>
+    request<void>(`${organizationPath(organizationId)}members/${encodeURIComponent(memberId)}/`, { method: 'DELETE' }),
   preview: (token: string, signal?: AbortSignal, installationAdmin = false) =>
     request<InvitationPreview>(
       installationAdmin ? adminInvitationPath(token) : invitationPath(token),

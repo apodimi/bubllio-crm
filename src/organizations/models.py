@@ -71,6 +71,8 @@ class WorkspaceAccessEvent(models.Model):
         INVITE_INSTALLATION_ADMIN = "invite_installation_admin", "Invite installation administrator"
         ACCEPT_INSTALLATION_ADMIN = "accept_installation_admin", "Accept installation administrator invitation"
         UPDATE_INSTALLATION_SETTINGS = "update_installation_settings", "Update installation settings"
+        UPDATE_WORKSPACE_SETTINGS = "update_workspace_settings", "Update workspace settings"
+        DOWNLOAD_WORKSPACE_EXPORT = "download_workspace_export", "Download workspace data export"
 
     action = models.CharField(max_length=40, choices=Action.choices)
     actor = models.ForeignKey(
@@ -129,6 +131,25 @@ class OrganizationSettings(models.Model):
     timezone = models.CharField(max_length=64, default="UTC")
     locale = models.CharField(max_length=20, default="en-us")
     default_from_name = models.CharField(max_length=255, blank=True)
+    legal_name = models.CharField(max_length=255, blank=True)
+    trading_name = models.CharField(max_length=255, blank=True)
+    tax_id = models.CharField(max_length=50, blank=True)
+    tax_office = models.CharField(max_length=120, blank=True)
+    registration_number = models.CharField(max_length=80, blank=True)
+    business_email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    website = models.URLField(blank=True)
+    address_line_1 = models.CharField(max_length=255, blank=True)
+    address_line_2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    postal_code = models.CharField(max_length=30, blank=True)
+    country = models.CharField(max_length=2, blank=True)
+    currency = models.CharField(max_length=3, default="EUR")
+    fiscal_year_start_month = models.PositiveSmallIntegerField(default=1)
+    default_tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    default_payment_terms_days = models.PositiveSmallIntegerField(default=30)
+    document_prefix = models.CharField(max_length=20, blank=True)
+    next_document_number = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

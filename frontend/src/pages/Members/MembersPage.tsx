@@ -8,6 +8,7 @@ import {
   useCreateInvitation,
   useInvitations,
   useWorkspaceMembers,
+  useMemberActions,
 } from '../../features/invitations/hooks/useInvitations'
 import { Failure, Loading } from '../../components/common/Feedback'
 
@@ -22,6 +23,7 @@ export function MembersPage() {
   const members = useWorkspaceMembers(organizationId)
   const invitations = useInvitations(organizationId)
   const create = useCreateInvitation(organizationId)
+  const actions = useMemberActions(organizationId)
   const [sent, setSent] = useState('')
   const {
     register,
@@ -146,7 +148,12 @@ export function MembersPage() {
               <Typography>
                 {member.username} · {member.email}
               </Typography>
-              <Typography color="text.secondary">{member.role}</Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' } }}>
+                <TextField select size="small" value={member.role} disabled={member.role === 'owner' || actions.update.isPending} onChange={(event) => void actions.update.mutateAsync({ memberId: member.id, role: event.target.value as 'admin' | 'member' | 'viewer' })} sx={{ minWidth: 125 }} aria-label={`Role for ${member.username}`}>
+                  <MenuItem value="admin">Admin</MenuItem><MenuItem value="member">Member</MenuItem><MenuItem value="viewer">Viewer</MenuItem>
+                </TextField>
+                {member.role !== 'owner' && <Button size="small" color="error" disabled={actions.remove.isPending} onClick={() => { if (window.confirm(`Remove ${member.username} from this workspace?`)) void actions.remove.mutateAsync(member.id) }}>Remove</Button>}
+              </Stack>
             </Stack>
           ))}
         </Stack>

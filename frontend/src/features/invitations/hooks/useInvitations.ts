@@ -31,6 +31,20 @@ export function useCreateInvitation(organizationId: string) {
   })
 }
 
+export function useMemberActions(organizationId: string) {
+  const queryClient = useQueryClient()
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] })
+  const update = useMutation({
+    mutationFn: ({ memberId, role }: { memberId: string; role: InvitationRole | 'owner' }) => invitationService.updateMember(organizationId, memberId, role),
+    onSuccess: refresh,
+  })
+  const remove = useMutation({
+    mutationFn: (memberId: string) => invitationService.removeMember(organizationId, memberId),
+    onSuccess: refresh,
+  })
+  return { update, remove }
+}
+
 export const useAcceptInvitation = (installationAdmin = false) =>
   useMutation({
     mutationFn: ({ token, input }: { token: string; input?: InvitationRegistration }) =>

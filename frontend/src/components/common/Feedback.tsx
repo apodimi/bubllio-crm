@@ -49,8 +49,11 @@ export function PageHeading({
         mb: 4,
       }}
     >
-      <Box>
-        <Typography variant="h4" sx={{ mb: 1 }}>
+      <Box sx={{ maxWidth: 720 }}>
+        <Typography variant="overline" color="primary.main" sx={{ letterSpacing: '.14em', fontSize: 10.5 }}>
+          Workspace
+        </Typography>
+        <Typography variant="h3" sx={{ mt: 0.35, mb: 1, fontSize: { xs: 30, md: 38 }, letterSpacing: '-.035em' }}>
           {title}
         </Typography>
         <Typography color="text.secondary">{description}</Typography>

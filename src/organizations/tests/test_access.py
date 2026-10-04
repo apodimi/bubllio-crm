@@ -266,6 +266,38 @@ class OrganizationSettingsAndEmailTests(APITestCase):
         denied = self.client.patch(self.settings_url(), {"timezone": "UTC"}, format="json")
         self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_owner_can_save_business_and_erp_defaults_with_audit_event(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.patch(
+            self.settings_url(),
+            {
+                "legal_name": "Nerds Lab IKE",
+                "tax_id": "EL123456789",
+                "country": "gr",
+                "currency": "eur",
+                "default_tax_rate": "24.00",
+                "next_document_number": 1001,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["country"], "GR")
+        self.assertEqual(response.data["currency"], "EUR")
+        event = WorkspaceAccessEvent.objects.get(action="update_workspace_settings")
+        self.assertEqual(event.organization_id, self.organization.id)
+        self.assertIn("tax_id", event.details["changed_fields"])
+        self.assertNotIn("EL123456789", str(event.details))
+
+    def test_erp_defaults_reject_invalid_values(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.patch(
+            self.settings_url(),
+            {"currency": "EURO", "default_tax_rate": "101", "next_document_number": 0},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
     def test_email_password_is_encrypted_and_never_returned(self):
         self.client.force_authenticate(self.owner)
         response = self.create_account()
@@ -465,3 +497,52 @@ class RestAuthenticationTests(APITestCase):
             format="json",
         )
         self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class WorkspaceOperationsTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner")
+        self.viewer = User.objects.create_user(username="viewer")
+        self.other_owner = User.objects.create_user(username="other-owner")
+        self.organization = Organization.objects.create(name="Nerds Lab", slug="nerds-lab")
+        self.other = Organization.objects.create(name="Other", slug="other")
+        OrganizationMembership.objects.create(
+            organization=self.organization, user=self.owner, role="owner"
+        )
+        OrganizationMembership.objects.create(
+            organization=self.organization, user=self.viewer, role="viewer"
+        )
+        OrganizationMembership.objects.create(
+            organization=self.other, user=self.other_owner, role="owner"
+        )
+        WorkspaceAccessEvent.objects.create(
+            action="update_workspace_settings", actor=self.owner,
+            organization_id=self.organization.id, details={"changed_fields": ["currency"]},
+        )
+        WorkspaceAccessEvent.objects.create(
+            action="update_workspace_settings", actor=self.other_owner,
+            organization_id=self.other.id, details={"changed_fields": ["locale"]},
+        )
+
+    def test_activity_is_scoped_to_workspace_and_managers(self):
+        url = reverse("workspace-activity", kwargs={"organization_id": self.organization.id})
+        self.client.force_authenticate(self.viewer)
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["actor"], "owner")
+
+    def test_workspace_export_is_scoped_and_records_download(self):
+        url = reverse("workspace-data-export", kwargs={"organization_id": self.organization.id})
+        self.client.force_authenticate(self.viewer)
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["workspace"]["slug"], "nerds-lab")
+        self.assertNotIn("other", str(response.data))
+        self.assertTrue(WorkspaceAccessEvent.objects.filter(
+            action="download_workspace_export", organization_id=self.organization.id,
+        ).exists())

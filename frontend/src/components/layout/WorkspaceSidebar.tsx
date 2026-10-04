@@ -119,11 +119,11 @@ export function WorkspaceSidebar({
         component={Link}
         to="/"
         aria-label="Bubllio home"
-        sx={{ alignSelf: 'flex-start', textDecoration: 'none', mx: 1, mt: 1, mb: 4 }}
+        sx={{ alignSelf: 'flex-start', textDecoration: 'none', mx: 1, mt: 1, mb: 4.5 }}
       >
         <BrandLogo product="CRM" />
       </Box>
-      <Typography variant="overline" color="text.secondary" sx={{ px: 1, mb: 1 }}>
+      <Typography variant="overline" color="text.secondary" sx={{ px: 1, mb: 1, letterSpacing: '.13em', fontSize: 10 }}>
         WORKSPACE
       </Typography>
       <Select
@@ -168,6 +168,8 @@ export function WorkspaceSidebar({
         sx={{
           mb: 3,
           borderRadius: 2,
+          bgcolor: 'rgba(255,255,255,.72)',
+          boxShadow: '0 8px 24px rgba(15,31,56,.06)',
           '& .MuiSelect-select': { py: 0.75, pr: 4.5 },
         }}
       >
@@ -203,7 +205,7 @@ export function WorkspaceSidebar({
           </MenuItem>
         ))}
       </Select>
-      <List>
+      <List sx={{ display: 'grid', gap: 0.35 }}>
         {organizationId &&
           navigationItems.map((item) => (
             <Link
@@ -216,7 +218,12 @@ export function WorkspaceSidebar({
               <ListItemButton
                 component="div"
                 selected={currentPath === item.path || currentPath === `${item.path}/`}
-                sx={{ mb: 0.5 }}
+                sx={{
+                  py: 1.05,
+                  '&.Mui-selected': { boxShadow: '0 8px 22px rgba(0,91,239,.11)' },
+                  transition: 'transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms cubic-bezier(.2,.8,.2,1)',
+                  '&:hover': { transform: 'translateX(3px)' },
+                }}
               >
                 <ListItemIcon sx={{ minWidth: 38, color: 'inherit' }}>{item.icon}</ListItemIcon>
                 <ListItemText
