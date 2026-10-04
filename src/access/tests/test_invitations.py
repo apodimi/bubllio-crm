@@ -7,7 +7,13 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from organizations.models import EmailAccount, Organization, OrganizationInvitation, OrganizationMembership
+from organizations.models import (
+    EmailAccount,
+    Organization,
+    OrganizationInvitation,
+    OrganizationMembership,
+    WorkspaceAccessEvent,
+)
 
 
 User = get_user_model()
@@ -41,6 +47,11 @@ class InvitationTests(APITestCase):
         token = invite_url.rsplit("/", 1)[-1]
         invitation = OrganizationInvitation.objects.get(id=response.data["id"])
         self.assertNotEqual(invitation.token_hash, token)
+        invited_event = WorkspaceAccessEvent.objects.get(action="invite_member")
+        self.assertEqual(invited_event.actor, self.owner)
+        self.assertEqual(invited_event.organization_id, self.organization.id)
+        self.assertEqual(invited_event.details, {"email": "new@example.com", "role": "viewer"})
+        self.assertNotIn(token, str(invited_event.details))
         self.client.force_authenticate(user=None)
         preview = self.client.get(reverse("invitation-detail", kwargs={"token": token}))
         self.assertEqual(preview.data["organization_name"], "Nerds Lab")
@@ -53,6 +64,9 @@ class InvitationTests(APITestCase):
         self.assertTrue(OrganizationMembership.objects.filter(
             organization=self.organization, user__username="new-person", role="viewer",
         ).exists())
+        accepted_event = WorkspaceAccessEvent.objects.get(action="accept_member_invitation")
+        self.assertEqual(accepted_event.target_user.username, "new-person")
+        self.assertEqual(accepted_event.details["role"], "viewer")
         self.assertEqual(self.client.post(reverse("invitation-accept", kwargs={"token": token})).status_code, 404)
 
     def test_existing_user_must_sign_in_with_invited_email(self):

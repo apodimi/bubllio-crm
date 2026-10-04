@@ -51,7 +51,7 @@ class OrganizationProvisioning(models.Model):
 
 
 class WorkspaceAccessEvent(models.Model):
-    """Append-only operational history for provisioning privilege changes."""
+    """Append-only installation activity history without secret values."""
 
     class Action(models.TextChoices):
         GRANT_CREATOR = "grant_creator", "Grant workspace creator"
@@ -60,6 +60,17 @@ class WorkspaceAccessEvent(models.Model):
         RESEND_OWNER_INVITATION = "resend_owner_invitation", "Resend owner invitation"
         CANCEL_WORKSPACE = "cancel_workspace", "Cancel pending workspace"
         ACCEPT_OWNER_INVITATION = "accept_owner_invitation", "Accept owner invitation"
+        DOWNLOAD_DATA_EXPORT = "download_data_export", "Download installation data export"
+        INVITE_MEMBER = "invite_member", "Invite workspace member"
+        ACCEPT_MEMBER_INVITATION = "accept_member_invitation", "Accept member invitation"
+        CHANGE_MEMBER_ROLE = "change_member_role", "Change member role"
+        REMOVE_MEMBER = "remove_member", "Remove workspace member"
+        CREATE_EMAIL_CONNECTION = "create_email_connection", "Create email connection"
+        UPDATE_EMAIL_CONNECTION = "update_email_connection", "Update email connection"
+        DELETE_EMAIL_CONNECTION = "delete_email_connection", "Delete email connection"
+        INVITE_INSTALLATION_ADMIN = "invite_installation_admin", "Invite installation administrator"
+        ACCEPT_INSTALLATION_ADMIN = "accept_installation_admin", "Accept installation administrator invitation"
+        UPDATE_INSTALLATION_SETTINGS = "update_installation_settings", "Update installation settings"
 
     action = models.CharField(max_length=40, choices=Action.choices)
     actor = models.ForeignKey(
@@ -69,6 +80,7 @@ class WorkspaceAccessEvent(models.Model):
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="workspace_access_targets"
     )
     organization_id = models.UUIDField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -86,6 +98,26 @@ class InstallationState(models.Model):
     def save(self, *args, **kwargs):
         self.id = 1
         super().save(*args, **kwargs)
+
+
+class InstallationBackupEvent(models.Model):
+    """Operator-reported backup and restore-test result; never stores backup data."""
+
+    class Kind(models.TextChoices):
+        BACKUP = "backup", "Backup"
+        RESTORE_TEST = "restore_test", "Restore test"
+
+    class Status(models.TextChoices):
+        SUCCESS = "success", "Success"
+        FAILURE = "failure", "Failure"
+
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    status = models.CharField(max_length=10, choices=Status.choices)
+    completed_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ("-completed_at", "-id")
+        indexes = [models.Index(fields=("kind", "-completed_at"))]
 
 
 class OrganizationSettings(models.Model):

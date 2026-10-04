@@ -28,6 +28,9 @@ import { useAccountSettings } from '../../features/auth/hooks/useAccountSettings
 import { authService } from '../../features/auth/services/authService'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { ProductionReadinessCard } from '../../features/installation/components/ProductionReadinessCard'
+import { SystemInformationPanel } from '../../features/installation/components/SystemInformationPanel'
+import { InstallationAuditLog } from '../../features/installation/components/InstallationAuditLog'
+import { BackupStatusPanel } from '../../features/installation/components/BackupStatusPanel'
 
 export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
@@ -191,7 +194,8 @@ export function AccountSettingsPage() {
           <Box>
             <Typography variant="h4">Account settings</Typography>
             <Typography color="text.secondary">
-              Manage your profile and security preferences.
+              Manage your own account and, if permitted, the settings used by the whole
+              installation.
             </Typography>
           </Box>
         </Stack>
@@ -207,7 +211,12 @@ export function AccountSettingsPage() {
           variant="outlined"
         />
       </Stack>
-      {isSuperuser && <ProductionReadinessCard />}
+      <Box>
+        <Typography variant="h5">Your account</Typography>
+        <Typography color="text.secondary">
+          These settings affect only your own profile and sign-in.
+        </Typography>
+      </Box>
       <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
         <Stack component="form" onSubmit={saveProfile} spacing={2}>
           <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
@@ -354,13 +363,22 @@ export function AccountSettingsPage() {
         </Stack>
       </Paper>
       {isSuperuser && (
+        <Box sx={{ pt: 2 }}>
+          <Typography variant="h5">Installation administration</Typography>
+          <Typography color="text.secondary">
+            These settings affect the whole Bubllio installation and everyone who uses it.
+          </Typography>
+        </Box>
+      )}
+      {isSuperuser && (
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
           <Stack spacing={2}>
             <Box>
               <Typography variant="h6">Workspace creators</Typography>
               <Typography variant="body2" color="text.secondary">
-                Let an existing account create shared workspaces without granting installation
-                administrator or Django admin access. Each new workspace needs a nominated owner.
+                Allow an existing user to create new shared workspaces. This does not give them
+                access to installation settings or to workspaces they do not belong to. They must
+                choose an owner for every new workspace.
               </Typography>
             </Box>
             <Stack
@@ -421,8 +439,9 @@ export function AccountSettingsPage() {
               <Box>
                 <Typography variant="h6">Installation administrators</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Invite trusted IT colleagues to manage this installation. Workspace data still
-                  requires a separate membership in the application.
+                  Invite trusted IT staff to manage server-wide settings and other installation
+                  administrators. They can see workspace data only when they are also added to that
+                  workspace.
                 </Typography>
               </Box>
             </Stack>
@@ -481,18 +500,23 @@ export function AccountSettingsPage() {
             <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
               <EmailOutlined color="primary" />
               <Box>
-                <Typography variant="h6">Fallback SMTP</Typography>
+                <Typography variant="h6">Default email connection</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Used by workspaces without their own email account.
+                  Sends invitations and password reset messages when a workspace does not have its
+                  own email connection.
                 </Typography>
               </Box>
             </Stack>
             {account ? (
               <Alert severity="success">
-                Configured with {account.host} and used when a workspace has no SMTP override.
+                Email is ready through {account.host}. It is used only when a workspace has no email
+                connection of its own.
               </Alert>
             ) : (
-              <Alert severity="info">No installation fallback SMTP is configured yet.</Alert>
+              <Alert severity="info">
+                No default email connection is set. Some invitations and password reset messages may
+                not be delivered.
+              </Alert>
             )}
             <FormControlLabel
               control={
@@ -514,7 +538,12 @@ export function AccountSettingsPage() {
                   label={
                     field === 'from_email'
                       ? 'Sender email address'
-                      : field[0].toUpperCase() + field.slice(1)
+                      : {
+                          name: 'Connection name',
+                          host: 'Email server address',
+                          port: 'Email server port',
+                          username: 'Email account username',
+                        }[field]
                   }
                   type={field === 'port' ? 'number' : field === 'from_email' ? 'email' : 'text'}
                   value={values[field]}
@@ -525,7 +554,7 @@ export function AccountSettingsPage() {
                 />
               ))}
               <TextField
-                label="SMTP password"
+                label="Email account password"
                 type="password"
                 value={values.password}
                 onChange={(event) =>
@@ -533,11 +562,13 @@ export function AccountSettingsPage() {
                 }
                 required={!account}
                 helperText={
-                  account ? 'Enter it again only when replacing the stored credentials.' : undefined
+                  account
+                    ? 'Leave this empty to keep the saved password. Enter a value only when changing it.'
+                    : 'The password is encrypted before it is stored.'
                 }
               />
               <Button type="submit" variant="contained" disabled={installation.save.isPending}>
-                {installation.save.isPending ? 'Saving…' : 'Save fallback SMTP'}
+                {installation.save.isPending ? 'Saving…' : 'Save email connection'}
               </Button>
               {installation.save.isError && (
                 <Alert severity="error">{installation.save.error.message}</Alert>
@@ -546,6 +577,10 @@ export function AccountSettingsPage() {
           </Stack>
         </Paper>
       )}
+      {isSuperuser && <ProductionReadinessCard />}
+      {isSuperuser && <SystemInformationPanel />}
+      {isSuperuser && <InstallationAuditLog />}
+      {isSuperuser && <BackupStatusPanel />}
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Delete account?</DialogTitle>
         <DialogContent>

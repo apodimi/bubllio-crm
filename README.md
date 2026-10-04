@@ -143,6 +143,10 @@ DELETE /api/v1/organizations/<id>/
 
 GET  /api/v1/installation/update-status/
 GET  /api/v1/installation/production-readiness/
+GET  /api/v1/installation/system-information/
+GET  /api/v1/installation/audit-log/
+GET  /api/v1/installation/backup-status/
+GET  /api/v1/installation/data-export/
 
 GET  /api/v1/organizations/<id>/members/
 GET  /api/v1/organizations/<id>/invitations/
@@ -212,6 +216,7 @@ Start here:
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Authentication and Roles](docs/architecture/authentication-and-roles.md)
 - [Roles and Access — Plain-language Guide](docs/guides/roles-and-access.md)
+- [Installation Settings — Plain-language Guide](docs/guides/installation-settings.md)
 - [Workspace Access Model: Research and Proposed Direction](docs/research/access-model-comparison.md)
 - [Automations Architecture](docs/architecture/automations.md)
 - [Try Your First Automation](docs/guides/first-automation.md)

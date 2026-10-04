@@ -1,6 +1,7 @@
 export interface ProductionReadinessCheck {
   key: string
   label: string
+  meaning: string
   status: 'pass' | 'fail'
   guidance: string
 }

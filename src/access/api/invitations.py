@@ -132,6 +132,12 @@ class OrganizationInvitationListCreateAPIView(APIView):
                     account=account, recipient=email,
                     organization_name=organization.name, invite_url=invite_url,
                 )
+                WorkspaceAccessEvent.objects.create(
+                    action=WorkspaceAccessEvent.Action.INVITE_MEMBER,
+                    actor=request.user,
+                    organization_id=organization.id,
+                    details={"email": email, "role": role},
+                )
         except Exception:
             logger.exception(
                 "Invitation email delivery failed for organization=%s recipient=%s account=%s",
@@ -243,6 +249,13 @@ class InvitationAcceptAPIView(APIView):
                 organization=invitation.organization,
                 user=user,
                 defaults={"role": invitation.role},
+            )
+            WorkspaceAccessEvent.objects.create(
+                action=WorkspaceAccessEvent.Action.ACCEPT_MEMBER_INVITATION,
+                actor=user,
+                target_user=user,
+                organization_id=invitation.organization_id,
+                details={"email": invitation.email, "role": membership.role},
             )
         invitation.accepted_at = timezone.now()
         invitation.save(update_fields=("accepted_at",))

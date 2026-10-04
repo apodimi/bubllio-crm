@@ -491,7 +491,7 @@ test('installation admin sees a new release banner', async ({ page }) => {
         latest_version: '0.2.0',
         update_available: true,
         release_name: 'Bubllio CRM 0.2.0',
-        release_url: 'https://github.com/apodimi/bubllio-crm-api/releases/tag/v0.2.0',
+        release_url: 'https://github.com/apodimi/bubllio-crm/releases/tag/v0.2.0',
         published_at: '2026-10-04T10:00:00Z',
       },
     }),
@@ -503,7 +503,7 @@ test('installation admin sees a new release banner', async ({ page }) => {
   await expect(banner).toContainText('You are running 0.1.0')
   await expect(banner.getByRole('link', { name: 'View release' })).toHaveAttribute(
     'href',
-    'https://github.com/apodimi/bubllio-crm-api/releases/tag/v0.2.0',
+    'https://github.com/apodimi/bubllio-crm/releases/tag/v0.2.0',
   )
 })
 
@@ -546,22 +546,51 @@ test('installation admin can review production readiness checks', async ({ page 
     route.fulfill({
       json: {
         ready: false,
-        passed: 7,
-        total: 9,
+        passed: 9,
+        total: 11,
         checks: [
           {
             key: 'debug_disabled',
-            label: 'Debug mode is disabled',
+            label: 'Detailed error pages are hidden',
+            meaning:
+              'Prevents visitors from seeing internal application details when something goes wrong.',
             status: 'pass',
-            guidance: 'Set DEBUG=false in the production Django settings.',
+            guidance: 'Set DJANGO_DEBUG=false on the server, then restart Bubllio.',
           },
           {
             key: 'secure_session_cookie',
-            label: 'Session cookies require HTTPS',
+            label: 'Sign-in cookies travel only over HTTPS',
+            meaning: 'Reduces the chance that somebody can steal an active sign-in session.',
             status: 'fail',
-            guidance: 'Set SESSION_COOKIE_SECURE=true in production.',
+            guidance: 'Set DJANGO_SESSION_COOKIE_SECURE=true and restart Bubllio.',
           },
         ],
+      },
+    }),
+  )
+  await page.route('**/api/v1/installation/system-information/', (route) =>
+    route.fulfill({
+      json: {
+        application_version: '0.1.0',
+        python_version: '3.13.0',
+        django_version: '6.0.7',
+        database: 'PostgreSQL',
+        email_delivery: 'Configured backend',
+        debug_enabled: false,
+        update_check_enabled: true,
+        public_url: 'https://crm.example.com',
+        runtime: 'Linux',
+      },
+    }),
+  )
+  await page.route('**/api/v1/installation/audit-log/', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v1/installation/backup-status/', (route) =>
+    route.fulfill({
+      json: {
+        backup: { status: 'unknown', completed_at: null },
+        restore_test: { status: 'unknown', completed_at: null },
+        backup_max_age_hours: 24,
+        restore_test_max_age_days: 90,
       },
     }),
   )
@@ -570,10 +599,12 @@ test('installation admin can review production readiness checks', async ({ page 
   await page.getByRole('button', { name: 'Open account menu' }).click()
   await page.getByRole('menuitem', { name: 'Account settings' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Production readiness' })).toBeVisible()
-  await expect(page.getByText('7 of 9 checks passed')).toBeVisible()
-  await expect(page.getByText('Session cookies require HTTPS')).toBeVisible()
-  await expect(page.getByText('Set SESSION_COOKIE_SECURE=true in production.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Server safety checks' })).toBeVisible()
+  await expect(page.getByText('9 of 11 safety checks passed')).toBeVisible()
+  await expect(page.getByText('Sign-in cookies travel only over HTTPS')).toBeVisible()
+  await expect(
+    page.getByText('Set DJANGO_SESSION_COOKIE_SECURE=true and restart Bubllio.'),
+  ).toBeVisible()
 })
 
 test('invite-only registration creates an account and opens the invited workspace', async ({

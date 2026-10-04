@@ -5,10 +5,11 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 
 
-def _check(key, label, passed, guidance):
+def _check(key, label, meaning, passed, guidance):
     return {
         "key": key,
         "label": label,
+        "meaning": meaning,
         "status": "pass" if passed else "fail",
         "guidance": guidance,
     }
@@ -33,71 +34,82 @@ def get_production_readiness():
     checks = [
         _check(
             "debug_disabled",
-            "Debug mode is disabled",
+            "Detailed error pages are hidden",
+            "Prevents visitors from seeing internal application details when something goes wrong.",
             not settings.DEBUG,
-            "Set DEBUG=false in the production Django settings.",
+            "Set DJANGO_DEBUG=false on the server, then restart Bubllio.",
         ),
         _check(
             "secret_key",
-            "Django secret key is production-safe",
+            "The application signing key is safe",
+            "Protects sign-ins, password reset links, and other signed information.",
             len(secret_key) >= 50
             and len(set(secret_key)) >= 5
             and not secret_key.startswith("django-insecure-"),
-            "Set DJANGO_SECRET_KEY to a unique random value of at least 50 characters.",
+            "Create a unique random value of at least 50 characters, save it as DJANGO_SECRET_KEY, and restart Bubllio.",
         ),
         _check(
             "allowed_hosts",
-            "Allowed hosts are restricted",
+            "Only approved web addresses can open the app",
+            "Blocks requests that use an unexpected domain name.",
             bool(allowed_hosts) and "*" not in allowed_hosts,
-            "Set ALLOWED_HOSTS to the exact hostnames that serve this installation.",
+            "Set DJANGO_ALLOWED_HOSTS to the domains that serve Bubllio, separated by commas. Do not use *.",
         ),
         _check(
             "public_url_https",
-            "Public application URL uses HTTPS",
+            "Emails and links use the secure public address",
+            "Ensures invitations and password reset links point to the real HTTPS website.",
             public_url.scheme == "https" and bool(public_url.netloc),
-            "Set BUBLLIO_APP_URL to the public https:// URL of this installation.",
+            "Set BUBLLIO_APP_URL to the full public address beginning with https://, then restart Bubllio.",
         ),
         _check(
             "https_redirect",
-            "HTTPS enforcement is configured",
+            "Unsecured visits are sent to HTTPS",
+            "Keeps passwords and CRM data encrypted while travelling over the network.",
             settings.SECURE_SSL_REDIRECT or bool(proxy_header),
-            "Enable SECURE_SSL_REDIRECT or configure SECURE_PROXY_SSL_HEADER behind a trusted proxy.",
+            "Enable DJANGO_SECURE_SSL_REDIRECT, or configure DJANGO_TRUST_X_FORWARDED_PROTO when a trusted proxy handles HTTPS.",
         ),
         _check(
             "secure_session_cookie",
-            "Session cookies require HTTPS",
+            "Sign-in cookies travel only over HTTPS",
+            "Reduces the chance that somebody can steal an active sign-in session.",
             settings.SESSION_COOKIE_SECURE,
-            "Set SESSION_COOKIE_SECURE=true in production.",
+            "Set DJANGO_SESSION_COOKIE_SECURE=true and restart Bubllio.",
         ),
         _check(
             "secure_csrf_cookie",
-            "CSRF cookies require HTTPS",
+            "Form protection cookies travel only over HTTPS",
+            "Helps protect users when they save settings or submit forms.",
             settings.CSRF_COOKIE_SECURE,
-            "Set CSRF_COOKIE_SECURE=true in production.",
+            "Set DJANGO_CSRF_COOKIE_SECURE=true and restart Bubllio.",
         ),
         _check(
             "hsts",
-            "HTTP Strict Transport Security is enabled",
+            "Browsers remember to use HTTPS",
+            "Tells browsers to avoid unsecured connections to this installation.",
             settings.SECURE_HSTS_SECONDS > 0,
-            "Enable HSTS in Django or at the HTTPS proxy after confirming the site is HTTPS-only.",
+            "After confirming the site works only through HTTPS, set DJANGO_SECURE_HSTS_SECONDS=31536000.",
         ),
         _check(
             "hsts_subdomains",
-            "HSTS includes subdomains",
+            "HTTPS protection includes subdomains",
+            "Extends the browser HTTPS rule to every subdomain of the public domain.",
             settings.SECURE_HSTS_INCLUDE_SUBDOMAINS,
-            "Enable HSTS includeSubDomains only after confirming every subdomain is HTTPS-only.",
+            "Only when every subdomain is HTTPS-only, set DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=true.",
         ),
         _check(
             "hsts_preload",
-            "HSTS preload is enabled",
+            "Browser preload protection is enabled",
+            "Allows supported browsers to know the domain requires HTTPS before the first visit.",
             settings.SECURE_HSTS_PRELOAD,
-            "Enable HSTS preload only after reviewing its long-lived browser commitment.",
+            "Review the long-term HTTPS commitment first, then set DJANGO_SECURE_HSTS_PRELOAD=true.",
         ),
         _check(
             "email_encryption_key",
-            "Email credential encryption key is configured",
+            "Saved email passwords can be encrypted",
+            "Protects SMTP passwords stored in the database.",
             _has_valid_encryption_key(),
-            "Set BUBLLIO_EMAIL_ENCRYPTION_KEY to a valid Fernet key before storing SMTP credentials.",
+            "Generate a Fernet key, store it as BUBLLIO_EMAIL_ENCRYPTION_KEY, and keep a secure copy outside the server.",
         ),
     ]
     passed = sum(check["status"] == "pass" for check in checks)

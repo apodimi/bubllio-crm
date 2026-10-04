@@ -17,7 +17,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import UserProfile
 from organizations.services.email_service import send_installation_admin_invitation_email
 from access.api.invitations import InvitationRegistrationSerializer, token_hash
-from organizations.models import EmailAccount, InstallationAdminInvitation, InstallationState
+from organizations.models import (
+    EmailAccount, InstallationAdminInvitation, InstallationState, WorkspaceAccessEvent,
+)
 from access.permissions import IsInstallationAdmin
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,11 @@ class InstallationAdminInvitationListCreateAPIView(APIView):
                     expires_at=timezone.now() + timedelta(days=7),
                 )
                 send_installation_admin_invitation_email(account=account, recipient=email, invite_url=invite_url)
+                WorkspaceAccessEvent.objects.create(
+                    action=WorkspaceAccessEvent.Action.INVITE_INSTALLATION_ADMIN,
+                    actor=request.user,
+                    details={"email": email},
+                )
         except Exception:
             logger.exception("Installation administrator invitation delivery failed for invitation email=%s", email)
             return Response({"detail": "The invitation email could not be sent. Check installation SMTP."}, status=502)
@@ -133,4 +140,10 @@ class InstallationAdminInvitationAcceptAPIView(APIView):
             user.save(update_fields=("is_superuser", "is_staff"))
         invitation.accepted_at = timezone.now()
         invitation.save(update_fields=("accepted_at",))
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.ACCEPT_INSTALLATION_ADMIN,
+            actor=user,
+            target_user=user,
+            details={"email": invitation.email},
+        )
         return Response({"tokens": tokens, "is_superuser": True}, status=201)

@@ -29,16 +29,16 @@ export function ProductionReadinessCard() {
             <SecurityRounded color="primary" />
             <Box>
               <Typography variant="h6" component="h2">
-                Production readiness
+                Server safety checks
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Application-level security checks for this self-hosted installation.
+                A plain-language checklist for running this installation safely for real users.
               </Typography>
             </Box>
           </Stack>
           {readiness.data && (
             <Chip
-              label={readiness.data.ready ? 'Ready for production' : 'Needs attention'}
+              label={readiness.data.ready ? 'All checks passed' : 'Action needed'}
               color={readiness.data.ready ? 'success' : 'warning'}
             />
           )}
@@ -47,7 +47,7 @@ export function ProductionReadinessCard() {
         {readiness.isPending && (
           <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5 }}>
             <CircularProgress size={20} />
-            <Typography color="text.secondary">Checking configuration…</Typography>
+            <Typography color="text.secondary">Checking the server settings…</Typography>
           </Stack>
         )}
         {readiness.isError && (
@@ -55,7 +55,7 @@ export function ProductionReadinessCard() {
             severity="error"
             action={<Button onClick={() => void readiness.refetch()}>Retry</Button>}
           >
-            The production checks could not be loaded.
+            We could not check the server settings. Try again.
           </Alert>
         )}
         {readiness.data && (
@@ -63,7 +63,7 @@ export function ProductionReadinessCard() {
             <Box>
               <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {readiness.data.passed} of {readiness.data.total} checks passed
+                  {readiness.data.passed} of {readiness.data.total} safety checks passed
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {Math.round((readiness.data.passed / readiness.data.total) * 100)}%
@@ -94,10 +94,18 @@ export function ProductionReadinessCard() {
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>
                         {check.label}
                       </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {check.meaning}
+                      </Typography>
                       {!passed && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                          {check.guidance}
-                        </Typography>
+                        <Box sx={{ mt: 0.75 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                            What to do
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {check.guidance}
+                          </Typography>
+                        </Box>
                       )}
                     </Box>
                   </Stack>
@@ -105,8 +113,8 @@ export function ProductionReadinessCard() {
               })}
             </Stack>
             <Alert severity="info">
-              Also verify TLS termination, firewall rules, backups, and monitoring at the hosting or
-              reverse-proxy layer.
+              This checks the application settings. Your hosting provider or server administrator
+              must also confirm HTTPS, firewall rules, backups, and monitoring.
             </Alert>
           </>
         )}

@@ -31,6 +31,10 @@ from accounts.views import (
 from onboarding.api.setup import InstallationSetupAPIView, InstallationSmtpTestAPIView
 from onboarding.api.update_status import InstallationUpdateStatusAPIView
 from onboarding.api.production_readiness import InstallationProductionReadinessAPIView
+from onboarding.api.system_information import InstallationSystemInformationAPIView
+from onboarding.api.installation_audit_log import InstallationAuditLogAPIView
+from onboarding.api.backup_status import InstallationBackupStatusAPIView
+from onboarding.api.data_export import InstallationDataExportAPIView
 from access.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
 from onboarding.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
@@ -46,6 +50,26 @@ urlpatterns = [
         "api/v1/installation/production-readiness/",
         InstallationProductionReadinessAPIView.as_view(),
         name="installation-production-readiness",
+    ),
+    path(
+        "api/v1/installation/system-information/",
+        InstallationSystemInformationAPIView.as_view(),
+        name="installation-system-information",
+    ),
+    path(
+        "api/v1/installation/audit-log/",
+        InstallationAuditLogAPIView.as_view(),
+        name="installation-audit-log",
+    ),
+    path(
+        "api/v1/installation/backup-status/",
+        InstallationBackupStatusAPIView.as_view(),
+        name="installation-backup-status",
+    ),
+    path(
+        "api/v1/installation/data-export/",
+        InstallationDataExportAPIView.as_view(),
+        name="installation-data-export",
     ),
     path("api/v1/invitations/<str:token>/", InvitationDetailAPIView.as_view(), name="invitation-detail"),
     path("api/v1/invitations/<str:token>/accept/", InvitationAcceptAPIView.as_view(), name="invitation-accept"),

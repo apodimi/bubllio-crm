@@ -50,7 +50,7 @@ implementation on them.
 | Responsibility | Implemented today | Possible later refinement |
 | --- | --- | --- |
 | First installation | First-run setup creates a Django superuser, the first workspace, and its owner membership. | Keep one-time bootstrap. |
-| More IT operators | Existing installation admins invite another installation admin, granting Django superuser/staff. | Keep rare; add an audit event for this elevation, which is not yet in `WorkspaceAccessEvent`. |
+| More IT operators | Existing installation admins invite another installation admin, granting Django superuser/staff, and the invitation plus acceptance are audited. | Keep rare and review the installation activity log regularly. |
 | Create a shared workspace | A Django superuser or delegated workspace creator may call `POST /api/v1/organizations/`. The delegated grant does not confer Django staff/superuser. | Consider an invitation to create a brand-new creator account; grants currently require an existing account. |
 | Assign business owner | Creator nominates `owner_email`. If different from their own email, the workspace is isolated pending email acceptance; acceptance removes the provisional creator membership and installs the business owner. | Consider configurable owner-invitation expiry/recovery policy if enterprise deployments need it. |
 | Configure workspace | Owner/admin can change settings and SMTP, manage allowed members; only owner can transfer ownership/delete. | Preserve these four simple roles until actual use cases require finer permissions. |
@@ -90,9 +90,9 @@ enforces the creator grant independently of React.
   membership and an explicit resend/cancel recovery path. The database still
   enforces *at most* one owner, not *at least* one after every possible direct
   administrative intervention.
-- **Audit privilege changes.** Grant/revoke, creation, resend/cancel, and initial
-  owner acceptance are recorded in `WorkspaceAccessEvent`. Ordinary workspace
-  membership/ownership and SMTP changes still need an audit trail; invitation
+- **Audit privilege changes.** Grant/revoke, creation, resend/cancel, invitations,
+  owner acceptance, membership/ownership changes, SMTP changes, and installation
+  administrator elevation are recorded in `WorkspaceAccessEvent`. Invitation
   revocation is not implemented.
 - **Keep the default simple.** Do not add arbitrary custom roles, Salesforce-like
   record hierarchies, or personal workspaces by default. Introduce narrower

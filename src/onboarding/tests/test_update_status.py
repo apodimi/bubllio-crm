@@ -20,7 +20,7 @@ class GitHubResponse(BytesIO):
 
 @override_settings(
     BUBLLIO_UPDATE_CHECK_ENABLED=True,
-    BUBLLIO_UPDATE_REPOSITORY="apodimi/bubllio-crm-api",
+    BUBLLIO_UPDATE_REPOSITORY="apodimi/bubllio-crm",
     BUBLLIO_UPDATE_CHECK_TTL=21600,
 )
 class InstallationUpdateStatusTests(APITestCase):
@@ -56,7 +56,7 @@ class InstallationUpdateStatusTests(APITestCase):
                 "latest_version": "0.2.0",
                 "update_available": True,
                 "release_name": "Bubllio CRM 0.2.0",
-                "release_url": "https://github.com/apodimi/bubllio-crm-api/releases/tag/v0.2.0",
+                "release_url": "https://github.com/apodimi/bubllio-crm/releases/tag/v0.2.0",
                 "published_at": "2026-10-04T10:00:00Z",
             },
         )

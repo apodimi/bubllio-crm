@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from organizations.models import OrganizationMembership
+from organizations.models import OrganizationMembership, WorkspaceAccessEvent
 from access.permissions import Capability, get_membership, get_organization_for_user
 from organizations.serializers import OrganizationMembershipSerializer
 
@@ -48,6 +48,7 @@ class OrganizationMembershipDetailAPIView(APIView):
             request, organization_id, membership_id
         )
         requested_role = request.data.get("role")
+        previous_role = target.role
         valid_roles = OrganizationMembership.Role.values
         if requested_role not in valid_roles:
             return Response(
@@ -86,10 +87,20 @@ class OrganizationMembershipDetailAPIView(APIView):
             target.role = requested_role
             target.save(update_fields=("role", "updated_at"))
 
+        if previous_role != target.role:
+            WorkspaceAccessEvent.objects.create(
+                action=WorkspaceAccessEvent.Action.CHANGE_MEMBER_ROLE,
+                actor=request.user,
+                target_user=target.user,
+                organization_id=organization.id,
+                details={"previous_role": previous_role, "new_role": target.role},
+            )
+
         return Response(OrganizationMembershipSerializer(target).data)
 
+    @transaction.atomic
     def delete(self, request, organization_id, membership_id):
-        _, requester, target = self._context(request, organization_id, membership_id)
+        organization, requester, target = self._context(request, organization_id, membership_id)
         requester_is_owner = requester is None or requester.role == OrganizationMembership.Role.OWNER
         if target.role == OrganizationMembership.Role.OWNER:
             return Response(
@@ -101,5 +112,14 @@ class OrganizationMembershipDetailAPIView(APIView):
                 {"detail": "Administrators cannot remove other administrators."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        target_user = target.user
+        previous_role = target.role
         target.delete()
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.REMOVE_MEMBER,
+            actor=request.user,
+            target_user=target_user,
+            organization_id=organization.id,
+            details={"role": previous_role},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -152,9 +152,10 @@ Only the creator sees their pending workspaces; installation admins can see all.
 An unaccepted or expired invitation grants **no** workspace access. The
 database constraint ensures at most one owner; the provisional membership
 ensures a pending workspace is not left ownerless. Owner handoff, grant/revoke,
-shared-workspace creation through this API, resend, and cancellation are recorded in a read-only
-`WorkspaceAccessEvent` log visible to installation admins in Django admin.
-General membership changes do not yet have that audit coverage.
+shared-workspace creation through this API, resend, cancellation, member
+invitations, role changes, removals, and email-connection changes are recorded
+in a read-only `WorkspaceAccessEvent` log visible to installation admins.
+Secret values and invitation tokens are not stored in that log.
 
 ## Tenant-scoped routes
 
@@ -274,11 +275,10 @@ existing personal workspaces.
 
 ## Future security work
 
-- general invitation revocation and membership-change audit trail;
+- general invitation revocation;
 - a future HttpOnly-cookie refresh transport if the deployment needs stronger browser-side token protection;
 - inactive/suspended memberships;
-- audit log for ordinary membership and later ownership changes (provisioning
-  ownership acceptance is already logged);
+- audit coverage for personal-account profile and sign-in changes;
 - rate limiting and production HTTPS/security settings.
 
 ## Django Admin fallback

@@ -7,7 +7,13 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from ..models import EmailAccount, Organization, OrganizationMembership, OrganizationSettings
+from ..models import (
+    EmailAccount,
+    Organization,
+    OrganizationMembership,
+    OrganizationSettings,
+    WorkspaceAccessEvent,
+)
 from ..admin import EmailAccountAdminForm
 
 
@@ -156,6 +162,19 @@ class MembershipManagementTests(APITestCase):
         self.member_membership.refresh_from_db()
         self.assertEqual(self.owner_membership.role, OrganizationMembership.Role.ADMIN)
         self.assertEqual(self.member_membership.role, OrganizationMembership.Role.OWNER)
+        event = WorkspaceAccessEvent.objects.get(action="change_member_role")
+        self.assertEqual(event.actor, self.owner)
+        self.assertEqual(event.target_user, self.member)
+        self.assertEqual(event.details, {"previous_role": "member", "new_role": "owner"})
+
+    def test_owner_removal_is_recorded(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.delete(self.detail_url(self.member_membership))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        event = WorkspaceAccessEvent.objects.get(action="remove_member")
+        self.assertEqual(event.target_user, self.member)
+        self.assertEqual(event.organization_id, self.organization.id)
+        self.assertEqual(event.details, {"role": "member"})
 
     def test_admin_cannot_change_or_remove_another_admin(self):
         second_admin = User.objects.create_user(username="second-admin")
@@ -253,6 +272,10 @@ class OrganizationSettingsAndEmailTests(APITestCase):
         self.assertNotIn("password", response.data)
         account = EmailAccount.objects.get(id=response.data["id"])
         self.assertNotEqual(account.encrypted_password, "smtp-secret")
+        event = WorkspaceAccessEvent.objects.get(action="create_email_connection")
+        self.assertEqual(event.actor, self.owner)
+        self.assertEqual(event.details["name"], "Company SMTP")
+        self.assertNotIn("smtp-secret", str(event.details))
 
     def test_viewer_can_list_email_metadata_but_cannot_manage_accounts(self):
         self.client.force_authenticate(self.owner)
@@ -335,6 +358,8 @@ class OrganizationSettingsAndEmailTests(APITestCase):
         account.refresh_from_db()
         self.assertEqual(account.from_name, "Nerds Lab CRM")
         self.assertEqual(account.encrypted_password, encrypted_password)
+        event = WorkspaceAccessEvent.objects.get(action="update_email_connection")
+        self.assertEqual(event.details["changed_fields"], ["from_name"])
 
     def test_test_email_marks_account_as_tested(self):
         self.client.force_authenticate(self.owner)

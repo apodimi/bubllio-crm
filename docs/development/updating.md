@@ -46,9 +46,37 @@ not allow it:
 BUBLLIO_UPDATE_CHECK_ENABLED=false
 ```
 
-`BUBLLIO_UPDATE_REPOSITORY` defaults to `apodimi/bubllio-crm-api` and accepts
+`BUBLLIO_UPDATE_REPOSITORY` defaults to `apodimi/bubllio-crm` and accepts
 only an `owner/repository` value. The endpoint and banner are available only to
 active installation administrators.
+
+## Backup and restore status
+
+Bubllio does not create database backups. Use the backup mechanism supported by
+the hosting provider or database service. After the backup job completes, report
+its result from the application environment:
+
+```bash
+uv run python src/manage.py record_backup_event --kind backup --status success
+```
+
+For failed runs, use `--status failure`. After completing a restore rehearsal,
+record it with `--kind restore_test`. The Account settings panel shows the last
+reported result, marks backups overdue after 24 hours, and recommends a restore
+test every 90 days. These intervals can be changed with
+`BUBLLIO_BACKUP_MAX_AGE_HOURS` and `BUBLLIO_RESTORE_TEST_MAX_AGE_DAYS`.
+
+The status is only as trustworthy as the scheduler that reports it. Run the
+reporting command after verifying the actual backup/restore operation succeeded;
+store backup artifacts outside the application database and test recovery in an
+isolated environment. Never put provider credentials or backup paths in the
+reported event.
+
+Installation administrators can also download a JSON data export from Account
+settings. It excludes passwords, authentication tokens, encrypted SMTP
+passwords, and automation error messages. The export contains customer data and
+must be stored securely. It is intended for local inspection and portability;
+it is not a replacement for a database-native backup and tested restore.
 
 ## Publishing a release
 

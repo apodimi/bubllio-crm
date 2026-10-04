@@ -58,9 +58,11 @@ BUBLLIO_UPDATE_CHECK_ENABLED = os.environ.get("BUBLLIO_UPDATE_CHECK_ENABLED", "t
 }
 BUBLLIO_UPDATE_REPOSITORY = os.environ.get(
     "BUBLLIO_UPDATE_REPOSITORY",
-    "apodimi/bubllio-crm-api",
+    "apodimi/bubllio-crm",
 )
 BUBLLIO_UPDATE_CHECK_TTL = int(os.environ.get("BUBLLIO_UPDATE_CHECK_TTL", "21600"))
+BUBLLIO_BACKUP_MAX_AGE_HOURS = int(os.environ.get("BUBLLIO_BACKUP_MAX_AGE_HOURS", "24"))
+BUBLLIO_RESTORE_TEST_MAX_AGE_DAYS = int(os.environ.get("BUBLLIO_RESTORE_TEST_MAX_AGE_DAYS", "90"))
 
 
 # Application definition

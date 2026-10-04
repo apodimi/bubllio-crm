@@ -4,7 +4,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from organizations.models import EmailAccount
+from organizations.models import EmailAccount, WorkspaceAccessEvent
 from access.permissions import Capability, get_organization_for_user
 from organizations.serializers import EmailAccountSerializer
 from ..services.email_service import mark_test_failure, mark_test_success, send_test_email
@@ -34,6 +34,12 @@ class EmailAccountListCreateAPIView(APIView):
         if serializer.validated_data.get("is_default"):
             EmailAccount.objects.filter(organization=organization).update(is_default=False)
         account = serializer.save()
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.CREATE_EMAIL_CONNECTION,
+            actor=request.user,
+            organization_id=organization.id,
+            details={"name": account.name, "from_email": account.from_email},
+        )
         return Response(EmailAccountSerializer(account).data, status=status.HTTP_201_CREATED)
 
 
@@ -66,11 +72,28 @@ class EmailAccountDetailAPIView(APIView):
                 is_default=False
             )
         account = serializer.save()
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.UPDATE_EMAIL_CONNECTION,
+            actor=request.user,
+            organization_id=organization.id,
+            details={
+                "name": account.name,
+                "changed_fields": sorted(serializer.validated_data.keys()),
+            },
+        )
         return Response(EmailAccountSerializer(account).data)
 
     def delete(self, request, organization_id, account_id):
-        _, account = self.get_context(request, organization_id, account_id)
+        organization, account = self.get_context(request, organization_id, account_id)
+        account_name = account.name
+        from_email = account.from_email
         account.delete()
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.DELETE_EMAIL_CONNECTION,
+            actor=request.user,
+            organization_id=organization.id,
+            details={"name": account_name, "from_email": from_email},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

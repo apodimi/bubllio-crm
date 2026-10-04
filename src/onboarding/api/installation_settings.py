@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from organizations.models import EmailAccount, InstallationState, Organization
+from organizations.models import EmailAccount, InstallationState, Organization, WorkspaceAccessEvent
 from access.permissions import IsInstallationAdmin
 from organizations.serializers import EmailAccountSerializer
 
@@ -41,6 +41,11 @@ class InstallationSettingsAPIView(APIView):
         if allow_personal_workspaces is not None and not smtp_fields.intersection(request.data):
             state.allow_personal_workspaces = allow_personal_workspaces
             state.save(update_fields=("allow_personal_workspaces",))
+            WorkspaceAccessEvent.objects.create(
+                action=WorkspaceAccessEvent.Action.UPDATE_INSTALLATION_SETTINGS,
+                actor=request.user,
+                details={"changed_fields": ["allow_personal_workspaces"]},
+            )
             account = state.fallback_email_account
             return Response({
                 "smtp": EmailAccountSerializer(account).data if account else None,
@@ -85,6 +90,15 @@ class InstallationSettingsAPIView(APIView):
             state.allow_personal_workspaces = allow_personal_workspaces
         if state.fallback_email_account_id != account.id or allow_personal_workspaces is not None:
             state.save(update_fields=("fallback_email_account", "allow_personal_workspaces"))
+        changed_fields = [field for field in request.data if field != "password"]
+        if "password" in request.data:
+            changed_fields.append("password_updated")
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.UPDATE_INSTALLATION_SETTINGS,
+            actor=request.user,
+            organization_id=account.organization_id,
+            details={"changed_fields": sorted(set(changed_fields))},
+        )
         return Response({
             "smtp": EmailAccountSerializer(account).data,
             "configured": account.is_active,

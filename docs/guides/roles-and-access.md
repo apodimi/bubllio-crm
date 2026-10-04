@@ -79,9 +79,10 @@ membership in an existing workspace.
   installation settings, or access to other teams' CRM data.
 - Personal workspaces are disabled by default. An installation admin may enable
   them; each user can then create one private personal workspace.
-- Grant/revoke, workspace creation, owner-invitation resend/cancel, and initial
-  owner acceptance have a read-only operational audit log. General membership
-  and SMTP changes do not yet have the same audit coverage.
+- Grant/revoke, workspace creation, invitations, role changes, member removals,
+  email-connection changes, installation settings, and data-export downloads
+  have a read-only operational audit log for installation administrators.
+  Passwords, invitation links, and other secret values are excluded.
 
 The backend checks permissions on every request. Hiding a button in React is
 only a convenience; it is not the security boundary.
