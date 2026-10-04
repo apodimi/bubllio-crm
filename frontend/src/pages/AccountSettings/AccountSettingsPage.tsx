@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from '@tanstack/react-router'
 import {
   Alert,
   Avatar,
@@ -31,11 +32,13 @@ import { ProductionReadinessCard } from '../../features/installation/components/
 import { SystemInformationPanel } from '../../features/installation/components/SystemInformationPanel'
 import { InstallationAuditLog } from '../../features/installation/components/InstallationAuditLog'
 import { BackupStatusPanel } from '../../features/installation/components/BackupStatusPanel'
+import { useOrganizations } from '../../features/organizations'
 
 export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
   const canCreateWorkspaces = useAuthStore((state) => state.user?.can_create_workspaces ?? false)
   const accountSettings = useAccountSettings()
+  const organizations = useOrganizations()
   const installation = useInstallationSettings(isSuperuser)
   const administrators = useInstallationAdministrators(isSuperuser)
   const workspaceCreators = useWorkspaceCreators(isSuperuser)
@@ -199,7 +202,7 @@ export function AccountSettingsPage() {
             </Typography>
           </Box>
         </Stack>
-        <Chip
+      <Chip
           label={
             isSuperuser
               ? 'Installation administrator'
@@ -209,8 +212,42 @@ export function AccountSettingsPage() {
           }
           color="primary"
           variant="outlined"
-        />
+      />
       </Stack>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 2.5, sm: 3.5 },
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, rgba(0,91,239,.06), rgba(20,115,255,.025))',
+        }}
+      >
+        <Stack spacing={1.5}>
+          <Box>
+            <Typography variant="h6">Workspace settings</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Company identity, regional preferences, ERP defaults, email connections, people, and workspace data.
+            </Typography>
+          </Box>
+          {organizations.data?.map((organization) => (
+            <Link
+              key={organization.id}
+              to="/organizations/$organizationId/settings"
+              params={{ organizationId: organization.id }}
+              style={{ textDecoration: 'none', alignSelf: 'flex-start' }}
+            >
+              <Button component="span" variant="outlined">
+                Open {organization.name} settings
+              </Button>
+            </Link>
+          ))}
+          {organizations.data?.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              You do not belong to a workspace yet.
+            </Typography>
+          )}
+        </Stack>
+      </Paper>
       <Box>
         <Typography variant="h5">Your account</Typography>
         <Typography color="text.secondary">
