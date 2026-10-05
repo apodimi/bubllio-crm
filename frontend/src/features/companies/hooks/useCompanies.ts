@@ -1,19 +1,22 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CompanyInput } from '../../../types/company.types'
 import { companyService } from '../services/companyService'
+import type { CompanyFilters } from '../services/companyService'
 
 export const companyKeys = {
-  byOrganization: (organizationId: string) =>
-    ['organizations', organizationId, 'companies'] as const,
+  byOrganization: (organizationId: string) => ['organizations', organizationId, 'companies'] as const,
+  list: (organizationId: string, filters: CompanyFilters) =>
+    [...companyKeys.byOrganization(organizationId), filters] as const,
 }
 
-const companiesQuery = (organizationId: string) =>
+const companiesQuery = (organizationId: string, filters: CompanyFilters) =>
   queryOptions({
-    queryKey: companyKeys.byOrganization(organizationId),
-    queryFn: ({ signal }) => companyService.list(organizationId, signal),
+    queryKey: companyKeys.list(organizationId, filters),
+    queryFn: ({ signal }) => companyService.list(organizationId, filters, signal),
   })
 
-export const useCompanies = (organizationId: string) => useQuery(companiesQuery(organizationId))
+export const useCompanies = (organizationId: string, filters: CompanyFilters = {}) =>
+  useQuery(companiesQuery(organizationId, filters))
 
 const useCompanyMutation = (organizationId: string) => {
   const queryClient = useQueryClient()

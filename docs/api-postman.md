@@ -162,6 +162,7 @@ Companies and contacts:
 ```text
 GET  /api/v1/organizations/<organization_id>/companies/
 GET  /api/v1/organizations/<organization_id>/companies/?search=<term>
+GET  /api/v1/organizations/<organization_id>/companies/?lifecycle_stage=<stage>
 POST /api/v1/organizations/<organization_id>/companies/
 GET  /api/v1/organizations/<organization_id>/companies/<company_id>/
 PATCH /api/v1/organizations/<organization_id>/companies/<company_id>/
@@ -184,6 +185,8 @@ POST /api/v1/organizations/<organization_id>/automations/<automation_id>/test/
 Do not include `organization` in company, contact, or automation request bodies.
 The server takes ownership from `<organization_id>` after checking the user's
 membership. Response bodies still include the read-only organization UUID.
+Company search covers its name, tax ID, industry, contact details, city, country,
+and notes. `lifecycle_stage` accepts `lead`, `prospect`, `customer`, or `inactive`.
 
 ## Example bodies
 

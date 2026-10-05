@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useDeferredValue, useState } from 'react'
 import {
   Alert,
   Button,
@@ -18,6 +18,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Stack,
+  MenuItem,
 } from '@mui/material'
 import AddRounded from '@mui/icons-material/AddRounded'
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded'
@@ -30,18 +32,16 @@ import type { Company } from '../../types/company.types'
 
 export function CompaniesPage() {
   const org = useWorkspace()
-  const query = useCompanies(org.id)
   const [search, setSearch] = useState('')
+  const [stage, setStage] = useState<Company['lifecycle_stage'] | ''>('')
+  const deferredSearch = useDeferredValue(search)
+  const query = useCompanies(org.id, { search: deferredSearch, lifecycleStage: stage })
   const [create, setCreate] = useState(false)
   const [editing, setEditing] = useState<Company | null>(null)
   const [deleting, setDeleting] = useState<Company | null>(null)
   const remove = useDeleteCompany(org.id)
   const canManage = canCreateRecords(org)
-  const rows = (query.data ?? []).filter((company) =>
-    [company.name, company.email].some((value) =>
-      value.toLowerCase().includes(search.toLowerCase()),
-    ),
-  )
+  const rows = query.data ?? []
   return (
     <>
       <PageHeading
@@ -55,12 +55,28 @@ export function CompaniesPage() {
           )
         }
       />
-      <TextField
-        label="Search companies"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        sx={{ mb: 3, width: { xs: '100%', sm: 360 } }}
-      />
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
+        <TextField
+          label="Search companies"
+          placeholder="Name, tax ID, city, industry…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          sx={{ width: { xs: '100%', sm: 420 } }}
+        />
+        <TextField
+          select
+          label="Lifecycle stage"
+          value={stage}
+          onChange={(event) => setStage(event.target.value as Company['lifecycle_stage'] | '')}
+          sx={{ width: { xs: '100%', sm: 200 } }}
+        >
+          <MenuItem value="">All stages</MenuItem>
+          <MenuItem value="lead">Lead</MenuItem>
+          <MenuItem value="prospect">Prospect</MenuItem>
+          <MenuItem value="customer">Customer</MenuItem>
+          <MenuItem value="inactive">Inactive</MenuItem>
+        </TextField>
+      </Stack>
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -69,9 +85,11 @@ export function CompaniesPage() {
         <Paper variant="outlined">
           {rows.length === 0 ? (
             <Empty
-              title={search ? 'No matches' : 'Your next partnership awaits'}
+              title={search || stage ? 'No matches' : 'Your next partnership awaits'}
               description={
-                search ? 'Try another name or email.' : 'Add a company to start building your CRM.'
+                search || stage
+                  ? 'Try another search or lifecycle stage.'
+                  : 'Add a company to start building your CRM.'
               }
             />
           ) : (
@@ -80,8 +98,8 @@ export function CompaniesPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Company</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Phone</TableCell>
+                    <TableCell>Business profile</TableCell>
+                    <TableCell>Location</TableCell>
                     <TableCell>Stage</TableCell>
                     {canManage && <TableCell align="right">Actions</TableCell>}
                   </TableRow>
@@ -89,9 +107,21 @@ export function CompaniesPage() {
                 <TableBody>
                   {rows.map((company) => (
                     <TableRow key={company.id} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>{company.name}</TableCell>
-                      <TableCell>{company.email || '—'}</TableCell>
-                      <TableCell>{company.phone_number || '—'}</TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {company.email || company.phone_number || 'No contact details'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{company.industry || '—'}</Typography>
+                        {company.tax_id && (
+                          <Typography variant="caption" color="text.secondary">
+                            Tax ID: {company.tax_id}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>{[company.city, company.country].filter(Boolean).join(', ') || '—'}</TableCell>
                       <TableCell>
                         <Chip
                           size="small"

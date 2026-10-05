@@ -10,11 +10,13 @@ class CompanyAdmin(admin.ModelAdmin):
         "name",
         "organization",
         "lifecycle_stage",
+        "tax_id",
+        "industry",
         "email",
         "phone_number",
         "website",
         "created_at",
         "updated_at",
     )
-    search_fields = ("name", "email", "phone_number", "website")
-    list_filter = ("organization", "lifecycle_stage")
+    search_fields = ("name", "tax_id", "industry", "email", "phone_number", "website", "city")
+    list_filter = ("organization", "lifecycle_stage", "country")

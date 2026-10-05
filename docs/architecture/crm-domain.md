@@ -81,6 +81,11 @@ That status lives in:
 Company.lifecycle_stage
 ```
 
+The company record also stores the business profile needed during sales and
+customer servicing: tax/VAT reference, industry, contact channels, postal
+address, country code, and internal notes. These fields belong to the owning
+organization and are included in tenant-scoped search.
+
 ## Contact
 
 `Contact` is a person inside a company.

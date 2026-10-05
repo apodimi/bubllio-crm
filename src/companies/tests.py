@@ -53,9 +53,72 @@ class CompanyTenantAccessTests(APITestCase):
 
     def test_member_can_create_company_without_organization_in_body(self):
         self.client.force_authenticate(self.user)
-        response = self.client.post(self.url(), {"name": "Acme"}, format="json")
+        response = self.client.post(
+            self.url(),
+            {
+                "name": "Acme",
+                "tax_id": "EL123456789",
+                "industry": "Technology",
+                "address_line_1": "1 Market Street",
+                "city": "Athens",
+                "postal_code": "105 63",
+                "country": "gr",
+                "notes": "Priority account",
+            },
+            format="json",
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["organization"], self.organization.id)
+        self.assertEqual(response.data["country"], "GR")
+        self.assertEqual(response.data["tax_id"], "EL123456789")
+
+    def test_company_search_includes_business_profile_fields(self):
+        Company.objects.create(
+            organization=self.organization,
+            name="Tax Search",
+            tax_id="EL99887766",
+            industry="Hospitality",
+            city="Thessaloniki",
+        )
+        self.client.force_authenticate(self.user)
+
+        by_tax = self.client.get(self.url(), {"search": "998877"})
+        by_industry = self.client.get(self.url(), {"search": "hospital"})
+        by_city = self.client.get(self.url(), {"search": "thess"})
+
+        self.assertEqual([item["name"] for item in by_tax.data], ["Tax Search"])
+        self.assertEqual([item["name"] for item in by_industry.data], ["Tax Search"])
+        self.assertEqual([item["name"] for item in by_city.data], ["Tax Search"])
+
+    def test_company_list_filters_by_lifecycle_stage(self):
+        Company.objects.create(
+            organization=self.organization,
+            name="Current Customer",
+            lifecycle_stage=Company.LifecycleStage.CUSTOMER,
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(self.url(), {"lifecycle_stage": "customer"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["name"] for item in response.data], ["Current Customer"])
+
+    def test_company_list_rejects_invalid_lifecycle_stage(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(self.url(), {"lifecycle_stage": "unknown"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_company_rejects_invalid_country_code(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.post(
+            self.url(), {"name": "Invalid Country", "country": "Greece"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("country", response.data)
 
     def test_user_cannot_access_another_organization(self):
         self.client.force_authenticate(self.user)

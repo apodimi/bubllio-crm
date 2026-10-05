@@ -23,10 +23,25 @@ class CompanyListCreateAPIView(APIView):
         if search:
             companies = companies.filter(
                 Q(name__icontains=search) |
+                Q(tax_id__icontains=search) |
+                Q(industry__icontains=search) |
                 Q(email__icontains=search) |
                 Q(phone_number__icontains=search) |
-                Q(website__icontains=search)
+                Q(website__icontains=search) |
+                Q(city__icontains=search) |
+                Q(country__icontains=search) |
+                Q(notes__icontains=search)
             )
+
+        lifecycle_stage = request.query_params.get("lifecycle_stage")
+        if lifecycle_stage:
+            valid_stages = {choice for choice, _label in Company.LifecycleStage.choices}
+            if lifecycle_stage not in valid_stages:
+                return Response(
+                    {"lifecycle_stage": ["Select a valid lifecycle stage."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            companies = companies.filter(lifecycle_stage=lifecycle_stage)
 
         serializer = CompanySerializer(companies, many=True)
         return Response(serializer.data)
