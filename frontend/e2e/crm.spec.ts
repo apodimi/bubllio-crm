@@ -9,11 +9,25 @@ async function mockApi(page: Page) {
     {
       id: 'co-a',
       organization: 'alpha',
+      customer_code: 'CUS-00001',
+      assigned_to: 1,
+      assigned_to_name: 'Demo User',
       name: 'Acme Ltd',
+      tax_id: '',
+      industry: 'Technology',
       email: 'hello@example.com',
       phone_number: '',
       website: '',
+      address_line_1: '',
+      address_line_2: '',
+      city: 'Athens',
+      postal_code: '',
+      country: 'GR',
+      notes: '',
       lifecycle_stage: 'lead',
+      archived_at: null,
+      created_at: '2030-01-01T00:00:00Z',
+      updated_at: '2030-01-01T00:00:00Z',
     },
   ]
   await page.route('**/api/v1/**', async (route) => {
@@ -52,6 +66,9 @@ async function mockApi(page: Page) {
         return route.fulfill({ status: 201, json: companies[companies.length - 1] })
       }
       return route.fulfill({ json: companies })
+    }
+    if (path === '/api/v1/organizations/alpha/companies/assignees/') {
+      return route.fulfill({ json: [{ id: 1, name: 'Demo User', role: 'owner' }] })
     }
     if (path.startsWith('/api/v1/organizations/alpha/companies/')) {
       const companyId = path.split('/').at(-2)
@@ -176,6 +193,31 @@ test('creates company, handles validation and refreshes list', async ({ page }) 
   await page.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(page.getByRole('cell', { name: 'New partner', exact: true })).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('closing the stage menu never flashes owner options', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('link', { name: 'Companies', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Change stage for Acme Ltd' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Lead' })).toBeVisible()
+  await page.evaluate(() => {
+    document.body.dataset.ownerOptionFlashed = 'false'
+    const observer = new MutationObserver(() => {
+      const flashed = [...document.querySelectorAll('[role="menuitem"]')].some((element) =>
+        element.textContent?.includes('Unassigned'),
+      )
+      if (flashed) document.body.dataset.ownerOptionFlashed = 'true'
+    })
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+    window.setTimeout(() => observer.disconnect(), 500)
+  })
+
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(350)
+
+  expect(await page.locator('body').getAttribute('data-owner-option-flashed')).toBe('false')
 })
 
 test('edits and deletes a company', async ({ page }) => {

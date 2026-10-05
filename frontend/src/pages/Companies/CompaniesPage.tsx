@@ -440,8 +440,9 @@ export function CompaniesPage() {
         onClose={() => setInlineEdit(null)}
         slotProps={{ paper: { sx: { minWidth: 190, mt: 0.75 } } }}
       >
-        {inlineEdit?.field === 'stage'
-          ? (['lead', 'prospect', 'customer', 'inactive'] as const).map((item) => (
+        {inlineEdit
+          ? inlineEdit.field === 'stage'
+            ? (['lead', 'prospect', 'customer', 'inactive'] as const).map((item) => (
               <MenuItem
                 key={item}
                 selected={inlineEdit.company.lifecycle_stage === item}
@@ -449,8 +450,8 @@ export function CompaniesPage() {
               >
                 <ListItemText sx={{ textTransform: 'capitalize' }}>{item}</ListItemText>
               </MenuItem>
-            ))
-          : [
+              ))
+            : [
               <MenuItem
                 key="unassigned"
                 selected={inlineEdit?.company.assigned_to === null}
@@ -467,7 +468,8 @@ export function CompaniesPage() {
                   <ListItemText primary={member.name} secondary={member.role} />
                 </MenuItem>
               )),
-            ]}
+              ]
+          : null}
       </Menu>
       <Dialog
         open={Boolean(archiving)}
