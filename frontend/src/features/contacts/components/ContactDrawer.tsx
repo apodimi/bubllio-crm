@@ -5,6 +5,7 @@ import { Alert, Box, Button, Drawer, IconButton, MenuItem, Stack, TextField, Typ
 import type { Company } from '../../../types/company.types'
 import type { Contact, ContactInput } from '../../../types/contact.types'
 import { useCreateContact, useUpdateContact } from '../hooks/useContacts'
+import { useCompanyAssignees } from '../../companies'
 
 const emptyContact: ContactInput = {
   company: '',
@@ -14,6 +15,9 @@ const emptyContact: ContactInput = {
   phone_number: '',
   department: '',
   job_title: '',
+  assigned_to: null,
+  status: 'active',
+  is_primary: false,
 }
 
 export function ContactDrawer({ organizationId, companies, contact, onClose }: {
@@ -25,6 +29,7 @@ export function ContactDrawer({ organizationId, companies, contact, onClose }: {
   const create = useCreateContact(organizationId)
   const update = useUpdateContact(organizationId, contact?.id ?? '')
   const mutation = contact ? update : create
+  const assignees = useCompanyAssignees(organizationId)
   const [values, setValues] = useState<ContactInput>(contact ? {
     company: contact.company,
     first_name: contact.first_name,
@@ -33,6 +38,9 @@ export function ContactDrawer({ organizationId, companies, contact, onClose }: {
     phone_number: contact.phone_number,
     department: contact.department,
     job_title: contact.job_title,
+    assigned_to: contact.assigned_to,
+    status: contact.status,
+    is_primary: contact.is_primary,
   } : emptyContact)
 
   async function submit(event: FormEvent) {
@@ -74,6 +82,18 @@ export function ContactDrawer({ organizationId, companies, contact, onClose }: {
             <TextField label="Job title" value={values.job_title} onChange={(event) => field('job_title', event.target.value)} disabled={mutation.isPending} sx={{ flex: 1 }} slotProps={{ htmlInput: { maxLength: 150 } }} />
             <TextField label="Department" value={values.department} onChange={(event) => field('department', event.target.value)} disabled={mutation.isPending} sx={{ flex: 1 }} slotProps={{ htmlInput: { maxLength: 150 } }} />
           </Stack>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField select label="Contact owner" value={values.assigned_to ?? ''} onChange={(event) => setValues((current) => ({ ...current, assigned_to: event.target.value ? Number(event.target.value) : null }))} sx={{ flex: 1 }}>
+              <MenuItem value="">Unassigned</MenuItem>
+              {(assignees.data ?? []).map((person) => <MenuItem key={person.id} value={person.id}>{person.name}</MenuItem>)}
+            </TextField>
+            <TextField select label="Status" value={values.status} onChange={(event) => setValues((current) => ({ ...current, status: event.target.value as ContactInput['status'] }))} sx={{ flex: 1 }}>
+              <MenuItem value="active">Active</MenuItem><MenuItem value="former">Former</MenuItem>
+            </TextField>
+          </Stack>
+          <TextField select label="Primary contact" value={values.is_primary ? 'yes' : 'no'} onChange={(event) => setValues((current) => ({ ...current, is_primary: event.target.value === 'yes' }))} helperText="Only one active primary contact is kept per company.">
+            <MenuItem value="no">No</MenuItem><MenuItem value="yes">Yes</MenuItem>
+          </TextField>
         </Stack>
         <Stack direction="row" spacing={1.5} sx={{ justifyContent: 'flex-end', px: { xs: 2.5, sm: 4 }, py: 2.5, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider' }}>
           <Button onClick={onClose} disabled={mutation.isPending}>Cancel</Button>

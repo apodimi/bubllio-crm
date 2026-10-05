@@ -48,3 +48,17 @@ export const useDeleteContact = (organizationId: string) => {
     onSuccess: invalidate,
   })
 }
+
+export const useContactActivity = (organizationId: string, contactId: string) => useQuery({
+  queryKey: [...contactKeys.byOrganization(organizationId), contactId, 'activity'],
+  queryFn: ({ signal }) => contactService.activity(organizationId, contactId, signal),
+  enabled: Boolean(contactId),
+})
+
+function useContactAction(organizationId: string, action: 'archive' | 'restore') {
+  const invalidate = useInvalidateContacts(organizationId)
+  return useMutation({ mutationFn: (contactId: string) => contactService[action](organizationId, contactId), onSuccess: invalidate })
+}
+
+export const useArchiveContact = (organizationId: string) => useContactAction(organizationId, 'archive')
+export const useRestoreContact = (organizationId: string) => useContactAction(organizationId, 'restore')

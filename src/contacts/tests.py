@@ -141,3 +141,31 @@ class ContactTenantAccessTests(APITestCase):
         response = self.client.get(self.detail_url(hidden))
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_setting_primary_contact_replaces_previous_primary(self):
+        existing = Contact.objects.get(first_name="Maria")
+        existing.is_primary = True
+        existing.save()
+        replacement = Contact.objects.create(organization=self.organization, company=self.company, first_name="Nikos")
+        self.client.force_authenticate(self.user)
+
+        response = self.client.patch(self.detail_url(replacement), {"is_primary": True}, format="json")
+
+        existing.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_primary"])
+        self.assertFalse(existing.is_primary)
+
+    def test_archive_hides_contact_and_records_activity(self):
+        contact = Contact.objects.get(first_name="Maria")
+        self.client.force_authenticate(self.user)
+        archive_url = reverse("contact-archive", kwargs={"organization_id": self.organization.id, "contact_id": contact.id})
+        activity_url = reverse("contact-activity", kwargs={"organization_id": self.organization.id, "contact_id": contact.id})
+
+        archived = self.client.post(archive_url)
+        active_list = self.client.get(self.url())
+        activity = self.client.get(activity_url)
+
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        self.assertEqual(active_list.data, [])
+        self.assertEqual(activity.data[0]["action"], "archived")

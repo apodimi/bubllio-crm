@@ -122,7 +122,10 @@ Contacts belong to:
 The serializer validates that the selected company belongs to the selected organization.
 Contact email addresses are checked case-insensitively for exact duplicates
 inside the same organization. Contacts can be searched by name, communication
-details, department, or job title and filtered by their company.
+details, department, or job title and filtered by their company. They also track
+an optional workspace owner, active/former status, one active primary contact
+per company, archival state, and a tenant-scoped activity log. See the
+[business contact guide](../guides/contact-management.md) for the non-technical workflow.
 
 ## Why Not Use `Customer` As The Main Model?
 

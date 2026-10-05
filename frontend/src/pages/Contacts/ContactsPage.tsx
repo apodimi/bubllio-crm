@@ -9,6 +9,8 @@ import { Empty, Failure, Loading, PageHeading } from '../../components/common/Fe
 import { useCompanies } from '../../features/companies'
 import { useContacts, useDeleteContact } from '../../features/contacts'
 import { ContactDrawer } from '../../features/contacts/components/ContactDrawer'
+import { ContactProfileDrawer } from '../../features/contacts/components/ContactProfileDrawer'
+import { CompanyPreviewDrawer } from '../../features/companies/components/CompanyPreviewDrawer'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
 import type { Contact } from '../../types/contact.types'
 
@@ -19,10 +21,13 @@ export function ContactsPage() {
   const companies = useCompanies(org.id)
   const [search, setSearch] = useState('')
   const [company, setCompany] = useState('')
-  const query = useContacts(org.id, { search: useDeferredValue(search), company })
+  const [visibility, setVisibility] = useState<'active' | 'archived' | 'all'>('all')
+  const query = useContacts(org.id, { search: useDeferredValue(search), company, archived: visibility })
   const [create, setCreate] = useState(false)
   const [editing, setEditing] = useState<Contact | null>(null)
   const [deleting, setDeleting] = useState<Contact | null>(null)
+  const [viewing, setViewing] = useState<Contact | null>(null)
+  const [viewingCompany, setViewingCompany] = useState<string | null>(null)
   const remove = useDeleteContact(org.id)
   const canManage = canCreateRecords(org)
   const rows = query.data ?? []
@@ -36,6 +41,7 @@ export function ContactsPage() {
         <MenuItem value="">All companies</MenuItem>
         {(companies.data ?? []).map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}
       </TextField>
+      <TextField select label="Records" value={visibility} onChange={(event) => setVisibility(event.target.value as typeof visibility)} sx={{ width: { xs: '100%', sm: 180 } }}><MenuItem value="all">All records</MenuItem><MenuItem value="active">Active</MenuItem><MenuItem value="archived">Archived</MenuItem></TextField>
     </Stack>
     {error ? <Failure error={error} retry={() => { void query.refetch(); void companies.refetch() }} /> : query.isPending || companies.isPending ? <Loading /> : <Paper variant="outlined">
       {rows.length === 0 ? <Empty title={search || company ? 'No matches' : 'Get to know your people'} description={search || company ? 'Try changing the search or company filter.' : companies.data.length ? 'Add a contact linked to a company.' : 'Create a company first, then add its contacts.'} /> : <>
@@ -43,7 +49,7 @@ export function ContactsPage() {
           {rows.map((contact) => <Stack key={contact.id} direction="row" spacing={2} sx={{ p: 2.5, alignItems: 'flex-start' }}>
             <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', fontSize: 14 }}>{initials(contact)}</Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 700 }}>{contact.first_name} {contact.last_name}</Typography>
+              <Button variant="text" sx={{ p: 0, minWidth: 0, fontWeight: 700 }} onClick={() => setViewing(contact)}>{contact.first_name} {contact.last_name}</Button>
               <Typography variant="body2" color="text.secondary">{[contact.job_title, contact.company_name].filter(Boolean).join(' · ')}</Typography>
               <Stack direction="row" spacing={0.5} sx={{ mt: 1 }}>
                 {contact.email ? <IconButton size="small" component="a" href={`mailto:${contact.email}`} aria-label={`Email ${contact.first_name}`}><MailOutlineRounded fontSize="small" /></IconButton> : null}
@@ -56,8 +62,8 @@ export function ContactsPage() {
         <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}><Table>
           <TableHead><TableRow><TableCell>Contact</TableCell><TableCell>Company</TableCell><TableCell>Role</TableCell><TableCell>Contact details</TableCell>{canManage ? <TableCell align="right">Actions</TableCell> : null}</TableRow></TableHead>
           <TableBody>{rows.map((contact) => <TableRow key={contact.id} hover>
-            <TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 12 }}>{initials(contact)}</Avatar><Typography sx={{ fontWeight: 700 }}>{contact.first_name} {contact.last_name}</Typography></Stack></TableCell>
-            <TableCell>{contact.company_name}</TableCell>
+            <TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 12 }}>{initials(contact)}</Avatar><Box><Button variant="text" sx={{ p: 0, minWidth: 0, fontWeight: 700 }} onClick={() => setViewing(contact)}>{contact.first_name} {contact.last_name}</Button>{contact.is_primary ? <Typography variant="caption" color="primary.main" sx={{ display: 'block' }}>Primary contact</Typography> : null}</Box></Stack></TableCell>
+            <TableCell><Button variant="text" sx={{ px: 0 }} onClick={() => setViewingCompany(contact.company)}>{contact.company_name}</Button></TableCell>
             <TableCell><Typography variant="body2">{contact.job_title || '—'}</Typography>{contact.department ? <Typography variant="caption" color="text.secondary">{contact.department}</Typography> : null}</TableCell>
             <TableCell>{contact.email ? <Link href={`mailto:${contact.email}`} underline="hover">{contact.email}</Link> : '—'}{contact.phone_number ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35 }}>{contact.phone_number}</Typography> : null}</TableCell>
             {canManage ? <TableCell align="right"><Tooltip title="Edit contact"><IconButton aria-label={`Edit ${contact.first_name} ${contact.last_name}`.trim()} onClick={() => setEditing(contact)}><EditRounded /></IconButton></Tooltip><Tooltip title="Delete contact"><IconButton aria-label={`Delete ${contact.first_name} ${contact.last_name}`.trim()} onClick={() => setDeleting(contact)}><DeleteOutlineRounded /></IconButton></Tooltip></TableCell> : null}
@@ -67,6 +73,8 @@ export function ContactsPage() {
     </Paper>}
     {create && companies.data ? <ContactDrawer organizationId={org.id} companies={companies.data} onClose={() => setCreate(false)} /> : null}
     {editing && companies.data ? <ContactDrawer organizationId={org.id} companies={companies.data} contact={editing} onClose={() => setEditing(null)} /> : null}
+    {viewing && companies.data ? <ContactProfileDrawer organizationId={org.id} companies={companies.data} contact={viewing} onClose={() => setViewing(null)} onCompany={(companyId) => { setViewing(null); setViewingCompany(companyId) }} /> : null}
+    {viewingCompany ? <CompanyPreviewDrawer organizationId={org.id} companyId={viewingCompany} onClose={() => setViewingCompany(null)} /> : null}
     <Dialog open={Boolean(deleting)} onClose={remove.isPending ? undefined : () => setDeleting(null)}><DialogTitle>Delete contact?</DialogTitle><DialogContent>{remove.isError ? <Alert severity="error" sx={{ mb: 2 }}>{remove.error.message}</Alert> : null}<Typography>{deleting?.first_name} {deleting?.last_name} will be permanently removed. The company remains unchanged.</Typography></DialogContent><DialogActions sx={{ p: 3 }}><Button onClick={() => setDeleting(null)} disabled={remove.isPending}>Cancel</Button><Button color="error" variant="contained" disabled={remove.isPending} onClick={() => { if (deleting) remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) }) }}>{remove.isPending ? 'Deleting…' : 'Delete contact'}</Button></DialogActions></Dialog>
   </>
 }
