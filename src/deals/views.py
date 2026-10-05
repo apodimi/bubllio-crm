@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from access.permissions import Capability, get_organization_for_user
 from .models import Deal
 from .serializers import DealSerializer
+from .services import move_deal
 
 
 class DealListCreateAPIView(APIView):
@@ -64,3 +65,18 @@ class DealArchiveAPIView(APIView):
         deal.archived_at = None if deal.archived_at else timezone.now()
         deal.save(update_fields=("archived_at", "updated_at"))
         return Response(DealSerializer(deal).data)
+
+
+class DealMoveAPIView(APIView):
+    def post(self, request, organization_id, deal_id):
+        organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
+        deal = get_object_or_404(Deal, organization=organization, id=deal_id, archived_at__isnull=True)
+        stage = request.data.get("stage")
+        position = request.data.get("position")
+        if stage not in Deal.Stage.values:
+            return Response({"stage": ["Select a valid stage."]}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(position, int) or isinstance(position, bool) or position < 0:
+            return Response({"position": ["Enter a non-negative whole number."]}, status=status.HTTP_400_BAD_REQUEST)
+        if stage == Deal.Stage.LOST and not deal.lost_reason.strip():
+            return Response({"lost_reason": ["Add a reason before moving a deal to Lost."]}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DealSerializer(move_deal(deal=deal, stage=stage, position=position)).data)

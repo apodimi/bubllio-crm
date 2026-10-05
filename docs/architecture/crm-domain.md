@@ -134,8 +134,12 @@ per company, archival state, and a tenant-scoped activity log. See the
 `Deal` is a tenant-owned sales opportunity connected to one company and
 optionally one contact and workspace owner. It moves through lead, qualified,
 proposal, negotiation, won, or lost stages and stores value, currency,
-probability, and expected close date. Cross-tenant company, contact, and owner
-references are rejected. See the [business pipeline guide](../guides/sales-pipeline.md).
+probability, and expected close date. The entered amount records whether it is
+net or VAT-inclusive; the API derives net value, VAT amount, and gross value
+without mixing tax into revenue forecasts. Deals also keep a stable position
+inside each pipeline stage so drag-and-drop ordering persists. Cross-tenant
+company, contact, and owner references are rejected. See the
+[business pipeline guide](../guides/sales-pipeline.md).
 
 ## Why Not Use `Customer` As The Main Model?
 

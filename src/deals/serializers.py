@@ -7,6 +7,9 @@ class DealSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     contact_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
+    net_value = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    tax_value = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    gross_value = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
 
     def get_contact_name(self, deal):
         return str(deal.contact) if deal.contact else ""
@@ -25,6 +28,9 @@ class DealSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"contact": "Choose a contact from the selected company."})
         if owner and not OrganizationMembership.objects.filter(organization=organization, user=owner).exists():
             raise serializers.ValidationError({"assigned_to": "Choose a member of this workspace."})
+        tax_rate = attrs.get("tax_rate", getattr(self.instance, "tax_rate", 24))
+        if tax_rate < 0 or tax_rate > 100:
+            raise serializers.ValidationError({"tax_rate": "Enter a VAT rate between 0 and 100."})
         stage = attrs.get("stage", getattr(self.instance, "stage", Deal.Stage.LEAD))
         reason = attrs.get("lost_reason", getattr(self.instance, "lost_reason", ""))
         if stage == Deal.Stage.LOST and not reason.strip():
@@ -33,5 +39,5 @@ class DealSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Deal
-        fields = ("id", "organization", "company", "company_name", "contact", "contact_name", "assigned_to", "assigned_to_name", "title", "value", "currency", "probability", "stage", "expected_close_date", "lost_reason", "notes", "archived_at", "created_at", "updated_at")
-        read_only_fields = ("id", "organization", "company_name", "contact_name", "assigned_to_name", "archived_at", "created_at", "updated_at")
+        fields = ("id", "organization", "company", "company_name", "contact", "contact_name", "assigned_to", "assigned_to_name", "title", "value", "currency", "tax_rate", "amount_includes_tax", "net_value", "tax_value", "gross_value", "probability", "stage", "sort_order", "expected_close_date", "lost_reason", "notes", "archived_at", "created_at", "updated_at")
+        read_only_fields = ("id", "organization", "company_name", "contact_name", "assigned_to_name", "net_value", "tax_value", "gross_value", "sort_order", "archived_at", "created_at", "updated_at")

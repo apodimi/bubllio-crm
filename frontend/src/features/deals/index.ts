@@ -1,1 +1,1 @@
-export { dealKeys, useDeals, useUpdateDeal } from './hooks/useDeals'
+export { dealKeys, useDeals, useMoveDeal, useUpdateDeal } from './hooks/useDeals'
