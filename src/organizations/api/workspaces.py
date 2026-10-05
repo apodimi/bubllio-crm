@@ -25,6 +25,11 @@ class PersonalWorkspaceAPIView(APIView):
         })
 
     def post(self, request):
+        if not request.user.is_active or not request.user.is_superuser:
+            return Response(
+                {"detail": "Only an installation administrator can create workspaces."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         state = InstallationState.objects.get(pk=1)
         if not state.allow_personal_workspaces:
             return Response(
@@ -59,7 +64,7 @@ class OrganizationListCreateAPIView(APIView):
     def post(self, request):
         if not can_create_workspace(request.user):
             return Response(
-                {"detail": "Workspace creator permission is required."},
+                {"detail": "Only an installation administrator can create workspaces."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         owner_email = request.data.get("owner_email")

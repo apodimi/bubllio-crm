@@ -22,9 +22,7 @@ debugging a browser login.
 | GET | `/api/v1/setup/` | none | report whether first-run setup is available |
 | POST | `/api/v1/setup/` | server-side setup token in JSON | create the first admin, workspace, and optional SMTP account |
 | POST | `/api/v1/setup/smtp-test/` | server-side setup token in JSON | send a real test email with unsaved SMTP settings |
-| POST | `/api/v1/organizations/` | installation admin or workspace creator Bearer token | create a shared workspace with `owner_email`; a different owner receives an email invitation |
-| GET/POST | `/api/v1/organizations/workspace-creators/` | installation admin Bearer token | list grants or grant an existing active user provisioning access |
-| DELETE | `/api/v1/organizations/workspace-creators/<grant_id>/` | installation admin Bearer token | revoke a creator grant |
+| POST | `/api/v1/organizations/` | installation admin Bearer token | create a shared workspace with `owner_email`; a different owner receives an email invitation |
 | GET | `/api/v1/organizations/provisioning/` | authenticated Bearer token | list own pending handoffs; installation admins see all |
 | POST/DELETE | `/api/v1/organizations/provisioning/<organization_id>/` | provisioning creator or installation admin Bearer token | resend owner invitation or cancel pending workspace |
 | GET/POST | `/api/v1/organizations/<organization_id>/invitations/` | owner/admin Bearer token | list pending invitations or email a new invitation |
@@ -49,10 +47,9 @@ email-account fields including its password. SMTP requires a valid server-side
 setup in that database. The API rate-limits setup POST attempts. See
 [Getting Started](../getting-started.md) for the complete operator procedure.
 
-Installation settings expose the `allow_personal_workspaces` policy. It
-defaults to `false` and can be changed only by the installation administrator.
-When enabled, users may create one personal workspace explicitly; disabling
-the policy does not delete existing personal workspaces.
+Ordinary users cannot create personal or shared workspaces. Existing personal
+workspaces remain isolated, but new workspace provisioning is reserved for an
+installation administrator.
 
 The SMTP test request contains `setup_token`, `recipient` (a valid email
 address), and the same `smtp` object accepted by setup. It opens an SMTP
@@ -78,13 +75,10 @@ the server, and the response includes JWT `tokens` and `organization_id`. An
 existing user signs in and posts an empty JSON body with their Bearer token.
 Their account email must match the invitation. Acceptance creates a membership
 for that workspace only and consumes the link; replay or expiry returns `404`.
-An ordinary workspace membership alone does not permit creating another shared
-organization. An installation administrator may grant a separate
-workspace-creator right to an existing account. That creator must supply
-`owner_email` when creating a workspace. If it differs from their own email,
-the workspace remains hidden until the invited owner accepts; the creator's
-temporary membership is then removed. Installation administrators may still
-create a workspace for themselves by omitting `owner_email`. See the
+An ordinary workspace membership does not permit creating another organization.
+Only an installation administrator provisions a workspace. When `owner_email`
+belongs to another person, the workspace remains hidden until that owner accepts
+and the administrator's temporary membership is removed. See the
 [role guide](../architecture/authentication-and-roles.md) for the handoff and
 recovery flow.
 

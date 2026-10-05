@@ -66,12 +66,11 @@ IDs into the environment automatically.
 
 For expected results at each step, follow [Your First Automation](guides/first-automation.md).
 
-To test delegated provisioning instead, grant an existing account access with
-`POST /api/v1/organizations/workspace-creators/` and its email. Sign in as that
-account, create a workspace with a different `owner_email`, then inspect
+To test owner handoff, sign in as an installation administrator, create a
+workspace with a different `owner_email`, then inspect
 `GET /api/v1/organizations/provisioning/`. The normal organization list does
 not include it until the nominated owner accepts the email invitation. The
-creator may resend (`POST`) or cancel (`DELETE`) the pending provisioning URL.
+installation administrator may resend (`POST`) or cancel (`DELETE`) the pending provisioning URL.
 This flow needs working installation fallback SMTP; unlike a mocked Postman
 request, it sends a real invitation email.
 

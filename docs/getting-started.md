@@ -100,10 +100,9 @@ expires after seven days. A new recipient creates an account from the link;
 someone with an existing account signs in with the invited email. There is no
 public signup page. After joining, a user sees only workspaces where their
 invitation has been accepted. Installation administrators can create new shared
-workspaces or grant an existing account **Workspace creator** access in Account
-settings. A creator enters the new workspace's business owner email. When that
+workspaces. The installation administrator enters the new workspace's business owner email. When that
 email belongs to another person, the workspace stays pending and inaccessible
-until they accept the invitation; the creator can resend or cancel the handoff
+until they accept the invitation; the installation administrator can resend or cancel the handoff
 from the Workspaces page.
 
 Installation administrators can invite additional IT administrators from

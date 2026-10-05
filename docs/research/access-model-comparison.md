@@ -14,7 +14,7 @@ access are different responsibilities. The smallest useful model is:
 ```text
 Installation
   ├─ installation administrator: deployment-wide settings and IT access
-  ├─ workspace creator: create shared workspaces (implemented)
+  ├─ installation administrator: create shared workspaces
   └─ workspaces: independent membership and business data
        ├─ owner: ultimate workspace accountability
        ├─ admin: day-to-day workspace administration
@@ -51,7 +51,7 @@ implementation on them.
 | --- | --- | --- |
 | First installation | First-run setup creates a Django superuser, the first workspace, and its owner membership. | Keep one-time bootstrap. |
 | More IT operators | Existing installation admins invite another installation admin, granting Django superuser/staff, and the invitation plus acceptance are audited. | Keep rare and review the installation activity log regularly. |
-| Create a shared workspace | A Django superuser or delegated workspace creator may call `POST /api/v1/organizations/`. The delegated grant does not confer Django staff/superuser. | Consider an invitation to create a brand-new creator account; grants currently require an existing account. |
+| Create a shared workspace | Only an installation administrator may call `POST /api/v1/organizations/`. | Keep workspace provisioning centralized for managed installations. |
 | Assign business owner | Creator nominates `owner_email`. If different from their own email, the workspace is isolated pending email acceptance; acceptance removes the provisional creator membership and installs the business owner. | Consider configurable owner-invitation expiry/recovery policy if enterprise deployments need it. |
 | Configure workspace | Owner/admin can change settings and SMTP, manage allowed members; only owner can transfer ownership/delete. | Preserve these four simple roles until actual use cases require finer permissions. |
 | Read workspace data | Any membership can read all companies, contacts, automations, and runs in that workspace. | Consider record/team visibility only when requirements identify who must be hidden from whom; design it separately from action roles. |
@@ -61,8 +61,7 @@ implementation on them.
 
 1. IT completes first-run setup and invites a second trusted IT admin for
    operational continuity.
-2. IT gives a selected existing operations account the workspace-creator grant,
-   **not** installation-admin access.
+2. IT creates the workspace and nominates its business owner.
 3. The creator enters workspace details and nominates the business owner. The
    new owner accepts an email-bound invitation before receiving access. No
    public self-signup is required.
@@ -102,5 +101,5 @@ enforces the creator grant independently of React.
 
 Use two scopes: **installation privileges** for deployment/provisioning and
 **membership roles** for each workspace. Keep the four workspace roles and the
-delegated workspace-creator grant. Do not add arbitrary custom roles or
+central installation-admin provisioning. Do not add arbitrary custom roles or
 record-level security until a concrete customer workflow requires them.

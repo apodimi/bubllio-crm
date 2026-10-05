@@ -12,15 +12,14 @@ it is not another workspace.
 
 | Level | Role or grant | Who assigns it? | What it means |
 | --- | --- | --- | --- |
-| Installation | Installation administrator | The first-run setup creates the first one; an existing installation admin may invite more. | Manages installation policy and fallback SMTP, invites IT admins, grants workspace-creator access, and can create workspaces. This is a Django superuser. |
-| Installation | Workspace creator | Installation administrator, for an existing active account. | Can create a shared workspace and nominate its initial owner. This grant does **not** make the person a superuser or an automatic member of other workspaces. |
+| Installation | Installation administrator | The first-run setup creates the first one; an existing installation admin may invite more. | Manages installation policy and fallback SMTP, invites IT admins, and creates workspaces. This is a Django superuser. |
 | Workspace | Owner | First-run setup, self-nomination at creation, or acceptance of an initial owner invitation; later owners receive a transfer from the current owner. | Normally one owner per workspace, responsible for its administrators and lifecycle. The database prevents two owners. |
 | Workspace | Admin | Invited or promoted by the owner. | Manages daily workspace operations but cannot appoint admins, transfer ownership, or delete the workspace. |
 | Workspace | Member | Invited by an owner or admin. | Contributes CRM records; cannot manage workspace settings or members. |
 | Workspace | Viewer | Invited by an owner or admin. | Reads workspace data without creating records. |
 
 The installation role and a workspace role are independent. For example,
-Maria can be a workspace creator, an owner in Workspace A, a viewer in
+Maria can be an owner in Workspace A, a viewer in
 Workspace B, and have **no** access to Workspace C.
 
 ## Workspace permission matrix
@@ -51,8 +50,8 @@ workspace cannot be deleted or shared through the current API.
 
 1. The IT installer completes first-run setup. This person becomes an
    installation administrator and owner of the initial workspace.
-2. IT grants an existing colleague **workspace creator** access in Account
-   settings. This is safer than making them an installation administrator.
+2. Only an installation administrator creates a new workspace and nominates
+   its business owner.
 3. The creator enters a workspace name, slug, and the business owner's email.
    If the email belongs to somebody else, Bubllio sends a seven-day owner
    invitation using installation fallback SMTP.
@@ -64,8 +63,8 @@ workspace cannot be deleted or shared through the current API.
 
 If the creator deliberately enters their *own* email as initial owner, the
 workspace is available immediately and no owner invitation is needed.
-Granting or revoking workspace-creator access does not itself add or remove
-membership in an existing workspace.
+Creating a workspace does not itself give ordinary users access; access starts
+only after invitation acceptance creates a membership.
 
 ## Visibility and security limits
 
@@ -75,11 +74,8 @@ membership in an existing workspace.
 - An installation administrator has no automatic membership in unrelated
   workspaces through the REST API. However, this role is a **Django superuser**
   and can access data through `/admin/`; reserve it for trusted IT operators.
-- The delegated workspace-creator grant does not provide Django admin access,
-  installation settings, or access to other teams' CRM data.
-- Personal workspaces are disabled by default. An installation admin may enable
-  them; each user can then create one private personal workspace.
-- Grant/revoke, workspace creation, invitations, role changes, member removals,
+- Ordinary users cannot create shared or personal workspaces.
+- Workspace creation, invitations, role changes, member removals,
   email-connection changes, installation settings, and data-export downloads
   have a read-only operational audit log for installation administrators.
   Passwords, invitation links, and other secret values are excluded.

@@ -36,7 +36,7 @@ User 1 -> many OrganizationMemberships <- 1 Organization
 timestamps. The database prevents duplicate membership for the same user and
 organization and permits at most one owner per organization.
 
-An installation administrator or a user with a workspace-creator grant may
+An installation administrator may
 create a shared organization. The creator nominates its initial business owner
 by email; the handoff process is described below. Other users join only by
 accepting an invitation sent by that organization's owner or administrator.
@@ -45,7 +45,7 @@ There are three different questions, which must not be conflated:
 
 1. **Installation authority:** may this account configure the whole deployment
    or create shared workspaces? Active Django superusers can do both; a
-   workspace-creator grant allows only shared-workspace provisioning.
+   workspace creation remains an installation-admin responsibility.
 2. **Workspace membership:** which organizations may this account access, and
    what is its role in each? An installation administrator has no implicit REST
    membership in workspaces created by somebody else.
@@ -108,26 +108,14 @@ assignments; selecting a different workspace does not carry its role across.
 
 ## Workspace provisioning
 
-Only an installation administrator can grant or revoke workspace-creator access
-to an **existing active account**. This does not make that account Django staff,
-superuser, or a member of any workspace:
-
-```text
-GET    /api/v1/organizations/workspace-creators/
-POST   /api/v1/organizations/workspace-creators/  {"email": "creator@example.com"}
-DELETE /api/v1/organizations/workspace-creators/<grant_id>/
-```
-
-`GET /api/v1/auth/me/` exposes `can_create_workspaces` for the UI. The backend
-checks the grant on every create request; a stale UI or JWT cannot grant access.
-The grant is revocable. Revocation prevents new workspace creation but does not
-undo an already-created workspace or remove its membership. Workspace-creation
-and owner-invitation resend requests share a 20-per-user-per-day throttle.
+Only an active installation administrator can create a workspace. The backend
+checks this rule on every create request, so a stale UI or token cannot grant
+access. `GET /api/v1/auth/me/` exposes `can_create_workspaces` for the UI.
+Workspace-creation and owner-invitation resend requests share a daily throttle.
 
 Create a shared workspace with `POST /api/v1/organizations/` and `name`, `slug`,
-and `owner_email`. A delegated creator **must** supply `owner_email`; an
-installation administrator may omit it to become owner directly, preserving
-the old IT workflow. If the nominated email is the creator's own email, they
+and `owner_email`. The installation administrator may omit it to become owner
+directly. If the nominated email is the administrator's own email, they
 become owner immediately. Otherwise:
 
 1. Installation fallback SMTP must be configured. The server atomically creates
@@ -141,7 +129,7 @@ become owner immediately. Otherwise:
    account can register there; an existing account must sign in with the
    invited email. Acceptance atomically removes the provisional creator
    membership, installs the nominated owner, and opens the workspace.
-4. The creator or an installation administrator may view pending workspaces,
+4. An installation administrator may view pending workspaces,
    resend the invitation (invalidating the previous token), or cancel/delete
    the pending workspace:
 
@@ -151,10 +139,10 @@ POST   /api/v1/organizations/provisioning/<organization_id>/
 DELETE /api/v1/organizations/provisioning/<organization_id>/
 ```
 
-Only the creator sees their pending workspaces; installation admins can see all.
+Only installation administrators can see or manage pending workspaces.
 An unaccepted or expired invitation grants **no** workspace access. The
 database constraint ensures at most one owner; the provisional membership
-ensures a pending workspace is not left ownerless. Owner handoff, grant/revoke,
+ensures a pending workspace is not left ownerless. Owner handoff,
 shared-workspace creation through this API, resend, cancellation, member
 invitations, role changes, removals, and email-connection changes are recorded
 in a read-only `WorkspaceAccessEvent` log visible to installation admins.
@@ -214,7 +202,7 @@ the workspace, invited email, role, and expiry. `POST` to the corresponding
 invited email; a new user supplies a username and password and receives JWTs.
 The invited email cannot be changed at acceptance. No general public signup
 endpoint exists. Invited users cannot create additional shared organizations
-unless an installation administrator later grants workspace-creator access.
+because workspace creation is reserved for installation administrators.
 
 Set `BUBLLIO_APP_URL` to the public React origin for correct links in emails.
 Local development defaults to `http://127.0.0.1:5173`.
@@ -256,23 +244,21 @@ API, even a superuser sees CRM workspaces only through `OrganizationMembership`.
 Because Django superusers can access data through `/admin/`, this role is
 reserved for trusted IT operators and must not be used as a workspace role.
 
-Installation administrators can create shared organizations and manage
-installation settings. Delegated workspace creators can create organizations,
-but cannot change installation settings or invite installation administrators.
+Installation administrators create shared organizations and manage installation
+settings. Workspace creation cannot be delegated to ordinary accounts.
 Organization owners and administrators can invite people into their own
-workspace, but cannot grant workspace-creator or installation-admin access.
+workspace, but cannot provision workspaces or grant installation-admin access.
 
 **Important limitation:** the REST API enforces membership even for installation
 administrators, but Django's `/admin/` grants superusers broad database access.
 Do not describe the present installation role as technically unable to read
 other workspaces. Treat it as highly privileged, reserve it for trusted IT
-operators, and protect `/admin/` accordingly. Delegated workspace creators
-have no Django admin access from that grant. See the
+operators, and protect `/admin/` accordingly. See the
 [research and access-model rationale](../research/access-model-comparison.md).
 
-The installation setting `allow_personal_workspaces` defaults to false. When
-enabled, any authenticated user can create one personal workspace, owned only
-by that user; personal workspaces cannot invite members or be deleted through
+Personal workspace creation is not offered to ordinary users; they see only
+workspaces reached through accepted invitations. Existing personal workspaces
+remain isolated and cannot invite members or be deleted through
 the current API. Disabling the setting blocks new creation but does not remove
 existing personal workspaces.
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Box,
@@ -19,7 +19,6 @@ import {
 import AddRounded from '@mui/icons-material/AddRounded'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
 import { organizationKeys, useOrganizations } from '../../features/organizations'
-import { organizationService } from '../../features/organizations/services/organizationService'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { authService } from '../../features/auth/services/authService'
 import {
@@ -43,18 +42,9 @@ export function OrganizationsPage() {
     if (currentUser.data) useAuthStore.setState({ user: currentUser.data })
   }, [currentUser.data])
   const pending = usePendingWorkspaces(true)
-  const personalPolicy = useQuery({
-    queryKey: ['personal-workspace-policy'],
-    queryFn: ({ signal }) => organizationService.personalPolicy(signal),
-  })
   const queryClient = useQueryClient()
-  const personalWorkspace = useMutation({
-    mutationFn: organizationService.createPersonal,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
-  })
   const [create, setCreate] = useState(false)
   const [cancelPendingId, setCancelPendingId] = useState<string | null>(null)
-  const hasPersonalWorkspace = query.data?.some((org) => org.is_personal) ?? false
   return (
     <>
       <PageHeading
@@ -62,15 +52,6 @@ export function OrganizationsPage() {
         description="A home for every team and every relationship."
         action={
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-            {personalPolicy.data?.allowed && !hasPersonalWorkspace && (
-              <Button
-                variant="outlined"
-                onClick={() => void personalWorkspace.mutateAsync()}
-                disabled={personalWorkspace.isPending}
-              >
-                {personalWorkspace.isPending ? 'Creating…' : 'Create personal'}
-              </Button>
-            )}
             {canCreate && (
               <Button
                 variant="contained"

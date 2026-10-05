@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import BasePermission
 
-from organizations.models import Organization, OrganizationMembership, WorkspaceCreatorGrant
+from organizations.models import Organization, OrganizationMembership
 
 
 class IsInstallationAdmin(BasePermission):
@@ -49,10 +49,7 @@ def roles_with_capability(capability):
 
 
 def can_create_workspace(user):
-    return bool(
-        user and user.is_authenticated and user.is_active
-        and (user.is_superuser or WorkspaceCreatorGrant.objects.filter(user=user).exists())
-    )
+    return bool(user and user.is_authenticated and user.is_active and user.is_superuser)
 
 
 def get_organization_for_user(*, user, organization_id, capability):
