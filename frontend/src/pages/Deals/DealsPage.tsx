@@ -12,13 +12,13 @@ import {
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { Alert, Box, Button, Chip, Stack } from '@mui/material'
-import { CreateDialog } from '../../components/common/CreateDialog'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
 import { useCompanies } from '../../features/companies'
-import { dealKeys, useDeals, useMoveDeal, useUpdateDeal } from '../../features/deals'
-import { canCreateRecords, organizationPath, useWorkspace } from '../../features/organizations'
+import { useDeals, useMoveDeal } from '../../features/deals'
+import { canCreateRecords, useWorkspace } from '../../features/organizations'
 import type { Deal, DealStage } from '../../types/deal.types'
 import { DealDragPreview } from './DealCard'
+import { DealDrawer } from './DealDrawer'
 import { DealLane } from './DealLane'
 
 const stages: Array<{ value: DealStage; label: string; accent: string }> = [
@@ -36,9 +36,8 @@ export function DealsPage() {
   const org = useWorkspace()
   const deals = useDeals(org.id)
   const companies = useCompanies(org.id, { archived: 'active' })
-  const update = useUpdateDeal(org.id)
   const move = useMoveDeal(org.id)
-  const [create, setCreate] = useState(false)
+  const [drawer, setDrawer] = useState<{ deal?: Deal; initialStage?: DealStage } | null>(null)
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -61,16 +60,6 @@ export function DealsPage() {
   const laneDeals = (stage: DealStage) =>
     rows.filter((deal) => deal.stage === stage).sort((a, b) => a.sort_order - b.sort_order)
 
-  function changeStage(deal: Deal, stage: DealStage) {
-    update.mutate({
-      id: deal.id,
-      body: {
-        stage,
-        lost_reason: stage === 'lost' ? deal.lost_reason || 'Not specified' : deal.lost_reason,
-      },
-    })
-  }
-
   function dragEnd(event: DragEndEvent) {
     setActiveDeal(null)
     const deal = event.active.data.current?.deal as Deal | undefined
@@ -83,7 +72,10 @@ export function DealsPage() {
     const targetIndex = overDeal
       ? targetLane.findIndex((item) => item.id === overDeal.id)
       : destination.length
-    if (stage === 'lost') return changeStage(deal, stage)
+    if (stage === 'lost' && !deal.lost_reason) {
+      setDrawer({ deal, initialStage: 'lost' })
+      return
+    }
     move.mutate({
       id: deal.id,
       stage,
@@ -95,7 +87,7 @@ export function DealsPage() {
     setActiveDeal((event.active.data.current?.deal as Deal | undefined) ?? null)
   }
 
-  const mutationError = update.error ?? move.error
+  const mutationError = move.error
   return (
     <>
       <PageHeading
@@ -107,7 +99,7 @@ export function DealsPage() {
               variant="contained"
               startIcon={<AddRounded />}
               disabled={!companies.data?.length}
-              onClick={() => setCreate(true)}
+              onClick={() => setDrawer({})}
             >
               Add deal
             </Button>
@@ -171,8 +163,7 @@ export function DealsPage() {
                 label={stage.label}
                 accent={stage.accent}
                 deals={laneDeals(stage.value)}
-                stages={stages}
-                onStageChange={changeStage}
+                onEdit={(deal) => setDrawer({ deal })}
               />
             ))}
           </Box>
@@ -181,46 +172,13 @@ export function DealsPage() {
           </DragOverlay>
         </DndContext>
       )}
-      {create && companies.data ? (
-        <CreateDialog
-          title="Add deal"
-          path={`${organizationPath(org.id)}deals/`}
-          invalidate={dealKeys.list(org.id)}
-          onClose={() => setCreate(false)}
-          fields={[
-            { name: 'title', label: 'Deal title', required: true, maxLength: 255 },
-            {
-              name: 'company',
-              label: 'Company',
-              required: true,
-              options: companies.data.map((company) => ({
-                value: company.id,
-                label: company.name,
-              })),
-            },
-            { name: 'value', label: 'Amount', required: true, type: 'number' },
-            {
-              name: 'currency',
-              label: 'Currency',
-              required: true,
-              options: [
-                { value: 'EUR', label: 'EUR' },
-                { value: 'USD', label: 'USD' },
-                { value: 'GBP', label: 'GBP' },
-              ],
-            },
-            { name: 'tax_rate', label: 'VAT rate %', type: 'number' },
-            {
-              name: 'amount_includes_tax',
-              label: 'Amount includes VAT',
-              options: [
-                { value: 'false', label: 'No — amount is net' },
-                { value: 'true', label: 'Yes — amount is gross' },
-              ],
-            },
-            { name: 'probability', label: 'Probability %', type: 'number' },
-            { name: 'expected_close_date', label: 'Expected close date', type: 'date' },
-          ]}
+      {drawer && companies.data ? (
+        <DealDrawer
+          organizationId={org.id}
+          companies={companies.data}
+          deal={drawer.deal}
+          initialStage={drawer.initialStage}
+          onClose={() => setDrawer(null)}
         />
       ) : null}
     </>

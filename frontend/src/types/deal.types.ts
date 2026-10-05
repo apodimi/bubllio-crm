@@ -26,3 +26,20 @@ export interface Deal {
   created_at: string
   updated_at: string
 }
+
+export type DealInput = Pick<
+  Deal,
+  | 'company'
+  | 'contact'
+  | 'assigned_to'
+  | 'title'
+  | 'value'
+  | 'currency'
+  | 'tax_rate'
+  | 'amount_includes_tax'
+  | 'probability'
+  | 'stage'
+  | 'expected_close_date'
+  | 'lost_reason'
+  | 'notes'
+>

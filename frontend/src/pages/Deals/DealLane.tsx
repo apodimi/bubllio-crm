@@ -17,15 +17,13 @@ export function DealLane({
   label,
   accent,
   deals,
-  stages,
-  onStageChange,
+  onEdit,
 }: {
   stage: DealStage
   label: string
   accent: string
   deals: Deal[]
-  stages: Array<{ value: DealStage; label: string; accent: string }>
-  onStageChange: (deal: Deal, stage: DealStage) => void
+  onEdit: (deal: Deal) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `stage:${stage}`, data: { stage } })
   const totals = deals.reduce<Record<string, number>>(
@@ -94,12 +92,7 @@ export function DealLane({
       <SortableContext items={deals.map((deal) => deal.id)} strategy={verticalListSortingStrategy}>
         <Stack spacing={1.25}>
           {deals.map((deal) => (
-            <DealCard
-              key={deal.id}
-              deal={deal}
-              stages={stages}
-              onStageChange={(next) => onStageChange(deal, next)}
-            />
+            <DealCard key={deal.id} deal={deal} onEdit={() => onEdit(deal)} />
           ))}
           {deals.length === 0 ? (
             <Box

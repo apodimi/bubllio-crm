@@ -1,4 +1,5 @@
 import DragIndicatorRounded from '@mui/icons-material/DragIndicatorRounded'
+import EditOutlined from '@mui/icons-material/EditOutlined'
 import EventOutlined from '@mui/icons-material/EventOutlined'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -6,29 +7,20 @@ import { alpha } from '@mui/material/styles'
 import {
   Avatar,
   Box,
+  ButtonBase,
   IconButton,
   LinearProgress,
-  MenuItem,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
-import type { Deal, DealStage } from '../../types/deal.types'
+import type { Deal } from '../../types/deal.types'
 
 const money = (value: string, currency: string) =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(value))
 
-export function DealCard({
-  deal,
-  stages,
-  onStageChange,
-}: {
-  deal: Deal
-  stages: Array<{ value: DealStage; label: string }>
-  onStageChange: (stage: DealStage) => void
-}) {
+export function DealCard({ deal, onEdit }: { deal: Deal; onEdit: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: deal.id,
     data: { deal, stage: deal.stage },
@@ -46,13 +38,13 @@ export function DealCard({
     >
       <DealCardSurface
         deal={deal}
-        stages={stages}
-        onStageChange={onStageChange}
+        onEdit={onEdit}
         dragHandle={
           <Tooltip title="Drag to move" placement="top">
             <IconButton
               size="small"
               aria-label={`Move ${deal.title}`}
+              onClick={(event) => event.stopPropagation()}
               {...attributes}
               {...listeners}
               sx={{
@@ -85,14 +77,12 @@ export function DealDragPreview({ deal }: { deal: Deal }) {
 
 function DealCardSurface({
   deal,
-  stages,
-  onStageChange,
+  onEdit,
   dragHandle,
   preview = false,
 }: {
   deal: Deal
-  stages?: Array<{ value: DealStage; label: string }>
-  onStageChange?: (stage: DealStage) => void
+  onEdit?: () => void
   dragHandle?: React.ReactNode
   preview?: boolean
 }) {
@@ -100,6 +90,7 @@ function DealCardSurface({
   return (
     <Paper
       elevation={preview ? 4 : 1}
+      onClick={onEdit}
       sx={{
         p: 2,
         borderRadius: '16px',
@@ -109,6 +100,7 @@ function DealCardSurface({
         boxShadow: preview ? undefined : '0 3px 12px rgba(15,31,56,.055)',
         transition:
           'border-color 140ms ease-out, box-shadow 140ms ease-out, transform 140ms ease-out',
+        cursor: onEdit ? 'pointer' : 'grabbing',
         '&:hover': preview
           ? undefined
           : {
@@ -207,22 +199,30 @@ function DealCardSurface({
           <Typography variant="caption">Close by {deal.expected_close_date}</Typography>
         </Stack>
       ) : null}
-      {!preview && stages && onStageChange ? (
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label="Stage"
-          value={deal.stage}
-          sx={{ mt: 2, '& .MuiInputBase-root': { bgcolor: 'background.default' } }}
-          onChange={(event) => onStageChange(event.target.value as DealStage)}
+      {!preview && onEdit ? (
+        <ButtonBase
+          onClick={(event) => {
+            event.stopPropagation()
+            onEdit()
+          }}
+          sx={{
+            mt: 1.75,
+            borderRadius: 1,
+            color: 'primary.main',
+            '&:focus-visible': {
+              outline: '3px solid',
+              outlineColor: 'action.focus',
+              outlineOffset: 2,
+            },
+          }}
         >
-          {stages.map((stage) => (
-            <MenuItem key={stage.value} value={stage.value}>
-              {stage.label}
-            </MenuItem>
-          ))}
-        </TextField>
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+            <EditOutlined sx={{ fontSize: 16 }} />
+            <Typography variant="caption" sx={{ fontWeight: 700 }}>
+              Open and edit
+            </Typography>
+          </Stack>
+        </ButtonBase>
       ) : null}
     </Paper>
   )
