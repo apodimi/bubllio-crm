@@ -120,6 +120,9 @@ Contacts belong to:
 - one company
 
 The serializer validates that the selected company belongs to the selected organization.
+Contact email addresses are checked case-insensitively for exact duplicates
+inside the same organization. Contacts can be searched by name, communication
+details, department, or job title and filtered by their company.
 
 ## Why Not Use `Customer` As The Main Model?
 
