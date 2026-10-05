@@ -86,6 +86,20 @@ customer servicing: tax/VAT reference, industry, contact channels, postal
 address, country code, and internal notes. These fields belong to the owning
 organization and are included in tenant-scoped search.
 
+Each company receives an organization-scoped customer code (`CUS-00001`, then
+`CUS-00002`, and so on) and may be assigned to one workspace member as its
+account owner. Tax/VAT IDs and email addresses are checked case-insensitively
+for exact duplicates inside the same organization.
+
+Companies are archived and restored for normal lifecycle management. Active
+lists hide archived records by default, while explicit filters can show archived
+or all records. Permanent deletion remains an API-level operation for empty
+records only; a company with contacts cannot be deleted.
+
+`CompanyActivity` records who created, updated, assigned, archived, or restored
+a company. It also records when a contact is added. Activity entries store safe
+metadata such as changed field names rather than previous field values.
+
 ## Contact
 
 `Contact` is a person inside a company.
@@ -133,6 +147,8 @@ Organization 1 -> many Contacts
 Organization 1 -> many OrganizationMemberships
 User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
+Company 1 -> many CompanyActivities
+User 1 -> many assigned Companies
 Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
 Organization 1 -> 1 OrganizationSettings

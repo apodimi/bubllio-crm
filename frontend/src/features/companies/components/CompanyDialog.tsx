@@ -20,7 +20,7 @@ import { Controller, useForm } from 'react-hook-form'
 import type { Company } from '../../../types/company.types'
 import { companySchema } from '../companySchema'
 import type { CompanyFormValues } from '../companySchema'
-import { useCreateCompany, useUpdateCompany } from '../hooks/useCompanies'
+import { useCompanyAssignees, useCreateCompany, useUpdateCompany } from '../hooks/useCompanies'
 
 const stages = ['lead', 'prospect', 'customer', 'inactive'] as const
 
@@ -192,6 +192,7 @@ export function CompanyDialog({
   const create = useCreateCompany(organizationId)
   const update = useUpdateCompany(organizationId, company?.id ?? '')
   const mutation = company ? update : create
+  const members = useCompanyAssignees(organizationId)
   const {
     control,
     handleSubmit,
@@ -212,6 +213,7 @@ export function CompanyDialog({
       country: company?.country ?? '',
       notes: company?.notes ?? '',
       lifecycle_stage: company?.lifecycle_stage ?? 'lead',
+      assigned_to: company?.assigned_to ?? null,
     },
   })
 
@@ -328,6 +330,29 @@ export function CompanyDialog({
                 )}
               />
             </Stack>
+            <Controller
+              name="assigned_to"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="Account owner"
+                  value={field.value ?? ''}
+                  onChange={(event) =>
+                    field.onChange(event.target.value === '' ? null : Number(event.target.value))
+                  }
+                  disabled={mutation.isPending || members.isPending}
+                  helperText="The teammate responsible for this relationship."
+                >
+                  <MenuItem value="">Unassigned</MenuItem>
+                  {(members.data ?? []).map((member) => (
+                    <MenuItem key={member.id} value={Number(member.id)}>
+                      {member.name} · {member.role}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
             <Controller
               name="email"
               control={control}

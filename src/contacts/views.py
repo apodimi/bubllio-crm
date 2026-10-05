@@ -43,7 +43,20 @@ class ContactListCreateAPIView(APIView):
         )
 
         if serializer.is_valid():
-            serializer.save(organization=organization)
+            contact = serializer.save(organization=organization)
+            if contact.company:
+                from companies.models import CompanyActivity
+                from companies.services import record_company_activity
+
+                record_company_activity(
+                    company=contact.company,
+                    actor=request.user,
+                    action=CompanyActivity.Action.CONTACT_ADDED,
+                    details={
+                        "contact_id": str(contact.id),
+                        "contact_name": str(contact),
+                    },
+                )
             return Response(serializer.data, status=201)
 
         return Response(serializer.errors, status=400)

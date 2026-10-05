@@ -53,6 +53,8 @@ export function CompanyProfileContent({ company }: { company: Company }) {
           Business details
         </Typography>
         <Stack spacing={1.5}>
+          <Detail label="Customer code" value={company.customer_code} />
+          <Detail label="Account owner" value={company.assigned_to_name || 'Unassigned'} />
           <Detail label="Tax / VAT ID" value={company.tax_id} />
           <Detail label="Industry" value={company.industry} />
           <Detail label="Address" value={address.join(', ')} />

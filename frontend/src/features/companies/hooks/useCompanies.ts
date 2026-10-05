@@ -10,6 +10,8 @@ export const companyKeys = {
     [...companyKeys.byOrganization(organizationId), filters] as const,
   detail: (organizationId: string, companyId: string) =>
     [...companyKeys.byOrganization(organizationId), companyId] as const,
+  activity: (organizationId: string, companyId: string) =>
+    [...companyKeys.detail(organizationId, companyId), 'activity'] as const,
 }
 
 const companiesQuery = (organizationId: string, filters: CompanyFilters) =>
@@ -26,6 +28,19 @@ export const useCompany = (organizationId: string, companyId: string) =>
     queryKey: companyKeys.detail(organizationId, companyId),
     queryFn: ({ signal }) => companyService.get(organizationId, companyId, signal),
     enabled: Boolean(companyId),
+  })
+
+export const useCompanyActivity = (organizationId: string, companyId: string) =>
+  useQuery({
+    queryKey: companyKeys.activity(organizationId, companyId),
+    queryFn: ({ signal }) => companyService.activity(organizationId, companyId, signal),
+    enabled: Boolean(companyId),
+  })
+
+export const useCompanyAssignees = (organizationId: string) =>
+  useQuery({
+    queryKey: [...companyKeys.byOrganization(organizationId), 'assignees'],
+    queryFn: ({ signal }) => companyService.assignees(organizationId, signal),
   })
 
 const useCompanyMutation = (organizationId: string) => {
@@ -54,6 +69,22 @@ export const useDeleteCompany = (organizationId: string) => {
   const invalidate = useCompanyMutation(organizationId)
   return useMutation({
     mutationFn: (companyId: string) => companyService.remove(organizationId, companyId),
+    onSuccess: invalidate,
+  })
+}
+
+export const useArchiveCompany = (organizationId: string) => {
+  const invalidate = useCompanyMutation(organizationId)
+  return useMutation({
+    mutationFn: (companyId: string) => companyService.archive(organizationId, companyId),
+    onSuccess: invalidate,
+  })
+}
+
+export const useRestoreCompany = (organizationId: string) => {
+  const invalidate = useCompanyMutation(organizationId)
+  return useMutation({
+    mutationFn: (companyId: string) => companyService.restore(organizationId, companyId),
     onSuccess: invalidate,
   })
 }

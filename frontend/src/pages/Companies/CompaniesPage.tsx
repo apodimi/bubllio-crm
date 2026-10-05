@@ -23,10 +23,12 @@ import {
   MenuItem,
 } from '@mui/material'
 import AddRounded from '@mui/icons-material/AddRounded'
-import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded'
+import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
+import RestoreRounded from '@mui/icons-material/RestoreRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useCompanies, useDeleteCompany } from '../../features/companies'
+import { useArchiveCompany, useCompanies, useRestoreCompany } from '../../features/companies'
+import { useAuthStore } from '../../features/auth/store/authStore'
 import { useWorkspace, canCreateRecords } from '../../features/organizations'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
 import { CompanyDialog } from '../../features/companies/components/CompanyDialog'
@@ -39,12 +41,21 @@ export function CompaniesPage() {
   const routeSearch = useSearch({ from: '/organizations/$organizationId/companies' })
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<Company['lifecycle_stage'] | ''>('')
+  const [visibility, setVisibility] = useState<'active' | 'archived' | 'all'>('active')
+  const [owner, setOwner] = useState<number | 'unassigned' | ''>('')
+  const currentUserId = useAuthStore((state) => state.user?.id)
   const deferredSearch = useDeferredValue(search)
-  const query = useCompanies(org.id, { search: deferredSearch, lifecycleStage: stage })
+  const query = useCompanies(org.id, {
+    search: deferredSearch,
+    lifecycleStage: stage,
+    archived: visibility,
+    assignedTo: owner,
+  })
   const [create, setCreate] = useState(false)
   const [editing, setEditing] = useState<Company | null>(null)
-  const [deleting, setDeleting] = useState<Company | null>(null)
-  const remove = useDeleteCompany(org.id)
+  const [archiving, setArchiving] = useState<Company | null>(null)
+  const archive = useArchiveCompany(org.id)
+  const restore = useRestoreCompany(org.id)
   const canManage = canCreateRecords(org)
   const rows = query.data ?? []
 
@@ -89,6 +100,31 @@ export function CompaniesPage() {
           <MenuItem value="customer">Customer</MenuItem>
           <MenuItem value="inactive">Inactive</MenuItem>
         </TextField>
+        <TextField
+          select
+          label="Ownership"
+          value={owner}
+          onChange={(event) => {
+            const value = event.target.value
+            setOwner(value === 'unassigned' ? value : value ? Number(value) : '')
+          }}
+          sx={{ width: { xs: '100%', sm: 180 } }}
+        >
+          <MenuItem value="">All owners</MenuItem>
+          {currentUserId ? <MenuItem value={currentUserId}>My companies</MenuItem> : null}
+          <MenuItem value="unassigned">Unassigned</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="Records"
+          value={visibility}
+          onChange={(event) => setVisibility(event.target.value as 'active' | 'archived' | 'all')}
+          sx={{ width: { xs: '100%', sm: 160 } }}
+        >
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="archived">Archived</MenuItem>
+          <MenuItem value="all">All records</MenuItem>
+        </TextField>
       </Stack>
       {query.isPending ? (
         <Loading />
@@ -98,10 +134,14 @@ export function CompaniesPage() {
         <Paper variant="outlined">
           {rows.length === 0 ? (
             <Empty
-              title={search || stage ? 'No matches' : 'Your next partnership awaits'}
+              title={
+                search || stage || owner || visibility !== 'active'
+                  ? 'No matches'
+                  : 'Your next partnership awaits'
+              }
               description={
-                search || stage
-                  ? 'Try another search or lifecycle stage.'
+                search || stage || owner || visibility !== 'active'
+                  ? 'Try changing the search or filters.'
                   : 'Add a company to start building your CRM.'
               }
             />
@@ -131,6 +171,9 @@ export function CompaniesPage() {
                       >
                         <Box sx={{ minWidth: 0 }}>
                           <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {company.customer_code} · {company.assigned_to_name || 'Unassigned'}
+                          </Typography>
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                             {company.email || company.phone_number || 'No contact details'}
                           </Typography>
@@ -169,13 +212,18 @@ export function CompaniesPage() {
                           </IconButton>
                           <IconButton
                             size="small"
-                            aria-label={`Delete ${company.name}`}
+                            aria-label={`${company.archived_at ? 'Restore' : 'Archive'} ${company.name}`}
                             onClick={(event) => {
                               event.stopPropagation()
-                              setDeleting(company)
+                              if (company.archived_at) restore.mutate(company.id)
+                              else setArchiving(company)
                             }}
                           >
-                            <DeleteOutlineRounded fontSize="small" />
+                            {company.archived_at ? (
+                              <RestoreRounded fontSize="small" />
+                            ) : (
+                              <ArchiveOutlined fontSize="small" />
+                            )}
                           </IconButton>
                         </Stack>
                       ) : null}
@@ -212,6 +260,13 @@ export function CompaniesPage() {
                       >
                         <TableCell>
                           <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block' }}
+                          >
+                            {company.customer_code} · {company.assigned_to_name || 'Unassigned'}
+                          </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {company.email || company.phone_number || 'No contact details'}
                           </Typography>
@@ -248,15 +303,18 @@ export function CompaniesPage() {
                                 <EditRounded />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Delete company">
+                            <Tooltip
+                              title={company.archived_at ? 'Restore company' : 'Archive company'}
+                            >
                               <IconButton
-                                aria-label={`Delete ${company.name}`}
+                                aria-label={`${company.archived_at ? 'Restore' : 'Archive'} ${company.name}`}
                                 onClick={(event) => {
                                   event.stopPropagation()
-                                  setDeleting(company)
+                                  if (company.archived_at) restore.mutate(company.id)
+                                  else setArchiving(company)
                                 }}
                               >
-                                <DeleteOutlineRounded />
+                                {company.archived_at ? <RestoreRounded /> : <ArchiveOutlined />}
                               </IconButton>
                             </Tooltip>
                           </TableCell>
@@ -282,35 +340,34 @@ export function CompaniesPage() {
         />
       ) : null}
       <Dialog
-        open={Boolean(deleting)}
-        onClose={remove.isPending ? undefined : () => setDeleting(null)}
+        open={Boolean(archiving)}
+        onClose={archive.isPending ? undefined : () => setArchiving(null)}
       >
-        <DialogTitle>Delete company?</DialogTitle>
+        <DialogTitle>Archive company?</DialogTitle>
         <DialogContent>
-          {remove.isError && (
+          {archive.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {remove.error.message}
+              {archive.error.message}
             </Alert>
           )}
           <Typography>
-            {deleting?.name} and all of its contacts will be permanently deleted. This cannot be
-            undone.
+            {archiving?.name} will leave the active list, but its profile, contacts, and history
+            stay intact. You can restore it at any time.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setDeleting(null)} disabled={remove.isPending}>
+          <Button onClick={() => setArchiving(null)} disabled={archive.isPending}>
             Cancel
           </Button>
           <Button
-            color="error"
             variant="contained"
-            disabled={remove.isPending}
+            disabled={archive.isPending}
             onClick={() => {
-              if (!deleting) return
-              remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })
+              if (!archiving) return
+              archive.mutate(archiving.id, { onSuccess: () => setArchiving(null) })
             }}
           >
-            {remove.isPending ? 'Deleting…' : 'Delete company'}
+            {archive.isPending ? 'Archiving…' : 'Archive company'}
           </Button>
         </DialogActions>
       </Dialog>

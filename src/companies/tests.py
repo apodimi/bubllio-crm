@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 
 from organizations.models import Organization, OrganizationMembership
 
-from .models import Company
+from .models import Company, CompanyActivity
 
 
 User = get_user_model()
@@ -45,6 +45,12 @@ class CompanyTenantAccessTests(APITestCase):
             },
         )
 
+    def action_url(self, company, action):
+        return reverse(
+            f"company-{action}",
+            kwargs={"organization_id": self.organization.id, "company_id": company.id},
+        )
+
     def test_member_lists_only_companies_in_selected_organization(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url())
@@ -71,6 +77,59 @@ class CompanyTenantAccessTests(APITestCase):
         self.assertEqual(response.data["organization"], self.organization.id)
         self.assertEqual(response.data["country"], "GR")
         self.assertEqual(response.data["tax_id"], "EL123456789")
+        self.assertEqual(response.data["customer_code"], "CUS-00002")
+        self.assertTrue(
+            CompanyActivity.objects.filter(
+                company_id=response.data["id"],
+                action=CompanyActivity.Action.CREATED,
+                actor=self.user,
+            ).exists()
+        )
+
+    def test_customer_codes_are_sequential_per_organization(self):
+        self.client.force_authenticate(self.user)
+
+        first = self.client.post(self.url(), {"name": "First"}, format="json")
+        second = self.client.post(self.url(), {"name": "Second"}, format="json")
+
+        self.assertEqual(first.data["customer_code"], "CUS-00002")
+        self.assertEqual(second.data["customer_code"], "CUS-00003")
+
+    def test_assignee_must_belong_to_selected_organization(self):
+        self.client.force_authenticate(self.user)
+
+        accepted = self.client.post(
+            self.url(), {"name": "Owned", "assigned_to": self.user.id}, format="json"
+        )
+        rejected = self.client.post(
+            self.url(), {"name": "Wrong owner", "assigned_to": self.other_user.id}, format="json"
+        )
+
+        self.assertEqual(accepted.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(accepted.data["assigned_to_name"], "member")
+        self.assertEqual(rejected.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("assigned_to", rejected.data)
+
+    def test_duplicate_tax_id_and_email_are_rejected_within_workspace(self):
+        Company.objects.create(
+            organization=self.organization,
+            name="Existing",
+            tax_id="EL123",
+            email="billing@example.com",
+        )
+        self.client.force_authenticate(self.user)
+
+        by_tax = self.client.post(
+            self.url(), {"name": "Duplicate tax", "tax_id": "el123"}, format="json"
+        )
+        by_email = self.client.post(
+            self.url(), {"name": "Duplicate email", "email": "BILLING@example.com"}, format="json"
+        )
+
+        self.assertEqual(by_tax.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("tax_id", by_tax.data)
+        self.assertEqual(by_email.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", by_email.data)
 
     def test_company_search_includes_business_profile_fields(self):
         Company.objects.create(
@@ -162,6 +221,54 @@ class CompanyTenantAccessTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Company.objects.filter(id=company.id).exists())
+
+    def test_company_can_be_archived_filtered_and_restored(self):
+        company = Company.objects.get(name="Visible Company")
+        self.client.force_authenticate(self.user)
+
+        archived = self.client.post(self.action_url(company, "archive"))
+        active_list = self.client.get(self.url())
+        archived_list = self.client.get(self.url(), {"archived": "archived"})
+        restored = self.client.post(self.action_url(company, "restore"))
+
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(archived.data["archived_at"])
+        self.assertEqual(active_list.data, [])
+        self.assertEqual([item["id"] for item in archived_list.data], [str(company.id)])
+        self.assertIsNone(restored.data["archived_at"])
+        self.assertEqual(
+            list(company.activities.values_list("action", flat=True)),
+            [CompanyActivity.Action.RESTORED, CompanyActivity.Action.ARCHIVED],
+        )
+
+    def test_activity_endpoint_records_changed_fields(self):
+        company = Company.objects.get(name="Visible Company")
+        self.client.force_authenticate(self.user)
+        self.client.patch(
+            self.detail_url(company),
+            {"assigned_to": self.user.id},
+            format="json",
+        )
+
+        response = self.client.get(self.action_url(company, "activity"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data[0]["action"], CompanyActivity.Action.ASSIGNED)
+        self.assertEqual(response.data[0]["details"]["fields"], ["assigned_to"])
+
+    def test_viewer_cannot_archive_company(self):
+        company = Company.objects.get(name="Visible Company")
+        viewer = User.objects.create_user(username="archive-viewer")
+        OrganizationMembership.objects.create(
+            organization=self.organization,
+            user=viewer,
+            role=OrganizationMembership.Role.VIEWER,
+        )
+        self.client.force_authenticate(viewer)
+
+        response = self.client.post(self.action_url(company, "archive"))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_company_detail_is_scoped_to_url_organization(self):
         hidden = Company.objects.get(name="Hidden Company")

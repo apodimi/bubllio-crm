@@ -1,6 +1,9 @@
 export interface Company {
   id: string
   organization: string
+  customer_code: string
+  assigned_to: number | null
+  assigned_to_name: string
   name: string
   tax_id: string
   industry: string
@@ -16,6 +19,24 @@ export interface Company {
   lifecycle_stage: 'lead' | 'prospect' | 'customer' | 'inactive'
   created_at: string
   updated_at: string
+  archived_at: string | null
 }
 
-export type CompanyInput = Omit<Company, 'id' | 'organization' | 'created_at' | 'updated_at'>
+export type CompanyInput = Omit<
+  Company,
+  | 'id'
+  | 'organization'
+  | 'customer_code'
+  | 'assigned_to_name'
+  | 'created_at'
+  | 'updated_at'
+  | 'archived_at'
+>
+
+export interface CompanyActivity {
+  id: string
+  action: 'created' | 'updated' | 'assigned' | 'contact_added' | 'archived' | 'restored'
+  actor_name: string
+  details: { fields?: string[]; contact_name?: string }
+  created_at: string
+}
