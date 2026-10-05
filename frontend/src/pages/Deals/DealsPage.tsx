@@ -3,12 +3,13 @@ import AddRounded from '@mui/icons-material/AddRounded'
 import {
   closestCorners,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { Alert, Box, Button, Chip, Stack } from '@mui/material'
 import { CreateDialog } from '../../components/common/CreateDialog'
@@ -17,15 +18,16 @@ import { useCompanies } from '../../features/companies'
 import { dealKeys, useDeals, useMoveDeal, useUpdateDeal } from '../../features/deals'
 import { canCreateRecords, organizationPath, useWorkspace } from '../../features/organizations'
 import type { Deal, DealStage } from '../../types/deal.types'
+import { DealDragPreview } from './DealCard'
 import { DealLane } from './DealLane'
 
-const stages: Array<{ value: DealStage; label: string }> = [
-  { value: 'lead', label: 'Lead' },
-  { value: 'qualified', label: 'Qualified' },
-  { value: 'proposal', label: 'Proposal' },
-  { value: 'negotiation', label: 'Negotiation' },
-  { value: 'won', label: 'Won' },
-  { value: 'lost', label: 'Lost' },
+const stages: Array<{ value: DealStage; label: string; accent: string }> = [
+  { value: 'lead', label: 'Lead', accent: '#6b7a90' },
+  { value: 'qualified', label: 'Qualified', accent: '#005bef' },
+  { value: 'proposal', label: 'Proposal', accent: '#4f46e5' },
+  { value: 'negotiation', label: 'Negotiation', accent: '#d97706' },
+  { value: 'won', label: 'Won', accent: '#16845b' },
+  { value: 'lost', label: 'Lost', accent: '#c24157' },
 ]
 const money = (value: string, currency: string) =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(value))
@@ -37,6 +39,7 @@ export function DealsPage() {
   const update = useUpdateDeal(org.id)
   const move = useMoveDeal(org.id)
   const [create, setCreate] = useState(false)
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -69,6 +72,7 @@ export function DealsPage() {
   }
 
   function dragEnd(event: DragEndEvent) {
+    setActiveDeal(null)
     const deal = event.active.data.current?.deal as Deal | undefined
     const stage = event.over?.data.current?.stage as DealStage | undefined
     if (!deal || !stage || !event.over) return
@@ -85,6 +89,10 @@ export function DealsPage() {
       stage,
       position: targetIndex < 0 ? destination.length : targetIndex,
     })
+  }
+
+  function dragStart(event: DragStartEvent) {
+    setActiveDeal((event.active.data.current?.deal as Deal | undefined) ?? null)
   }
 
   const mutationError = update.error ?? move.error
@@ -137,13 +145,19 @@ export function DealsPage() {
           description="Add an opportunity and move it forward as the conversation develops."
         />
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={dragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={dragStart}
+          onDragCancel={() => setActiveDeal(null)}
+          onDragEnd={dragEnd}
+        >
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: {
                 xs: 'repeat(6,minmax(280px,1fr))',
-                lg: 'repeat(6,minmax(220px,1fr))',
+                lg: 'repeat(6,minmax(252px,1fr))',
               },
               gap: 2,
               overflowX: 'auto',
@@ -155,12 +169,16 @@ export function DealsPage() {
                 key={stage.value}
                 stage={stage.value}
                 label={stage.label}
+                accent={stage.accent}
                 deals={laneDeals(stage.value)}
                 stages={stages}
                 onStageChange={changeStage}
               />
             ))}
           </Box>
+          <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
+            {activeDeal ? <DealDragPreview deal={activeDeal} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
       {create && companies.data ? (

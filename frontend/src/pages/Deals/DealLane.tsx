@@ -1,40 +1,98 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Chip, Paper, Stack, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
+import { Box, Stack, Typography } from '@mui/material'
 import type { Deal, DealStage } from '../../types/deal.types'
 import { DealCard } from './DealCard'
+
+const money = (value: number, currency: string) =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value)
 
 export function DealLane({
   stage,
   label,
+  accent,
   deals,
   stages,
   onStageChange,
 }: {
   stage: DealStage
   label: string
+  accent: string
   deals: Deal[]
-  stages: Array<{ value: DealStage; label: string }>
+  stages: Array<{ value: DealStage; label: string; accent: string }>
   onStageChange: (deal: Deal, stage: DealStage) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `stage:${stage}`, data: { stage } })
+  const totals = deals.reduce<Record<string, number>>(
+    (result, deal) => ({
+      ...result,
+      [deal.currency]: (result[deal.currency] ?? 0) + Number(deal.net_value),
+    }),
+    {},
+  )
   return (
-    <Paper
+    <Box
       ref={setNodeRef}
-      variant="outlined"
       sx={{
-        p: 2,
-        minHeight: 300,
-        bgcolor: isOver ? 'action.hover' : 'background.default',
-        transition: 'background-color 120ms ease-out',
+        p: 1.5,
+        minHeight: 440,
+        borderRadius: '16px',
+        bgcolor: isOver
+          ? (theme) => alpha(theme.palette.primary.main, 0.075)
+          : (theme) => alpha(theme.palette.primary.main, 0.025),
+        outline: '1px solid',
+        outlineColor: isOver ? (theme) => alpha(theme.palette.primary.main, 0.45) : 'divider',
+        outlineOffset: -1,
+        transition: 'background-color 140ms ease-out, outline-color 140ms ease-out',
       }}
     >
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography sx={{ fontWeight: 800 }}>{label}</Typography>
-        <Chip size="small" label={deals.length} />
+      <Stack spacing={0.75} sx={{ px: 0.5, pt: 0.25, pb: 1.75 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              bgcolor: accent,
+              boxShadow: `0 0 0 4px ${alpha(accent, 0.12)}`,
+            }}
+          />
+          <Typography sx={{ fontWeight: 800, flex: 1 }}>{label}</Typography>
+          <Box
+            sx={{
+              minWidth: 24,
+              height: 24,
+              px: 0.75,
+              borderRadius: 1.5,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'background.paper',
+              color: 'text.secondary',
+              fontSize: 12,
+              fontWeight: 750,
+            }}
+          >
+            {deals.length}
+          </Box>
+        </Stack>
+        {Object.entries(totals).map(([currency, total]) => (
+          <Typography
+            key={currency}
+            variant="caption"
+            color="text.secondary"
+            sx={{ pl: 2, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {money(total, currency)} net
+          </Typography>
+        ))}
       </Stack>
       <SortableContext items={deals.map((deal) => deal.id)} strategy={verticalListSortingStrategy}>
-        <Stack spacing={1.5}>
+        <Stack spacing={1.25}>
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -43,8 +101,29 @@ export function DealLane({
               onStageChange={(next) => onStageChange(deal, next)}
             />
           ))}
+          {deals.length === 0 ? (
+            <Box
+              sx={{
+                minHeight: 116,
+                border: '1px dashed',
+                borderColor: isOver ? 'primary.main' : 'divider',
+                borderRadius: '12px',
+                display: 'grid',
+                placeItems: 'center',
+                color: isOver ? 'primary.main' : 'text.secondary',
+                bgcolor: isOver
+                  ? (theme) => alpha(theme.palette.primary.main, 0.04)
+                  : 'transparent',
+                transition: 'all 140ms ease-out',
+              }}
+            >
+              <Typography variant="caption" sx={{ fontWeight: 650 }}>
+                {isOver ? `Move to ${label}` : 'Drop a deal here'}
+              </Typography>
+            </Box>
+          ) : null}
         </Stack>
       </SortableContext>
-    </Paper>
+    </Box>
   )
 }
