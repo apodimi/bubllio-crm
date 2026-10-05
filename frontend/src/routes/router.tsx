@@ -91,7 +91,18 @@ const overview = createRoute({
 const companies = createRoute({
   getParentRoute: () => workspace,
   path: '/companies',
+  validateSearch: (search: Record<string, unknown>) => ({
+    company: typeof search.company === 'string' ? search.company : undefined,
+  }),
   component: lazyRouteComponent(() => import('../pages/Companies/CompaniesPage'), 'CompaniesPage'),
+})
+const companyDetail = createRoute({
+  getParentRoute: () => workspace,
+  path: '/companies/$companyId',
+  component: lazyRouteComponent(
+    () => import('../pages/Companies/CompanyDetailPage'),
+    'CompanyDetailPage',
+  ),
 })
 const contacts = createRoute({
   getParentRoute: () => workspace,
@@ -125,7 +136,15 @@ export const router = createRouter({
     passwordReset,
     passwordResetConfirm,
     accountSettings,
-    workspace.addChildren([overview, companies, contacts, automations, members, settings]),
+    workspace.addChildren([
+      overview,
+      companies,
+      companyDetail,
+      contacts,
+      automations,
+      members,
+      settings,
+    ]),
   ]),
 })
 declare module '@tanstack/react-router' {

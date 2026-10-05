@@ -29,6 +29,9 @@ htmlcov/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.playwright-cli/
+output/playwright/
+.impeccable/bin/
 
 # IDEs
 .idea/

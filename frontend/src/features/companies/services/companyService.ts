@@ -20,6 +20,8 @@ export const companyService = {
     const query = params.toString()
     return request<Company[]>(companyPath(organizationId) + (query ? `?${query}` : ''), { signal })
   },
+  get: (organizationId: string, companyId: string, signal?: AbortSignal) =>
+    request<Company>(companyPath(organizationId, companyId), { signal }),
   create: (organizationId: string, body: CompanyInput) =>
     request<Company>(companyPath(organizationId), { body }),
   update: (organizationId: string, companyId: string, body: CompanyInput) =>

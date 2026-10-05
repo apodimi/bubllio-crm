@@ -1,5 +1,6 @@
 export {
   companyKeys,
+  useCompany,
   useCompanies,
   useCreateCompany,
   useDeleteCompany,

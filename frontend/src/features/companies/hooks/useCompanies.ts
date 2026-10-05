@@ -4,9 +4,12 @@ import { companyService } from '../services/companyService'
 import type { CompanyFilters } from '../services/companyService'
 
 export const companyKeys = {
-  byOrganization: (organizationId: string) => ['organizations', organizationId, 'companies'] as const,
+  byOrganization: (organizationId: string) =>
+    ['organizations', organizationId, 'companies'] as const,
   list: (organizationId: string, filters: CompanyFilters) =>
     [...companyKeys.byOrganization(organizationId), filters] as const,
+  detail: (organizationId: string, companyId: string) =>
+    [...companyKeys.byOrganization(organizationId), companyId] as const,
 }
 
 const companiesQuery = (organizationId: string, filters: CompanyFilters) =>
@@ -17,6 +20,13 @@ const companiesQuery = (organizationId: string, filters: CompanyFilters) =>
 
 export const useCompanies = (organizationId: string, filters: CompanyFilters = {}) =>
   useQuery(companiesQuery(organizationId, filters))
+
+export const useCompany = (organizationId: string, companyId: string) =>
+  useQuery({
+    queryKey: companyKeys.detail(organizationId, companyId),
+    queryFn: ({ signal }) => companyService.get(organizationId, companyId, signal),
+    enabled: Boolean(companyId),
+  })
 
 const useCompanyMutation = (organizationId: string) => {
   const queryClient = useQueryClient()

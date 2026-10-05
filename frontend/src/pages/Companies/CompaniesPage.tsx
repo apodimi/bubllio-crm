@@ -1,6 +1,7 @@
 import { useDeferredValue, useState } from 'react'
 import {
   Alert,
+  Box,
   Button,
   Chip,
   Dialog,
@@ -24,14 +25,18 @@ import {
 import AddRounded from '@mui/icons-material/AddRounded'
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useCompanies, useDeleteCompany } from '../../features/companies'
 import { useWorkspace, canCreateRecords } from '../../features/organizations'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
 import { CompanyDialog } from '../../features/companies/components/CompanyDialog'
+import { CompanyPreviewDrawer } from '../../features/companies/components/CompanyPreviewDrawer'
 import type { Company } from '../../types/company.types'
 
 export function CompaniesPage() {
   const org = useWorkspace()
+  const navigate = useNavigate({ from: '/organizations/$organizationId/companies' })
+  const routeSearch = useSearch({ from: '/organizations/$organizationId/companies' })
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<Company['lifecycle_stage'] | ''>('')
   const deferredSearch = useDeferredValue(search)
@@ -42,6 +47,14 @@ export function CompaniesPage() {
   const remove = useDeleteCompany(org.id)
   const canManage = canCreateRecords(org)
   const rows = query.data ?? []
+
+  function openCompany(companyId: string) {
+    void navigate({ search: { company: companyId } })
+  }
+
+  function closeCompany() {
+    void navigate({ search: { company: undefined } })
+  }
   return (
     <>
       <PageHeading
@@ -93,68 +106,167 @@ export function CompaniesPage() {
               }
             />
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Company</TableCell>
-                    <TableCell>Business profile</TableCell>
-                    <TableCell>Location</TableCell>
-                    <TableCell>Stage</TableCell>
-                    {canManage && <TableCell align="right">Actions</TableCell>}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
+            <>
+              <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />}>
                   {rows.map((company) => (
-                    <TableRow key={company.id} hover>
-                      <TableCell>
-                        <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {company.email || company.phone_number || 'No contact details'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{company.industry || '—'}</Typography>
-                        {company.tax_id && (
-                          <Typography variant="caption" color="text.secondary">
-                            Tax ID: {company.tax_id}
+                    <Box
+                      key={company.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open ${company.name}`}
+                      onClick={() => openCompany(company.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openCompany(company.id)
+                        }
+                      }}
+                      sx={{ p: 2.5, cursor: 'pointer', '&:active': { bgcolor: 'action.selected' } }}
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={2}
+                        sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
+                      >
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            {company.email || company.phone_number || 'No contact details'}
                           </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>{[company.city, company.country].filter(Boolean).join(', ') || '—'}</TableCell>
-                      <TableCell>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', mt: 1.25 }}
+                          >
+                            {[company.industry, company.city, company.country]
+                              .filter(Boolean)
+                              .join(' · ') || 'Business profile not completed'}
+                          </Typography>
+                        </Box>
                         <Chip
                           size="small"
                           label={company.lifecycle_stage}
                           color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
                           variant="outlined"
                         />
-                      </TableCell>
-                      {canManage && (
-                        <TableCell align="right">
-                          <Tooltip title="Edit company">
-                            <IconButton
-                              aria-label={`Edit ${company.name}`}
-                              onClick={() => setEditing(company)}
-                            >
-                              <EditRounded />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete company">
-                            <IconButton
-                              aria-label={`Delete ${company.name}`}
-                              onClick={() => setDeleting(company)}
-                            >
-                              <DeleteOutlineRounded />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      )}
-                    </TableRow>
+                      </Stack>
+                      {canManage ? (
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          sx={{ mt: 1.5, justifyContent: 'flex-end' }}
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label={`Edit ${company.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setEditing(company)
+                            }}
+                          >
+                            <EditRounded fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label={`Delete ${company.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setDeleting(company)
+                            }}
+                          >
+                            <DeleteOutlineRounded fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      ) : null}
+                    </Box>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                </Stack>
+              </Box>
+              <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Company</TableCell>
+                      <TableCell>Business profile</TableCell>
+                      <TableCell>Location</TableCell>
+                      <TableCell>Stage</TableCell>
+                      {canManage && <TableCell align="right">Actions</TableCell>}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((company) => (
+                      <TableRow
+                        key={company.id}
+                        hover
+                        tabIndex={0}
+                        aria-label={`Open ${company.name}`}
+                        onClick={() => openCompany(company.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openCompany(company.id)
+                          }
+                        }}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {company.email || company.phone_number || 'No contact details'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">{company.industry || '—'}</Typography>
+                          {company.tax_id && (
+                            <Typography variant="caption" color="text.secondary">
+                              Tax ID: {company.tax_id}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {[company.city, company.country].filter(Boolean).join(', ') || '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={company.lifecycle_stage}
+                            color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        {canManage && (
+                          <TableCell align="right">
+                            <Tooltip title="Edit company">
+                              <IconButton
+                                aria-label={`Edit ${company.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setEditing(company)
+                                }}
+                              >
+                                <EditRounded />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete company">
+                              <IconButton
+                                aria-label={`Delete ${company.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setDeleting(company)
+                                }}
+                              >
+                                <DeleteOutlineRounded />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
         </Paper>
       )}
@@ -162,6 +274,13 @@ export function CompaniesPage() {
       {editing && (
         <CompanyDialog organizationId={org.id} company={editing} onClose={() => setEditing(null)} />
       )}
+      {routeSearch.company ? (
+        <CompanyPreviewDrawer
+          organizationId={org.id}
+          companyId={routeSearch.company}
+          onClose={closeCompany}
+        />
+      ) : null}
       <Dialog
         open={Boolean(deleting)}
         onClose={remove.isPending ? undefined : () => setDeleting(null)}

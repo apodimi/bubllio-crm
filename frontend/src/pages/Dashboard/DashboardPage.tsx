@@ -87,6 +87,7 @@ export function DashboardPage() {
         <Link
           to="/organizations/$organizationId/companies"
           params={{ organizationId: org.id }}
+          search={{ company: undefined }}
           style={{ textDecoration: 'none' }}
         >
           <Button
