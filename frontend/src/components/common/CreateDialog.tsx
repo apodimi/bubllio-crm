@@ -38,7 +38,11 @@ export function CreateDialog({
   const mutation = useCreateResource(path, invalidate, onClose)
   function submit(event: FormEvent) {
     event.preventDefault()
-    const body = Object.fromEntries(fields.map((field) => [field.name, values[field.name] ?? '']))
+    const body = Object.fromEntries(
+      fields
+        .map((field) => [field.name, values[field.name] ?? ''] as const)
+        .filter(([, value]) => value !== ''),
+    )
     mutation.mutate(body)
   }
   return (

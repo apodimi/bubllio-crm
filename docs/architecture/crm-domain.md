@@ -14,6 +14,7 @@ Organization
   -> OrganizationInvitation
   -> Company
        -> Contact
+       -> Deal
   -> Automation
        -> AutomationRun
 
@@ -36,6 +37,7 @@ An organization owns its CRM data:
 
 - companies
 - contacts
+- deals and sales pipeline
 - automations
 - users and role-based permissions through memberships
 - pending invitations to users who are not members yet
@@ -127,6 +129,14 @@ an optional workspace owner, active/former status, one active primary contact
 per company, archival state, and a tenant-scoped activity log. See the
 [business contact guide](../guides/contact-management.md) for the non-technical workflow.
 
+## Deal
+
+`Deal` is a tenant-owned sales opportunity connected to one company and
+optionally one contact and workspace owner. It moves through lead, qualified,
+proposal, negotiation, won, or lost stages and stores value, currency,
+probability, and expected close date. Cross-tenant company, contact, and owner
+references are rejected. See the [business pipeline guide](../guides/sales-pipeline.md).
+
 ## Why Not Use `Customer` As The Main Model?
 
 `Customer` sounds like someone who already bought something.
@@ -154,10 +164,12 @@ Later, if the product needs more advanced account management, we can introduce a
 ```text
 Organization 1 -> many Companies
 Organization 1 -> many Contacts
+Organization 1 -> many Deals
 Organization 1 -> many OrganizationMemberships
 User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
 Company 1 -> many CompanyActivities
+Company 1 -> many Deals
 User 1 -> many assigned Companies
 Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
