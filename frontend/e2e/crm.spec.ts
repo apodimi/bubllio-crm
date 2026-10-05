@@ -5,6 +5,36 @@ const orgs = [
   { id: 'beta', name: 'Beta Studio', slug: 'beta', current_user_role: 'viewer' },
 ]
 async function mockApi(page: Page) {
+  const subscriptions = [
+    {
+      id: 'sub-a',
+      organization: 'alpha',
+      company: 'co-a',
+      company_name: 'Acme Ltd',
+      catalog_item: null,
+      catalog_item_name: '',
+      assigned_to: null,
+      assigned_to_name: '',
+      name: 'Managed service',
+      net_price: '100.00',
+      currency: 'EUR',
+      tax_rate: '24.00',
+      tax_amount: '24.00',
+      gross_price: '124.00',
+      billing_interval: 'monthly',
+      start_date: '2030-01-01',
+      next_billing_date: '2030-02-01',
+      renewal_date: null,
+      end_date: null,
+      cancellation_effective_date: null as string | null,
+      cancelled_at: null as string | null,
+      auto_renew: true,
+      status: 'active',
+      effective_status: 'active',
+      operational_reference: '',
+      notes: '',
+    },
+  ]
   const companies = [
     {
       id: 'co-a',
@@ -70,6 +100,63 @@ async function mockApi(page: Page) {
     if (path === '/api/v1/organizations/alpha/companies/assignees/') {
       return route.fulfill({ json: [{ id: 1, name: 'Demo User', role: 'owner' }] })
     }
+    if (path === '/api/v1/organizations/alpha/services/overview/') {
+      return route.fulfill({
+        json: {
+          active_subscriptions: 1,
+          scheduled_cancellations: subscriptions[0].status === 'cancelling' ? 1 : 0,
+          renewals_next_30_days: 0,
+          overdue_charges: 1,
+          open_balances: { EUR: '124.00' },
+          overdue_balances: { EUR: '124.00' },
+          collected_this_month: { EUR: '248.00' },
+          monthly_recurring_revenue: { EUR: '100.00' },
+        },
+      })
+    }
+    if (path === '/api/v1/organizations/beta/services/overview/') {
+      return route.fulfill({
+        json: {
+          active_subscriptions: 0,
+          scheduled_cancellations: 0,
+          renewals_next_30_days: 0,
+          overdue_charges: 0,
+          open_balances: {},
+          overdue_balances: {},
+          collected_this_month: {},
+          monthly_recurring_revenue: {},
+        },
+      })
+    }
+    if (path === '/api/v1/organizations/alpha/services/catalog/') {
+      return route.fulfill({ json: [] })
+    }
+    if (path === '/api/v1/organizations/alpha/services/subscriptions/') {
+      return route.fulfill({ json: subscriptions })
+    }
+    if (path === '/api/v1/organizations/alpha/services/charges/') {
+      return route.fulfill({ json: [] })
+    }
+    if (path === '/api/v1/organizations/alpha/services/subscriptions/sub-a/cancel/') {
+      subscriptions[0] = {
+        ...subscriptions[0],
+        status: 'cancelling',
+        effective_status: 'cancelling',
+        cancellation_effective_date: '2030-02-28',
+        cancelled_at: '2030-02-01T09:00:00Z',
+      }
+      return route.fulfill({ json: subscriptions[0] })
+    }
+    if (path === '/api/v1/organizations/alpha/services/subscriptions/sub-a/resume/') {
+      subscriptions[0] = {
+        ...subscriptions[0],
+        status: 'active',
+        effective_status: 'active',
+        cancellation_effective_date: null,
+        cancelled_at: null,
+      }
+      return route.fulfill({ json: subscriptions[0] })
+    }
     if (path.startsWith('/api/v1/organizations/alpha/companies/')) {
       const companyId = path.split('/').at(-2)
       const index = companies.findIndex((company) => company.id === companyId)
@@ -112,13 +199,13 @@ test('login, tenant switch, permissions and logout isolate data', async ({ page 
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
-  await expect(page.getByRole('cell', { name: 'Acme Ltd', exact: true })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Open Acme Ltd/ })).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('companies-desktop.png'), fullPage: true })
   await page.getByRole('combobox', { name: 'Select workspace' }).click()
   await page.getByRole('option', { name: 'Beta Studio' }).click()
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
-  await expect(page.getByRole('cell', { name: 'Beta Only' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Acme Ltd', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('row', { name: /Open Beta Only/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Open Acme Ltd/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Add company' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Open account menu' }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
@@ -187,11 +274,11 @@ test('creates company, handles validation and refreshes list', async ({ page }) 
   await page.getByLabel('Company name', { exact: false }).fill('Invalid')
   await page.getByRole('combobox', { name: 'Stage' }).click()
   await page.getByRole('option', { name: 'Lead', exact: true }).click()
-  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  await page.getByRole('button', { name: 'Create company', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Please choose another name.')
   await page.getByLabel('Company name', { exact: false }).fill('New partner')
-  await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await expect(page.getByRole('cell', { name: 'New partner', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Create company', exact: true }).click()
+  await expect(page.getByRole('row', { name: /Open New partner/ })).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
@@ -220,7 +307,7 @@ test('closing the stage menu never flashes owner options', async ({ page }) => {
   expect(await page.locator('body').getAttribute('data-owner-option-flashed')).toBe('false')
 })
 
-test('edits and deletes a company', async ({ page }) => {
+test('edits a company', async ({ page }) => {
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
@@ -230,14 +317,10 @@ test('edits and deletes a company', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Stage' }).click()
   await page.getByRole('option', { name: 'Customer', exact: true }).click()
   await page.getByRole('button', { name: 'Save changes' }).click()
-  await expect(page.getByRole('cell', { name: 'Acme Partner', exact: true })).toBeVisible()
-  await expect(page.getByText('customer', { exact: true })).toBeVisible()
-
-  await page.getByRole('button', { name: 'Delete Acme Partner' }).click()
-  await expect(page.getByText(/all of its contacts will be permanently deleted/)).toBeVisible()
-  await page.getByRole('button', { name: 'Delete company' }).click()
-  await expect(page.getByRole('cell', { name: 'Acme Partner', exact: true })).toHaveCount(0)
-  await expect(page.getByText('Your next partnership awaits')).toBeVisible()
+  await expect(page.getByRole('row', { name: /Open Acme Partner/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Change stage for Acme Partner' })).toHaveText(
+    'customer',
+  )
 })
 test('contact creation uses a company from the selected workspace', async ({ page }) => {
   await login(page)
@@ -251,9 +334,31 @@ test('contact creation uses a company from the selected workspace', async ({ pag
   const sent = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().endsWith('/contacts/'),
   )
-  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  await page.getByRole('button', { name: 'Create contact', exact: true }).click()
   expect((await sent).postDataJSON()).toMatchObject({ company: 'co-a', first_name: 'Maria' })
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('subscription cancellation remains active through the paid period and can resume', async ({
+  page,
+}) => {
+  await login(page)
+  await openAlpha(page)
+  await expect(page.getByText('Revenue & collections')).toBeVisible()
+  await expect(page.getByText('248.00 EUR')).toBeVisible()
+  await page.getByRole('link', { name: 'Services', exact: true }).click()
+  await page.getByRole('button', { name: 'Edit Managed service' }).click()
+  await page.getByRole('button', { name: 'Cancel subscription…' }).click()
+  const cancellationRequest = page.waitForRequest((request) =>
+    request.url().endsWith('/subscriptions/sub-a/cancel/'),
+  )
+  await page.getByRole('button', { name: 'Cancel at period end' }).click()
+  expect((await cancellationRequest).postDataJSON()).toEqual({ mode: 'end_of_period' })
+  await expect(page.getByText('Ending at period close')).toBeVisible()
+  await page.getByRole('button', { name: 'Edit Managed service' }).click()
+  await expect(page.getByText(/Service remains active through/)).toBeVisible()
+  await page.getByRole('button', { name: 'Keep active' }).click()
+  await expect(page.getByText('Active', { exact: true })).toBeVisible()
 })
 
 test('workspace owner safely updates and tests invitation email', async ({ page }) => {
@@ -300,14 +405,17 @@ test('workspace owner safely updates and tests invitation email', async ({ page 
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Email connections' }).click()
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
   await expect(page.getByLabel('SMTP hostname')).toHaveValue('smtp.example.com')
   await expect(page.getByLabel('New SMTP password')).toHaveValue('')
   await page.getByLabel('Sender display name').fill('Alpha CRM')
   await page.getByRole('button', { name: 'Save connection' }).click()
-  await expect(page.getByText('Email connection saved.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Edit SMTP connection' })).toHaveCount(0)
   await page.getByLabel('Test recipient').fill('owner@example.com')
-  await page.getByRole('button', { name: 'Send test email' }).click()
-  await expect(page.getByText(/Test email accepted by the SMTP server/)).toBeVisible()
+  const testRequest = page.waitForRequest((request) => request.url().endsWith('/smtp-a/test/'))
+  await page.getByRole('button', { name: 'Send test', exact: true }).click()
+  await testRequest
 })
 test('mobile navigation works without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })

@@ -43,6 +43,7 @@ class CustomerSubscription(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
         PAUSED = "paused", "Paused"
+        CANCELLING = "cancelling", "Cancelling"
         CANCELLED = "cancelled", "Cancelled"
         EXPIRED = "expired", "Expired"
 
@@ -61,6 +62,8 @@ class CustomerSubscription(models.Model):
     next_billing_date = models.DateField()
     renewal_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
+    cancellation_effective_date = models.DateField(blank=True, null=True)
+    cancelled_at = models.DateTimeField(blank=True, null=True)
     auto_renew = models.BooleanField(default=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     operational_reference = models.CharField(max_length=255, blank=True)
@@ -83,6 +86,24 @@ class CustomerSubscription(models.Model):
     @property
     def gross_price(self):
         return self.net_price + self.tax_amount
+
+    @property
+    def effective_status(self):
+        today = timezone.localdate()
+        if (
+            self.end_date
+            and self.end_date < today
+            and self.status
+            in {self.Status.ACTIVE, self.Status.PAUSED, self.Status.CANCELLING}
+        ):
+            return self.Status.EXPIRED
+        if (
+            self.status == self.Status.CANCELLING
+            and self.cancellation_effective_date
+            and self.cancellation_effective_date < today
+        ):
+            return self.Status.CANCELLED
+        return self.status
 
     def __str__(self):
         return f"{self.company}: {self.name}"

@@ -49,6 +49,21 @@ When a recurring charge is fully paid, the next charge is created once, provided
 the subscription is active, auto-renew is enabled, and its end date has not
 passed.
 
+## Cancel or resume a subscription
+
+The normal cancellation option is **Cancel at period end**. The subscription
+then enters **Ending at period close** and remains available through the last
+day of its current coverage period. Any later, unpaid charge that was prepared
+by the system is cancelled, while paid charges and payment history remain.
+
+If the current charge is paid after cancellation has already been scheduled, no
+new charge is created. Until the effective cancellation date, the user may
+select **Keep active** to resume the subscription. This reopens the already
+prepared next charge instead of creating a duplicate.
+
+**Cancel immediately** is intended for exceptional cases. It ends access on the
+current date but does not erase amounts already owed or payments already made.
+
 ## Understand the statuses
 
 - **Upcoming:** due on a future date and no payment has been recorded.
@@ -57,7 +72,16 @@ passed.
 - **Partially paid:** some money was received but a balance remains.
 - **Paid:** the full gross amount was received.
 - **Paused:** the customer subscription is temporarily on hold.
+- **Ending at period close:** cancellation is scheduled, but the service remains
+  active through the displayed date.
 - **Cancelled / expired:** the agreement is no longer active. History remains.
+
+## Overview metrics
+
+The workspace Overview shows monthly recurring revenue, payments collected in
+the current month, open and overdue balances, active subscriptions, upcoming
+renewals, and scheduled cancellations. Financial amounts are always grouped by
+currency. Monthly recurring revenue excludes VAT and one-off services.
 
 ## Permissions and data safety
 

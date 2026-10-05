@@ -117,7 +117,7 @@ function NewEmailConnection({ account, save, cancel }: {
     } finally { setSaving(false) }
   }
   const field = (name: keyof typeof values, label: string, type = 'text') => <TextField
-    label={label} type={type} value={values[name]} required={name !== 'from_name'} disabled={saving}
+    label={label} type={type} value={values[name]} required={name !== 'from_name' && !(name === 'password' && account)} disabled={saving}
     onChange={(event) => setValues((current) => ({ ...current, [name]: event.target.value }))}
   />
   return <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3, bgcolor: 'action.hover' }}><Stack component="form" onSubmit={(event) => void submit(event)} spacing={2}>

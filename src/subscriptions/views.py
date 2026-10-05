@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from access.permissions import Capability, get_organization_for_user
 
 from .models import Charge, CustomerSubscription, ServiceCatalogItem
+from .services import cancel_subscription, resume_subscription, subscription_overview
 from .serializers import (
     ChargeSerializer,
     CustomerSubscriptionSerializer,
@@ -103,6 +104,63 @@ class SubscriptionDetailAPIView(APIView):
         return Response(serializer.data)
 
 
+class SubscriptionCancelAPIView(APIView):
+    def post(self, request, organization_id, subscription_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        subscription = get_object_or_404(
+            CustomerSubscription, organization=organization, id=subscription_id
+        )
+        if subscription.effective_status in {
+            CustomerSubscription.Status.CANCELLED,
+            CustomerSubscription.Status.EXPIRED,
+        }:
+            return Response(
+                {"status": ["This subscription has already ended."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        mode = request.data.get("mode", "end_of_period")
+        if mode not in {"end_of_period", "immediate"}:
+            return Response(
+                {"mode": ["Choose end_of_period or immediate."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        subscription = cancel_subscription(
+            subscription=subscription, immediate=mode == "immediate"
+        )
+        return Response(CustomerSubscriptionSerializer(subscription).data)
+
+
+class SubscriptionResumeAPIView(APIView):
+    def post(self, request, organization_id, subscription_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        subscription = get_object_or_404(
+            CustomerSubscription, organization=organization, id=subscription_id
+        )
+        try:
+            subscription = resume_subscription(subscription=subscription)
+        except ValueError as error:
+            return Response({"status": [str(error)]}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(CustomerSubscriptionSerializer(subscription).data)
+
+
+class SubscriptionOverviewAPIView(APIView):
+    def get(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.VIEW_CRM,
+        )
+        return Response(subscription_overview(organization))
+
+
 class ChargeListAPIView(APIView):
     def get(self, request, organization_id):
         organization = get_organization_for_user(
@@ -139,4 +197,3 @@ class ChargePaymentListCreateAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-

@@ -191,7 +191,11 @@ amounts; it is not a manually maintained boolean.
 When an active recurring subscription with auto-renew enabled is fully paid,
 the service creates exactly one next charge. The database uniqueness constraint
 on subscription and due date keeps this operation idempotent. Pausing or
-cancelling a subscription does not delete its charges or payments.
+cancelling a subscription does not delete its charges or payments. A normal
+cancellation enters `cancelling` state through the current charge's coverage
+end, cancels only later open charges, and prevents payment from generating
+another charge. It may be resumed before that effective date without duplicating
+the next charge. Immediate cancellation remains an explicit exceptional action.
 
 ## Business Logic
 

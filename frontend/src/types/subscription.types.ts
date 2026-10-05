@@ -1,5 +1,5 @@
 export type BillingInterval = 'one_off' | 'monthly' | 'quarterly' | 'semiannual' | 'annual'
-export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'expired'
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelling' | 'cancelled' | 'expired'
 
 export interface ServiceCatalogItem {
   id: string
@@ -34,8 +34,11 @@ export interface CustomerSubscription {
   next_billing_date: string
   renewal_date: string | null
   end_date: string | null
+  cancellation_effective_date: string | null
+  cancelled_at: string | null
   auto_renew: boolean
   status: SubscriptionStatus
+  effective_status: SubscriptionStatus
   operational_reference: string
   notes: string
 }
@@ -68,10 +71,42 @@ export interface Charge {
   outstanding_amount: string
   currency: string
   state: 'open' | 'waived' | 'cancelled'
-  payment_status: 'upcoming' | 'due' | 'overdue' | 'partially_paid' | 'paid' | 'waived' | 'cancelled'
+  payment_status:
+    'upcoming' | 'due' | 'overdue' | 'partially_paid' | 'paid' | 'waived' | 'cancelled'
   payments: Payment[]
 }
 
 export type CatalogItemInput = Omit<ServiceCatalogItem, 'id' | 'organization'>
-export type SubscriptionInput = Pick<CustomerSubscription, 'company' | 'catalog_item' | 'name' | 'net_price' | 'currency' | 'tax_rate' | 'billing_interval' | 'start_date' | 'next_billing_date' | 'renewal_date' | 'end_date' | 'auto_renew' | 'status' | 'operational_reference' | 'notes'>
-export type PaymentInput = Pick<Payment, 'amount' | 'paid_date' | 'payment_method' | 'external_reference' | 'note'>
+export type SubscriptionInput = Pick<
+  CustomerSubscription,
+  | 'company'
+  | 'catalog_item'
+  | 'name'
+  | 'net_price'
+  | 'currency'
+  | 'tax_rate'
+  | 'billing_interval'
+  | 'start_date'
+  | 'next_billing_date'
+  | 'renewal_date'
+  | 'end_date'
+  | 'auto_renew'
+  | 'status'
+  | 'operational_reference'
+  | 'notes'
+>
+export type PaymentInput = Pick<
+  Payment,
+  'amount' | 'paid_date' | 'payment_method' | 'external_reference' | 'note'
+>
+
+export interface SubscriptionOverview {
+  active_subscriptions: number
+  scheduled_cancellations: number
+  renewals_next_30_days: number
+  overdue_charges: number
+  open_balances: Record<string, string>
+  overdue_balances: Record<string, string>
+  collected_this_month: Record<string, string>
+  monthly_recurring_revenue: Record<string, string>
+}

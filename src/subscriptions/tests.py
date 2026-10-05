@@ -169,18 +169,232 @@ class SubscriptionApiTests(APITestCase):
         self.assertEqual(list_response.data, [])
         self.assertEqual(payment_response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_cancelled_subscription_keeps_charge_history(self):
+    def test_immediate_cancellation_keeps_charge_history(self):
         response = self.create_subscription()
-        detail_url = reverse(
-            "subscription-detail",
+        cancel_url = reverse(
+            "subscription-cancel",
             kwargs={
                 "organization_id": self.organization.id,
                 "subscription_id": response.data["id"],
             },
         )
 
-        update_response = self.client.patch(detail_url, {"status": "cancelled"}, format="json")
+        update_response = self.client.post(cancel_url, {"mode": "immediate"}, format="json")
 
         self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data["effective_status"], "cancelled")
         self.assertEqual(Charge.objects.filter(subscription_id=response.data["id"]).count(), 1)
 
+    def test_cancellation_after_payment_keeps_access_until_period_end(self):
+        response = self.create_subscription()
+        subscription = CustomerSubscription.objects.get(id=response.data["id"])
+        current_charge = subscription.charges.get()
+        payment_url = reverse(
+            "charge-payment-list",
+            kwargs={"organization_id": self.organization.id, "charge_id": current_charge.id},
+        )
+        self.client.post(payment_url, {"amount": "124.00"}, format="json")
+        next_charge = subscription.charges.get(due_date=date(2026, 11, 5))
+
+        cancel_response = self.client.post(
+            reverse(
+                "subscription-cancel",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription.id,
+                },
+            ),
+            {"mode": "end_of_period"},
+            format="json",
+        )
+
+        self.assertEqual(cancel_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(cancel_response.data["effective_status"], "cancelling")
+        self.assertEqual(cancel_response.data["cancellation_effective_date"], "2026-11-04")
+        next_charge.refresh_from_db()
+        self.assertEqual(next_charge.state, Charge.State.CANCELLED)
+        self.assertEqual(current_charge.payments.count(), 1)
+
+    def test_payment_during_notice_period_does_not_create_next_charge(self):
+        response = self.create_subscription()
+        subscription = CustomerSubscription.objects.get(id=response.data["id"])
+        charge = subscription.charges.get()
+        self.client.post(
+            reverse(
+                "subscription-cancel",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription.id,
+                },
+            ),
+            {"mode": "end_of_period"},
+            format="json",
+        )
+
+        payment_response = self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={"organization_id": self.organization.id, "charge_id": charge.id},
+            ),
+            {"amount": "124.00"},
+            format="json",
+        )
+
+        self.assertEqual(payment_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(subscription.charges.count(), 1)
+
+    def test_pending_cancellation_can_be_resumed_and_reopens_next_charge(self):
+        response = self.create_subscription()
+        subscription = CustomerSubscription.objects.get(id=response.data["id"])
+        charge = subscription.charges.get()
+        self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={"organization_id": self.organization.id, "charge_id": charge.id},
+            ),
+            {"amount": "124.00"},
+            format="json",
+        )
+        cancel_url = reverse(
+            "subscription-cancel",
+            kwargs={
+                "organization_id": self.organization.id,
+                "subscription_id": subscription.id,
+            },
+        )
+        self.client.post(cancel_url, {"mode": "end_of_period"}, format="json")
+
+        resume_response = self.client.post(
+            reverse(
+                "subscription-resume",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription.id,
+                },
+            ),
+            format="json",
+        )
+
+        self.assertEqual(resume_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(resume_response.data["effective_status"], "active")
+        self.assertEqual(
+            subscription.charges.get(due_date=date(2026, 11, 5)).state,
+            Charge.State.OPEN,
+        )
+
+    def test_overview_reports_operational_metrics_by_currency(self):
+        response = self.create_subscription(renewal_date="2026-10-20")
+        subscription = CustomerSubscription.objects.get(id=response.data["id"])
+        charge = subscription.charges.get()
+        charge.due_date = date(2026, 10, 4)
+        charge.save(update_fields=("due_date", "updated_at"))
+        self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={"organization_id": self.organization.id, "charge_id": charge.id},
+            ),
+            {"amount": "24.00", "paid_date": "2026-10-05"},
+            format="json",
+        )
+
+        overview = self.client.get(
+            reverse("subscription-overview", kwargs={"organization_id": self.organization.id})
+        )
+
+        self.assertEqual(overview.status_code, status.HTTP_200_OK)
+        self.assertEqual(overview.data["active_subscriptions"], 1)
+        self.assertEqual(overview.data["renewals_next_30_days"], 1)
+        self.assertEqual(overview.data["overdue_charges"], 1)
+        self.assertEqual(overview.data["open_balances"]["EUR"], 100)
+        self.assertEqual(overview.data["collected_this_month"]["EUR"], 24)
+        self.assertEqual(overview.data["monthly_recurring_revenue"]["EUR"], 100)
+
+    def test_pause_cancels_future_charge_and_resume_reopens_it(self):
+        response = self.create_subscription()
+        subscription = CustomerSubscription.objects.get(id=response.data["id"])
+        charge = subscription.charges.get()
+        self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={"organization_id": self.organization.id, "charge_id": charge.id},
+            ),
+            {"amount": "124.00"},
+            format="json",
+        )
+
+        detail_url = reverse(
+            "subscription-detail",
+            kwargs={
+                "organization_id": self.organization.id,
+                "subscription_id": subscription.id,
+            },
+        )
+        pause_response = self.client.patch(detail_url, {"status": "paused"}, format="json")
+        future_charge = subscription.charges.get(due_date=date(2026, 11, 5))
+
+        self.assertEqual(pause_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(future_charge.state, Charge.State.CANCELLED)
+
+        resume_response = self.client.patch(detail_url, {"status": "active"}, format="json")
+        future_charge.refresh_from_db()
+        self.assertEqual(resume_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(future_charge.state, Charge.State.OPEN)
+
+    def test_past_end_date_is_effectively_expired_and_excluded_from_metrics(self):
+        subscription = CustomerSubscription.objects.create(
+            organization=self.organization,
+            company=self.company,
+            name="Ended service",
+            net_price="100.00",
+            currency="EUR",
+            tax_rate="24.00",
+            billing_interval="monthly",
+            start_date=date(2026, 9, 1),
+            next_billing_date=date(2026, 10, 1),
+            end_date=date(2026, 10, 4),
+        )
+
+        overview = self.client.get(
+            reverse("subscription-overview", kwargs={"organization_id": self.organization.id})
+        )
+
+        self.assertEqual(subscription.effective_status, CustomerSubscription.Status.EXPIRED)
+        self.assertEqual(overview.data["active_subscriptions"], 0)
+        self.assertEqual(overview.data["monthly_recurring_revenue"], {})
+
+    def test_cancellation_and_overview_are_tenant_scoped(self):
+        other_company = Company.objects.create(
+            organization=self.other_organization, name="Hidden customer"
+        )
+        other_subscription = CustomerSubscription.objects.create(
+            organization=self.other_organization,
+            company=other_company,
+            name="Hidden service",
+            net_price="10.00",
+            tax_rate="0.00",
+            currency="EUR",
+            billing_interval="monthly",
+            start_date=date(2026, 10, 5),
+            next_billing_date=date(2026, 10, 5),
+        )
+
+        cancellation = self.client.post(
+            reverse(
+                "subscription-cancel",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": other_subscription.id,
+                },
+            ),
+            {"mode": "end_of_period"},
+            format="json",
+        )
+        overview = self.client.get(
+            reverse(
+                "subscription-overview",
+                kwargs={"organization_id": self.other_organization.id},
+            )
+        )
+
+        self.assertEqual(cancellation.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(overview.status_code, status.HTTP_404_NOT_FOUND)
