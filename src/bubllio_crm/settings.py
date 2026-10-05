@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'companies.apps.CompaniesConfig',
     'contacts',
     'deals.apps.DealsConfig',
+    'subscriptions.apps.SubscriptionsConfig',
     'automations',
 ]
 

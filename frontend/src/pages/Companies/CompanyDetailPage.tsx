@@ -29,6 +29,7 @@ import {
 import { CompanyDialog } from '../../features/companies/components/CompanyDialog'
 import { CompanyProfileContent } from '../../features/companies/components/CompanyProfileContent'
 import { useContacts } from '../../features/contacts'
+import { useSubscriptions } from '../../features/subscriptions'
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value))
@@ -42,6 +43,7 @@ export function CompanyDetailPage() {
   const company = useCompany(organization.id, companyId)
   const contacts = useContacts(organization.id, { company: company.data?.id ?? '' })
   const activity = useCompanyActivity(organization.id, companyId)
+  const subscriptions = useSubscriptions(organization.id)
   const archive = useArchiveCompany(organization.id)
   const restore = useRestoreCompany(organization.id)
   const [editing, setEditing] = useState(false)
@@ -51,6 +53,9 @@ export function CompanyDetailPage() {
 
   const companyContacts = contacts.data ?? []
   const canManage = canCreateRecords(organization)
+  const companySubscriptions = (subscriptions.data ?? []).filter(
+    (subscription) => subscription.company === company.data.id,
+  )
 
   return (
     <>
@@ -194,6 +199,14 @@ export function CompanyDetailPage() {
               ))}
             </Stack>
           )}
+        </Paper>
+        <Paper variant="outlined" sx={{ overflow: 'hidden', gridColumn: { lg: '1 / -1' } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ px: 3, py: 2.5, alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2 }}>
+            <Box><Typography variant="h6">Services & billing</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>Customer subscriptions, renewal dates, and agreed amounts</Typography></Box>
+            <Link to="/organizations/$organizationId/services" params={{ organizationId: organization.id }}><Button component="span">Open billing</Button></Link>
+          </Stack>
+          <Divider />
+          {subscriptions.isPending ? <Loading /> : subscriptions.isError ? <Box sx={{ p: 3 }}><Failure error={subscriptions.error} retry={() => void subscriptions.refetch()} /></Box> : companySubscriptions.length === 0 ? <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>No services are connected to this company yet.</Typography> : <Stack divider={<Divider />}>{companySubscriptions.map((subscription) => <Stack key={subscription.id} direction={{ xs: 'column', sm: 'row' }} sx={{ px: 3, py: 2.25, justifyContent: 'space-between', gap: 1 }}><Box><Typography sx={{ fontWeight: 700 }}>{subscription.name}</Typography><Typography variant="body2" color="text.secondary">Next charge {formatDate(subscription.next_billing_date)} · {subscription.billing_interval.replace('_', ' ')}</Typography></Box><Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Chip size="small" label={subscription.status} color={subscription.status === 'active' ? 'success' : 'default'} /><Typography sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Number(subscription.gross_price).toLocaleString(undefined, { minimumFractionDigits: 2 })} {subscription.currency}</Typography></Stack></Stack>)}</Stack>}
         </Paper>
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3 }, gridColumn: { lg: '1 / -1' } }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 2.5 }}>

@@ -21,6 +21,7 @@ import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
 import SettingsRounded from '@mui/icons-material/SettingsRounded'
 import BoltRounded from '@mui/icons-material/BoltRounded'
 import TrendingUpRounded from '@mui/icons-material/TrendingUpRounded'
+import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
 import CheckRounded from '@mui/icons-material/CheckRounded'
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
 import { BrandLogo } from '../common/BrandLogo'
@@ -43,6 +44,7 @@ type NavigationItem = {
     | '/organizations/$organizationId/companies'
     | '/organizations/$organizationId/contacts'
     | '/organizations/$organizationId/deals'
+    | '/organizations/$organizationId/services'
     | '/organizations/$organizationId/automations'
     | '/organizations/$organizationId/members'
     | '/organizations/$organizationId/settings'
@@ -92,6 +94,7 @@ export function WorkspaceSidebar({
       icon: <PeopleAltRounded />,
     },
     { text: 'Deals', to: '/organizations/$organizationId/deals', path: `${basePath}/deals`, icon: <TrendingUpRounded /> },
+    { text: 'Services', to: '/organizations/$organizationId/services', path: `${basePath}/services`, icon: <SubscriptionsRounded /> },
     {
       text: 'Automations',
       to: '/organizations/$organizationId/automations',

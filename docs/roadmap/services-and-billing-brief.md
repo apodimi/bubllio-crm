@@ -10,7 +10,7 @@
 - hosting με μηνιαία πληρωμή,
 - domain με ετήσια ανανέωση,
 - website maintenance ανά τρίμηνο,
-- Microsoft 365 licenses ανά μήνα,
+- software licenses ανά μήνα,
 - ετήσιο support contract,
 - εφάπαξ installation ή consulting service.
 
@@ -187,13 +187,12 @@ feedback χρησιμοποιούν τις καθιερωμένες libraries κ
 - Usage-based pricing, tiered pricing και complex proration.
 - Multi-currency conversion.
 
-## Ανοιχτές αποφάσεις πριν την υλοποίηση
+## Αποφάσεις πρώτης έκδοσης
 
-1. Επιτρέπουμε custom billing interval στην πρώτη έκδοση ή μόνο προκαθορισμένα;
-2. Μπορεί payment να καλύπτει περισσότερες από μία charges ή μόνο μία;
-3. Χρειάζεται grace period πριν μία charge γίνει overdue;
-4. Ποιος ρόλος μπορεί να καταγράφει ή να διορθώνει payments;
-5. Θέλουμε reference πεδία ειδικά για domain/hosting ή ένα γενικό operational
-   reference στην πρώτη έκδοση;
-
-Οι παραπάνω αποφάσεις πρέπει να κλείσουν πριν δημιουργηθούν models και migrations.
+1. Χρησιμοποιούνται μόνο τα προκαθορισμένα billing intervals.
+2. Κάθε payment ανήκει σε μία charge. Μία charge δέχεται partial payments.
+3. Μία απλήρωτη charge γίνεται overdue την επόμενη ημέρα από το due date.
+4. Οι ρόλοι με δικαίωμα διαχείρισης CRM μπορούν να καταγράφουν payments.
+5. Χρησιμοποιείται ένα γενικό operational reference.
+6. Η επόμενη recurring charge δημιουργείται idempotently μόνο μετά την πλήρη
+   εξόφληση της τρέχουσας.

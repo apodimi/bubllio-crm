@@ -26,12 +26,7 @@ User
 
 `Organization` is our own customer's workspace or tenant.
 
-Example:
-
-```text
-Nerds Lab uses Bubllio CRM.
-Nerds Lab is an Organization.
-```
+An organization represents one isolated customer workspace in Bubllio CRM.
 
 An organization owns its CRM data:
 
@@ -62,11 +57,7 @@ roles control access after provisioning.
 
 `Company` is an external business stored inside the CRM.
 
-Example:
-
-```text
-Acme Inc is a company that Nerds Lab sells to or works with.
-```
+A company is an external business that the workspace sells to or works with.
 
 We chose `Company` instead of `Customer` because not every company is already a customer.
 
@@ -110,11 +101,7 @@ metadata such as changed field names rather than previous field values.
 
 `Contact` is a person inside a company.
 
-Example:
-
-```text
-Maria works in accounting at Acme Inc.
-```
+A contact is a person who works at one of the stored companies.
 
 Contacts belong to:
 
@@ -169,18 +156,42 @@ Later, if the product needs more advanced account management, we can introduce a
 Organization 1 -> many Companies
 Organization 1 -> many Contacts
 Organization 1 -> many Deals
+Organization 1 -> many ServiceCatalogItems
+Organization 1 -> many CustomerSubscriptions
+Organization 1 -> many Charges
+Organization 1 -> many Payments
 Organization 1 -> many OrganizationMemberships
 User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
 Company 1 -> many CompanyActivities
 Company 1 -> many Deals
+Company 1 -> many CustomerSubscriptions
 User 1 -> many assigned Companies
 Organization 1 -> many Automations
 Automation 1 -> many AutomationRuns
 Organization 1 -> 1 OrganizationSettings
 Organization 1 -> many EmailAccounts
 User 1 -> 0 or 1 personal Organization
+CustomerSubscription 1 -> many Charges
+Charge 1 -> many Payments
 ```
+
+## Services and billing
+
+`ServiceCatalogItem` stores reusable commercial defaults such as a service name,
+net price, VAT rate and billing cycle. `CustomerSubscription` is the actual
+agreement with one company and keeps a copy of those values so later catalog
+changes cannot rewrite customer history.
+
+Creating a subscription creates its first `Charge`. A charge snapshots net,
+VAT and gross amounts for one coverage period. One or more `Payment` records may
+settle it. The payment status is derived from the received and outstanding
+amounts; it is not a manually maintained boolean.
+
+When an active recurring subscription with auto-renew enabled is fully paid,
+the service creates exactly one next charge. The database uniqueness constraint
+on subscription and due date keeps this operation idempotent. Pausing or
+cancelling a subscription does not delete its charges or payments.
 
 ## Business Logic
 
