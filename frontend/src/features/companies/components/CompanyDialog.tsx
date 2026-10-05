@@ -40,6 +40,7 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
         borderTop: 1,
         borderBottom: 1,
         borderColor: 'divider',
+        borderRadius: '0 !important',
         '&:before': { display: 'none' },
       }}
     >
