@@ -18,6 +18,7 @@ describe('companySchema', () => {
         country: 'GR',
         notes: 'Priority account',
         lifecycle_stage: 'customer',
+        assigned_to: null,
       }).success,
     ).toBe(true)
   })

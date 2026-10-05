@@ -9,6 +9,7 @@ export const paper: Components<Theme>['MuiPaper'] = {
       borderColor: theme.palette.divider,
       boxShadow: 'none',
       borderRadius: brand.shape.borderRadius * 1.25,
+      overflow: 'hidden',
     }),
   },
 }

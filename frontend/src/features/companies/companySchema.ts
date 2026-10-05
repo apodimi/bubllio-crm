@@ -27,7 +27,7 @@ export const companySchema = z.object({
     .refine((value) => !value || /^[a-z]{2}$/i.test(value), 'Use a two-letter country code.'),
   notes: z.string().trim().max(5000, 'Use at most 5,000 characters.'),
   lifecycle_stage: z.enum(['lead', 'prospect', 'customer', 'inactive']),
-  assigned_to: z.number().int().positive().nullable().default(null),
+  assigned_to: z.number().int().positive().nullable(),
 })
 
 export type CompanyFormValues = z.infer<typeof companySchema>

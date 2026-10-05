@@ -13,6 +13,7 @@ export const tableCell: Components<Theme>['MuiTableCell'] = {
     root: ({ theme }) => ({
       borderColor: alpha(theme.palette.text.primary, 0.08),
       paddingBlock: 16,
+      'tbody tr:last-child &': { borderBottom: 0 },
     }),
   },
 }
