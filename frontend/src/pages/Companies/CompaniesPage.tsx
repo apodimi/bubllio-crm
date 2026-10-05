@@ -52,7 +52,7 @@ export function CompaniesPage() {
   const routeSearch = useSearch({ from: '/organizations/$organizationId/companies' })
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<Company['lifecycle_stage'] | ''>('')
-  const [visibility, setVisibility] = useState<'active' | 'archived' | 'all'>('active')
+  const [visibility, setVisibility] = useState<'active' | 'archived' | 'all'>('all')
   const [owner, setOwner] = useState<number | 'unassigned' | ''>('')
   const currentUserId = useAuthStore((state) => state.user?.id)
   const deferredSearch = useDeferredValue(search)
