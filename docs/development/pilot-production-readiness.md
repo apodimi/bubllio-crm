@@ -6,12 +6,15 @@ every P0 gate below has evidence and an owner.
 
 ## Current blockers
 
-- Production security settings are environment-driven, but no target deployment
-  has supplied and verified its values yet.
-- The checked-in email backend is console-only.
-- There is no production web-server, static-file, or deploy definition.
+- Production security and SMTP settings are environment-driven, but no target
+  deployment has supplied and verified its real values yet.
+- Gunicorn, Nginx, PostgreSQL Compose, static delivery, and health checks are
+  defined and smoke-tested locally; the target host and TLS proxy remain
+  unselected.
 - Backup, restore, monitoring, alerting, and incident procedures are undefined.
-- CI does not run tenant-isolation review, deployment checks, or PostgreSQL tests.
+- CI runs the backend suite on PostgreSQL and Django deployment checks, but a
+  manual tenant-isolation review and release-environment audit still need
+  retained evidence.
 - A customer acceptance flow and rollback decision have not been recorded.
 
 ## P0 go-live gates

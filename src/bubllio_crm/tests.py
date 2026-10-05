@@ -2,7 +2,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
-from django.test import SimpleTestCase
+from django.db import OperationalError
+from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
 
 from .database import get_database_config
 
@@ -58,3 +60,19 @@ class DatabaseConfigurationTests(SimpleTestCase):
     def test_invalid_database_url_has_clear_error(self):
         with self.assertRaisesMessage(ImproperlyConfigured, "DATABASE_URL is invalid"):
             get_database_config(self.base_dir, database_url="not-a-database-url")
+
+
+class HealthCheckTests(TestCase):
+    def test_health_check_reports_ready_when_database_is_available(self):
+        response = self.client.get(reverse("health-check"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+        self.assertIn("no-store", response["Cache-Control"])
+
+    @patch("bubllio_crm.health.connection.cursor", side_effect=OperationalError)
+    def test_health_check_reports_unavailable_when_database_is_down(self, _cursor):
+        response = self.client.get(reverse("health-check"))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"status": "unavailable"})

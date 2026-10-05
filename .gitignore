@@ -19,6 +19,7 @@ staticfiles/
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Tooling
 .coverage

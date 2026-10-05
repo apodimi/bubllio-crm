@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+.venv
+.uv-cache
+.logs
+.playwright-cli
+.env
+frontend
+src/db.sqlite3
+src/staticfiles
+**/__pycache__
+**/*.pyc

@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from bubllio_crm.health import health_check
+
 from accounts.auth_views import CurrentUserAPIView, LogoutAPIView
 from accounts.views import (
     CurrentAccountSettingsAPIView,
@@ -39,6 +41,7 @@ from access.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIV
 from onboarding.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
 urlpatterns = [
+    path("health/", health_check, name="health-check"),
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),
     path("api/v1/setup/smtp-test/", InstallationSmtpTestAPIView.as_view(), name="installation-smtp-test"),
     path(

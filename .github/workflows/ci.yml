@@ -9,6 +9,22 @@ jobs:
   backend:
     name: Verify backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: bubllio_test
+          POSTGRES_USER: bubllio
+          POSTGRES_PASSWORD: bubllio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bubllio -d bubllio_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://bubllio:bubllio@127.0.0.1:5432/bubllio_test
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -17,10 +33,23 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - run: uv sync
+      - run: uv sync --extra postgres
       - run: uv run python src/manage.py check
       - run: uv run python src/manage.py makemigrations --check --dry-run
-      - run: uv run python src/manage.py test bubllio_crm organizations companies contacts automations
+      - run: uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
+      - name: Verify production security settings
+        env:
+          DJANGO_DEBUG: "false"
+          DJANGO_SECRET_KEY: ci-only-production-check-secret-with-more-than-fifty-characters
+          DJANGO_ALLOWED_HOSTS: crm.example.com
+          DJANGO_CSRF_TRUSTED_ORIGINS: https://crm.example.com
+          DJANGO_SECURE_SSL_REDIRECT: "true"
+          DJANGO_SESSION_COOKIE_SECURE: "true"
+          DJANGO_CSRF_COOKIE_SECURE: "true"
+          DJANGO_SECURE_HSTS_SECONDS: "3600"
+          BUBLLIO_APP_URL: https://crm.example.com
+          BUBLLIO_EMAIL_ENCRYPTION_KEY: bUPlTTVfJnkhIWpMJTdA7p9Xk0EuPgGDfJnGZhr2hMI=
+        run: uv run python src/manage.py check --deploy
 
   frontend:
     name: Verify frontend

@@ -208,6 +208,7 @@ Start here:
 - [Frontend Workflow](docs/development/frontend-workflow.md)
 - [Database Setup](docs/development/databases.md)
 - [Pilot Production Readiness](docs/development/pilot-production-readiness.md)
+- [Production Deployment](docs/development/production-deployment.md)
 - [Updating a Self-hosted Installation](docs/development/updating.md)
 - [Migrations](docs/development/migrations.md)
 - [REST API Patterns](docs/api/rest-patterns.md)
