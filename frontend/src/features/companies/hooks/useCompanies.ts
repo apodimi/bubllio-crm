@@ -65,6 +65,15 @@ export const useUpdateCompany = (organizationId: string, companyId: string) => {
   })
 }
 
+export const useQuickUpdateCompany = (organizationId: string) => {
+  const invalidate = useCompanyMutation(organizationId)
+  return useMutation({
+    mutationFn: ({ companyId, body }: { companyId: string; body: Partial<CompanyInput> }) =>
+      companyService.update(organizationId, companyId, body),
+    onSuccess: invalidate,
+  })
+}
+
 export const useDeleteCompany = (organizationId: string) => {
   const invalidate = useCompanyMutation(organizationId)
   return useMutation({

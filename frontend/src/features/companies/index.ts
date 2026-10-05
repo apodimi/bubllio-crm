@@ -7,6 +7,7 @@ export {
   useArchiveCompany,
   useCreateCompany,
   useDeleteCompany,
+  useQuickUpdateCompany,
   useUpdateCompany,
   useRestoreCompany,
 } from './hooks/useCompanies'

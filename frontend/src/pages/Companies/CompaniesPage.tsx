@@ -1,4 +1,5 @@
 import { useDeferredValue, useState } from 'react'
+import type { MouseEvent } from 'react'
 import {
   Alert,
   Box,
@@ -21,13 +22,21 @@ import {
   Typography,
   Stack,
   MenuItem,
+  Menu,
+  ListItemText,
 } from '@mui/material'
 import AddRounded from '@mui/icons-material/AddRounded'
 import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
 import RestoreRounded from '@mui/icons-material/RestoreRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useArchiveCompany, useCompanies, useRestoreCompany } from '../../features/companies'
+import {
+  useArchiveCompany,
+  useCompanies,
+  useCompanyAssignees,
+  useQuickUpdateCompany,
+  useRestoreCompany,
+} from '../../features/companies'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { useWorkspace, canCreateRecords } from '../../features/organizations'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
@@ -56,6 +65,13 @@ export function CompaniesPage() {
   const [archiving, setArchiving] = useState<Company | null>(null)
   const archive = useArchiveCompany(org.id)
   const restore = useRestoreCompany(org.id)
+  const quickUpdate = useQuickUpdateCompany(org.id)
+  const assignees = useCompanyAssignees(org.id)
+  const [inlineEdit, setInlineEdit] = useState<{
+    anchor: HTMLElement
+    company: Company
+    field: 'stage' | 'owner'
+  } | null>(null)
   const canManage = canCreateRecords(org)
   const rows = query.data ?? []
 
@@ -65,6 +81,23 @@ export function CompaniesPage() {
 
   function closeCompany() {
     void navigate({ search: { company: undefined } })
+  }
+
+  function openInlineEdit(
+    event: MouseEvent<HTMLElement>,
+    company: Company,
+    field: 'stage' | 'owner',
+  ) {
+    event.stopPropagation()
+    setInlineEdit({ anchor: event.currentTarget, company, field })
+  }
+
+  function updateInline(body: Partial<Pick<Company, 'lifecycle_stage' | 'assigned_to'>>) {
+    if (!inlineEdit) return
+    quickUpdate.mutate(
+      { companyId: inlineEdit.company.id, body },
+      { onSuccess: () => setInlineEdit(null) },
+    )
   }
   return (
     <>
@@ -126,6 +159,11 @@ export function CompaniesPage() {
           <MenuItem value="all">All records</MenuItem>
         </TextField>
       </Stack>
+      {quickUpdate.isError ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {quickUpdate.error.message}
+        </Alert>
+      ) : null}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -238,6 +276,7 @@ export function CompaniesPage() {
                       <TableCell>Company</TableCell>
                       <TableCell>Business profile</TableCell>
                       <TableCell>Location</TableCell>
+                      <TableCell>Owner</TableCell>
                       <TableCell>Stage</TableCell>
                       {canManage && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
@@ -265,7 +304,7 @@ export function CompaniesPage() {
                             color="text.secondary"
                             sx={{ display: 'block' }}
                           >
-                            {company.customer_code} · {company.assigned_to_name || 'Unassigned'}
+                            {company.customer_code}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {company.email || company.phone_number || 'No contact details'}
@@ -283,11 +322,38 @@ export function CompaniesPage() {
                           {[company.city, company.country].filter(Boolean).join(', ') || '—'}
                         </TableCell>
                         <TableCell>
+                          {canManage ? (
+                            <Button
+                              size="small"
+                              color="inherit"
+                              disabled={quickUpdate.isPending}
+                              onClick={(event) => openInlineEdit(event, company, 'owner')}
+                              sx={{ minWidth: 0, px: 1, color: company.assigned_to_name ? 'text.primary' : 'text.secondary' }}
+                            >
+                              {company.assigned_to_name || 'Unassigned'}
+                            </Button>
+                          ) : (
+                            company.assigned_to_name || 'Unassigned'
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Chip
+                            clickable={canManage}
                             size="small"
                             label={company.lifecycle_stage}
                             color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
                             variant="outlined"
+                            aria-label={
+                              canManage
+                                ? `Change stage for ${company.name}`
+                                : `${company.name} stage: ${company.lifecycle_stage}`
+                            }
+                            onClick={
+                              canManage
+                                ? (event) => openInlineEdit(event, company, 'stage')
+                                : undefined
+                            }
+                            sx={{ textTransform: 'capitalize' }}
                           />
                         </TableCell>
                         {canManage && (
@@ -339,6 +405,41 @@ export function CompaniesPage() {
           onClose={closeCompany}
         />
       ) : null}
+      <Menu
+        anchorEl={inlineEdit?.anchor ?? null}
+        open={Boolean(inlineEdit)}
+        onClose={() => setInlineEdit(null)}
+        slotProps={{ paper: { sx: { minWidth: 190, mt: 0.75 } } }}
+      >
+        {inlineEdit?.field === 'stage'
+          ? (['lead', 'prospect', 'customer', 'inactive'] as const).map((item) => (
+              <MenuItem
+                key={item}
+                selected={inlineEdit.company.lifecycle_stage === item}
+                onClick={() => updateInline({ lifecycle_stage: item })}
+              >
+                <ListItemText sx={{ textTransform: 'capitalize' }}>{item}</ListItemText>
+              </MenuItem>
+            ))
+          : [
+              <MenuItem
+                key="unassigned"
+                selected={inlineEdit?.company.assigned_to === null}
+                onClick={() => updateInline({ assigned_to: null })}
+              >
+                <ListItemText>Unassigned</ListItemText>
+              </MenuItem>,
+              ...(assignees.data ?? []).map((member) => (
+                <MenuItem
+                  key={member.id}
+                  selected={inlineEdit?.company.assigned_to === member.id}
+                  onClick={() => updateInline({ assigned_to: member.id })}
+                >
+                  <ListItemText primary={member.name} secondary={member.role} />
+                </MenuItem>
+              )),
+            ]}
+      </Menu>
       <Dialog
         open={Boolean(archiving)}
         onClose={archive.isPending ? undefined : () => setArchiving(null)}

@@ -34,7 +34,7 @@ export const companyService = {
     request<Company>(companyPath(organizationId, companyId), { signal }),
   create: (organizationId: string, body: CompanyInput) =>
     request<Company>(companyPath(organizationId), { body }),
-  update: (organizationId: string, companyId: string, body: CompanyInput) =>
+  update: (organizationId: string, companyId: string, body: Partial<CompanyInput>) =>
     request<Company>(companyPath(organizationId, companyId), { method: 'PATCH', body }),
   remove: (organizationId: string, companyId: string) =>
     request<void>(companyPath(organizationId, companyId), { method: 'DELETE' }),
