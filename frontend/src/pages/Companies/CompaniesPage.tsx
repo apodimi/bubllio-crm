@@ -2,6 +2,7 @@ import { useDeferredValue, useState } from 'react'
 import type { MouseEvent } from 'react'
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -28,6 +29,7 @@ import {
 import AddRounded from '@mui/icons-material/AddRounded'
 import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
 import RestoreRounded from '@mui/icons-material/RestoreRounded'
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
@@ -75,8 +77,8 @@ export function CompaniesPage() {
   const canManage = canCreateRecords(org)
   const rows = query.data ?? []
 
-  function openCompany(companyId: string) {
-    void navigate({ search: { company: companyId } })
+  function openCompany(company: Company) {
+    void navigate({ search: { company: company.customer_code } })
   }
 
   function closeCompany() {
@@ -193,11 +195,11 @@ export function CompaniesPage() {
                       role="button"
                       tabIndex={0}
                       aria-label={`Open ${company.name}`}
-                      onClick={() => openCompany(company.id)}
+                      onClick={() => openCompany(company)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault()
-                          openCompany(company.id)
+                          openCompany(company)
                         }
                       }}
                       sx={{ p: 2.5, cursor: 'pointer', '&:active': { bgcolor: 'action.selected' } }}
@@ -273,6 +275,7 @@ export function CompaniesPage() {
                 <Table>
                   <TableHead>
                     <TableRow>
+                      <TableCell sx={{ width: 112 }}>Code</TableCell>
                       <TableCell>Company</TableCell>
                       <TableCell>Business profile</TableCell>
                       <TableCell>Location</TableCell>
@@ -288,24 +291,26 @@ export function CompaniesPage() {
                         hover
                         tabIndex={0}
                         aria-label={`Open ${company.name}`}
-                        onClick={() => openCompany(company.id)}
+                        onClick={() => openCompany(company)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault()
-                            openCompany(company.id)
+                            openCompany(company)
                           }
                         }}
                         sx={{ cursor: 'pointer' }}
                       >
                         <TableCell>
-                          <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
                           <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block' }}
+                            variant="body2"
+                            color="primary.dark"
+                            sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
                           >
                             {company.customer_code}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
                           <Typography variant="body2" color="text.secondary">
                             {company.email || company.phone_number || 'No contact details'}
                           </Typography>
@@ -326,10 +331,24 @@ export function CompaniesPage() {
                             <Button
                               size="small"
                               color="inherit"
+                              endIcon={<KeyboardArrowDownRounded sx={{ fontSize: 16 }} />}
                               disabled={quickUpdate.isPending}
                               onClick={(event) => openInlineEdit(event, company, 'owner')}
-                              sx={{ minWidth: 0, px: 1, color: company.assigned_to_name ? 'text.primary' : 'text.secondary' }}
+                              sx={{
+                                minWidth: 0,
+                                px: 0.75,
+                                py: 0.5,
+                                color: company.assigned_to_name
+                                  ? 'text.primary'
+                                  : 'text.secondary',
+                                bgcolor: 'action.hover',
+                              }}
                             >
+                              <Avatar
+                                sx={{ width: 24, height: 24, mr: 0.75, fontSize: 11, bgcolor: company.assigned_to_name ? 'primary.main' : 'action.disabledBackground' }}
+                              >
+                                {company.assigned_to_name?.slice(0, 1).toUpperCase() || '–'}
+                              </Avatar>
                               {company.assigned_to_name || 'Unassigned'}
                             </Button>
                           ) : (
@@ -337,24 +356,34 @@ export function CompaniesPage() {
                           )}
                         </TableCell>
                         <TableCell>
+                          {canManage ? (
+                            <Button
+                              size="small"
+                              color={company.lifecycle_stage === 'customer' ? 'primary' : 'inherit'}
+                              endIcon={<KeyboardArrowDownRounded sx={{ fontSize: 16 }} />}
+                              disabled={quickUpdate.isPending}
+                              aria-label={`Change stage for ${company.name}`}
+                              onClick={(event) => openInlineEdit(event, company, 'stage')}
+                              sx={{
+                                px: 1,
+                                py: 0.5,
+                                minWidth: 0,
+                                bgcolor: 'action.hover',
+                                textTransform: 'capitalize',
+                              }}
+                            >
+                              {company.lifecycle_stage}
+                            </Button>
+                          ) : (
                           <Chip
-                            clickable={canManage}
                             size="small"
                             label={company.lifecycle_stage}
                             color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
                             variant="outlined"
-                            aria-label={
-                              canManage
-                                ? `Change stage for ${company.name}`
-                                : `${company.name} stage: ${company.lifecycle_stage}`
-                            }
-                            onClick={
-                              canManage
-                                ? (event) => openInlineEdit(event, company, 'stage')
-                                : undefined
-                            }
+                            aria-label={`${company.name} stage: ${company.lifecycle_stage}`}
                             sx={{ textTransform: 'capitalize' }}
                           />
+                          )}
                         </TableCell>
                         {canManage && (
                           <TableCell align="right">

@@ -91,6 +91,10 @@ Each company receives an organization-scoped customer code (`CUS-00001`, then
 account owner. Tax/VAT IDs and email addresses are checked case-insensitively
 for exact duplicates inside the same organization.
 
+Customer-facing company URLs use this shorter code as their public reference.
+The API still accepts the original UUID in detail and action routes so existing
+bookmarks and integrations remain compatible.
+
 Companies are archived and restored for normal lifecycle management. Active
 lists hide archived records by default, while explicit filters can show archived
 or all records. Permanent deletion remains an API-level operation for empty

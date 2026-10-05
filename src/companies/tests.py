@@ -213,6 +213,43 @@ class CompanyTenantAccessTests(APITestCase):
         self.assertEqual(company.name, "Visible Partner")
         self.assertEqual(company.lifecycle_stage, Company.LifecycleStage.CUSTOMER)
 
+    def test_company_detail_accepts_customer_code_and_legacy_uuid(self):
+        company = Company.objects.get(name="Visible Company")
+        self.client.force_authenticate(self.user)
+
+        by_code = self.client.get(
+            reverse(
+                "company-detail",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "company_id": company.customer_code,
+                },
+            )
+        )
+        by_uuid = self.client.get(self.detail_url(company))
+
+        self.assertEqual(by_code.status_code, status.HTTP_200_OK)
+        self.assertEqual(by_uuid.status_code, status.HTTP_200_OK)
+        self.assertEqual(by_code.data["id"], by_uuid.data["id"])
+
+    def test_customer_code_lookup_remains_tenant_scoped(self):
+        hidden = Company.objects.get(name="Hidden Company")
+        hidden.customer_code = "CUS-99999"
+        hidden.save(update_fields=("customer_code",))
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(
+            reverse(
+                "company-detail",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "company_id": hidden.customer_code,
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_member_can_delete_company(self):
         company = Company.objects.get(name="Visible Company")
         self.client.force_authenticate(self.user)

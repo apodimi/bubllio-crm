@@ -85,7 +85,7 @@ export function CompanyPreviewDrawer({
               </Button>
               <Link
                 to="/organizations/$organizationId/companies/$companyId"
-                params={{ organizationId, companyId }}
+                params={{ organizationId, companyId: company.data.customer_code }}
               >
                 <Button component="span" variant="outlined" startIcon={<OpenInNewRounded />}>
                   Open full profile

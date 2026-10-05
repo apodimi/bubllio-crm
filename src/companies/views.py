@@ -1,3 +1,5 @@
+import uuid
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -10,6 +12,18 @@ from access.permissions import Capability, get_organization_for_user
 from .models import Company, CompanyActivity
 from .serializers import CompanyActivitySerializer, CompanyAssigneeSerializer, CompanySerializer
 from .services import create_company, record_company_activity
+
+
+def get_company_by_public_reference(*, organization, reference):
+    try:
+        company_id = uuid.UUID(str(reference))
+    except ValueError:
+        return get_object_or_404(
+            Company,
+            organization=organization,
+            customer_code__iexact=reference,
+        )
+    return get_object_or_404(Company, organization=organization, id=company_id)
 
 
 class CompanyListCreateAPIView(APIView):
@@ -100,7 +114,9 @@ class CompanyDetailAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.VIEW_CRM,
         )
-        company = get_object_or_404(Company, id=company_id, organization=organization)
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
         return Response(CompanySerializer(company).data)
 
     def patch(self, request, organization_id, company_id):
@@ -109,7 +125,9 @@ class CompanyDetailAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.MANAGE_CRM,
         )
-        company = get_object_or_404(Company, id=company_id, organization=organization)
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
         serializer = CompanySerializer(
             company,
             data=request.data,
@@ -140,7 +158,9 @@ class CompanyDetailAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.MANAGE_CRM,
         )
-        company = get_object_or_404(Company, id=company_id, organization=organization)
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
         if company.contacts.exists():
             return Response(
                 {"detail": "Archive this company before removing its connected contacts."},
@@ -157,7 +177,9 @@ class CompanyActivityAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.VIEW_CRM,
         )
-        company = get_object_or_404(Company, id=company_id, organization=organization)
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
         return Response(CompanyActivitySerializer(company.activities.all(), many=True).data)
 
 
@@ -168,7 +190,9 @@ class CompanyArchiveAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.MANAGE_CRM,
         )
-        company = get_object_or_404(Company, id=company_id, organization=organization)
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
         if not company.archived_at:
             company.archived_at = timezone.now()
             company.save(update_fields=("archived_at", "updated_at"))
@@ -187,7 +211,9 @@ class CompanyRestoreAPIView(APIView):
             organization_id=organization_id,
             capability=Capability.MANAGE_CRM,
         )
-        company = get_object_or_404(Company, id=company_id, organization=organization)
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
         if company.archived_at:
             company.archived_at = None
             company.save(update_fields=("archived_at", "updated_at"))
