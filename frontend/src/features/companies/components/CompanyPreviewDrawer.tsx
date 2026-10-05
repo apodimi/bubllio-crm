@@ -21,8 +21,8 @@ export function CompanyPreviewDrawer({
 }) {
   const [editing, setEditing] = useState(false)
   const company = useCompany(organizationId, companyId)
-  const contacts = useContacts(organizationId)
-  const companyContacts = (contacts.data ?? []).filter((contact) => contact.company === companyId)
+  const contacts = useContacts(organizationId, { company: company.data?.id ?? '' })
+  const companyContacts = contacts.data ?? []
 
   return (
     <Drawer

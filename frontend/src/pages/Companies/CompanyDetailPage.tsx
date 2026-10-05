@@ -40,7 +40,7 @@ export function CompanyDetailPage() {
     from: '/organizations/$organizationId/companies/$companyId',
   })
   const company = useCompany(organization.id, companyId)
-  const contacts = useContacts(organization.id)
+  const contacts = useContacts(organization.id, { company: company.data?.id ?? '' })
   const activity = useCompanyActivity(organization.id, companyId)
   const archive = useArchiveCompany(organization.id)
   const restore = useRestoreCompany(organization.id)
@@ -49,7 +49,7 @@ export function CompanyDetailPage() {
   if (company.isPending) return <Loading />
   if (company.isError) return <Failure error={company.error} retry={() => void company.refetch()} />
 
-  const companyContacts = (contacts.data ?? []).filter((contact) => contact.company === companyId)
+  const companyContacts = contacts.data ?? []
   const canManage = canCreateRecords(organization)
 
   return (
