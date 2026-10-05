@@ -6,8 +6,8 @@ export const paper: Components<Theme>['MuiPaper'] = {
   styleOverrides: {
     root: { backgroundImage: 'none' },
     outlined: ({ theme }) => ({
-      borderColor: 'transparent',
-      boxShadow: `inset 0 0 0 1px ${theme.palette.divider}, 0 14px 36px rgba(15,31,56,.055)`,
+      borderColor: theme.palette.divider,
+      boxShadow: 'none',
       borderRadius: brand.shape.borderRadius * 1.25,
     }),
   },
