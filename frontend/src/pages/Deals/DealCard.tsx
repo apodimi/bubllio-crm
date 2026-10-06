@@ -16,11 +16,20 @@ import {
   Typography,
 } from '@mui/material'
 import type { Deal } from '../../types/deal.types'
+import type { CrmTask } from '../../types/task.types'
 
 const money = (value: string, currency: string) =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(value))
 
-export function DealCard({ deal, onEdit }: { deal: Deal; onEdit: () => void }) {
+export function DealCard({
+  deal,
+  nextAction,
+  onEdit,
+}: {
+  deal: Deal
+  nextAction?: CrmTask
+  onEdit: () => void
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: deal.id,
     data: { deal, stage: deal.stage },
@@ -38,6 +47,7 @@ export function DealCard({ deal, onEdit }: { deal: Deal; onEdit: () => void }) {
     >
       <DealCardSurface
         deal={deal}
+        nextAction={nextAction}
         onEdit={onEdit}
         dragHandle={
           <Tooltip title="Drag to move" placement="top">
@@ -77,11 +87,13 @@ export function DealDragPreview({ deal }: { deal: Deal }) {
 
 function DealCardSurface({
   deal,
+  nextAction,
   onEdit,
   dragHandle,
   preview = false,
 }: {
   deal: Deal
+  nextAction?: CrmTask
   onEdit?: () => void
   dragHandle?: React.ReactNode
   preview?: boolean
@@ -197,6 +209,24 @@ function DealCardSurface({
         >
           <EventOutlined sx={{ fontSize: 16 }} />
           <Typography variant="caption">Close by {deal.expected_close_date}</Typography>
+        </Stack>
+      ) : null}
+      {!preview && !['won', 'lost'].includes(deal.stage) ? (
+        <Stack
+          direction="row"
+          spacing={0.75}
+          sx={{
+            alignItems: 'flex-start',
+            mt: 1.5,
+            color: nextAction?.effective_status === 'overdue' ? 'error.main' : 'text.secondary',
+          }}
+        >
+          <EventOutlined sx={{ fontSize: 16, mt: '1px' }} />
+          <Typography variant="caption" sx={{ fontWeight: nextAction ? 650 : 500 }}>
+            {nextAction
+              ? `Next: ${nextAction.title} · ${new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(new Date(nextAction.due_at))}`
+              : 'No next action'}
+          </Typography>
         </Stack>
       ) : null}
       {!preview && onEdit ? (

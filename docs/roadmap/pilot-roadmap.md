@@ -23,6 +23,10 @@
 - Contacts με company, owner, primary contact, archive και activity.
 - Deals με pipeline, drag and drop, status, owner, contact, probability,
   ημερομηνία κλεισίματος, ΦΠΑ και lost reason.
+- Tasks και follow-ups με company/contact/deal, owner, due time, reminder,
+  priority, today/upcoming/overdue views και next action στα deals.
+- Services, subscriptions, renewals, εσωτερικές χρεώσεις και recurring revenue.
+- Actionable Overview με προσωπικά tasks, overdue follow-ups και billing attention.
 - Organization και ERP defaults.
 - SMTP account configuration.
 - Βασικές automations και automation runs.
@@ -32,26 +36,16 @@
 
 ## P0 — Απαραίτητα για pilot
 
-### 1. Activities, tasks και next actions
+### 1. Ενιαίο customer και deal timeline
 
-Καταγραφή note, call, meeting και task, συνδεδεμένων με company, contact ή deal.
-Τα tasks χρειάζονται owner, due date, reminder, priority και open/completed
-κατάσταση. Κάθε ανοικτό deal πρέπει να μπορεί να δείξει την επόμενη ενέργεια και
-αν αυτή έχει καθυστερήσει.
-
-**Αποτέλεσμα:** ο χρήστης γνωρίζει τι πρέπει να κάνει σήμερα και κανένα ενεργό
-deal δεν ξεχνιέται.
-
-### 2. Ενιαίο customer και deal timeline
-
-Χρονολογική προβολή αλλαγών, notes, activities, contacts, deals και μελλοντικά
+Χρονολογική προβολή αλλαγών, notes, completed tasks, contacts, deals και
 services/payments. Το timeline πρέπει να διαχωρίζει system events από ανθρώπινες
 ενέργειες και να μην αποθηκεύει ευαίσθητες παλιές τιμές χωρίς λόγο.
 
 **Αποτέλεσμα:** οποιοδήποτε μέλος της ομάδας καταλαβαίνει άμεσα τι έχει συμβεί
 με έναν πελάτη.
 
-### 3. Global search
+### 2. Global search
 
 Αναζήτηση σε companies, customer codes, contacts, email, τηλέφωνο και deals,
 πάντα μέσα στα επιτρεπόμενα workspaces του χρήστη.
@@ -59,7 +53,7 @@ services/payments. Το timeline πρέπει να διαχωρίζει system e
 **Αποτέλεσμα:** γρήγορη πρόσβαση σε εγγραφές χωρίς αναζήτηση σε διαφορετικές
 σελίδες.
 
-### 4. CSV import
+### 3. CSV import
 
 Import companies και contacts με preview, mapping στηλών, validation, duplicate
 checks, error report και αναγνωρίσιμο import batch.
@@ -69,27 +63,12 @@ checks, error report και αναγνωρίσιμο import batch.
 
 ## P1 — Διαφοροποίηση και καθημερινή αξία
 
-### 5. Services, subscriptions και renewals
-
-Service catalog, ενεργές υπηρεσίες ανά πελάτη, billing cycles, renewals και
-εσωτερική παρακολούθηση due/paid/overdue χρεώσεων. Η αναλυτική απόφαση προϊόντος
-βρίσκεται στο [services and billing brief](services-and-billing-brief.md).
-
-**Αποτέλεσμα:** το CRM συνεχίζει να εξυπηρετεί την ομάδα και μετά το κλείσιμο της
-πώλησης και εμφανίζει το recurring revenue.
-
-### 6. Actionable dashboard
-
-Today's tasks, overdue follow-ups, deals χωρίς next action, deals που κλείνουν
-σύντομα, renewals και χρεώσεις που λήγουν. Δεν προσθέτουμε διακοσμητικά charts
-χωρίς συγκεκριμένη απόφαση που βοηθούν να ληφθεί.
-
-### 7. Saved views και My work
+### 4. Saved views και My work
 
 My companies, my deals, closing this month, no next action, overdue follow-ups,
 renewals και archived records.
 
-### 8. Deal profile
+### 5. Deal profile
 
 Πλήρης σελίδα deal με timeline, stage history, notes, activities, contacts και
 next action. Το υπάρχον drawer παραμένει το γρήγορο create/edit flow.
@@ -111,12 +90,11 @@ next action. Το υπάρχον drawer παραμένει το γρήγορο c
 ## Συμφωνημένη σειρά
 
 ```text
-Activities + Tasks + Next action
-  -> Unified timeline
+Unified timeline
   -> Global search
   -> CSV import
-  -> Services + recurring billing
-  -> Actionable dashboard
+  -> Saved views + My work
+  -> Deal profile
   -> Pilot hardening and onboarding
 ```
 

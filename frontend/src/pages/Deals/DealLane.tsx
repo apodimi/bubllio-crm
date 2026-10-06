@@ -3,6 +3,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { alpha } from '@mui/material/styles'
 import { Box, Stack, Typography } from '@mui/material'
 import type { Deal, DealStage } from '../../types/deal.types'
+import type { CrmTask } from '../../types/task.types'
 import { DealCard } from './DealCard'
 
 const money = (value: number, currency: string) =>
@@ -17,12 +18,14 @@ export function DealLane({
   label,
   accent,
   deals,
+  nextActionByDeal,
   onEdit,
 }: {
   stage: DealStage
   label: string
   accent: string
   deals: Deal[]
+  nextActionByDeal: Map<string, CrmTask>
   onEdit: (deal: Deal) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `stage:${stage}`, data: { stage } })
@@ -92,7 +95,12 @@ export function DealLane({
       <SortableContext items={deals.map((deal) => deal.id)} strategy={verticalListSortingStrategy}>
         <Stack spacing={1.25}>
           {deals.map((deal) => (
-            <DealCard key={deal.id} deal={deal} onEdit={() => onEdit(deal)} />
+            <DealCard
+              key={deal.id}
+              deal={deal}
+              nextAction={nextActionByDeal.get(deal.id)}
+              onEdit={() => onEdit(deal)}
+            />
           ))}
           {deals.length === 0 ? (
             <Box

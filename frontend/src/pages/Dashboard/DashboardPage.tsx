@@ -7,6 +7,7 @@ import { useCompanies } from '../../features/companies'
 import { useContacts } from '../../features/contacts'
 import { useWorkspace } from '../../features/organizations'
 import { useSubscriptionOverview } from '../../features/subscriptions'
+import { useTasks } from '../../features/tasks'
 import { Failure, Loading, PageHeading } from '../../components/common/Feedback'
 
 export function DashboardPage() {
@@ -15,9 +16,25 @@ export function DashboardPage() {
   const contacts = useContacts(org.id)
   const automations = useAutomations(org.id)
   const billing = useSubscriptionOverview(org.id)
-  const error = companies.error || contacts.error || automations.error || billing.error
+  const todayTasks = useTasks(org.id, { bucket: 'today', assignedTo: 'me' })
+  const overdueTasks = useTasks(org.id, { bucket: 'overdue', assignedTo: 'me' })
+  const error =
+    companies.error ||
+    contacts.error ||
+    automations.error ||
+    billing.error ||
+    todayTasks.error ||
+    overdueTasks.error
   if (error) return <Failure error={error} />
-  if (!companies.data || !contacts.data || !automations.data || !billing.data) return <Loading />
+  if (
+    !companies.data ||
+    !contacts.data ||
+    !automations.data ||
+    !billing.data ||
+    !todayTasks.data ||
+    !overdueTasks.data
+  )
+    return <Loading />
   const stats = [
     { label: 'Companies', value: companies.data.length, note: 'Relationships in your pipeline' },
     { label: 'Contacts', value: contacts.data.length, note: 'People you work with' },
@@ -91,6 +108,91 @@ export function DashboardPage() {
           </Paper>
         ))}
       </Box>
+      <Paper variant="outlined" sx={{ mb: 4, overflow: 'hidden' }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          divider={<Divider orientation="vertical" flexItem />}
+        >
+          <Box sx={{ p: { xs: 3, md: 4 }, flex: 1 }}>
+            <Stack
+              direction="row"
+              sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, mb: 2.5 }}
+            >
+              <Box>
+                <Typography variant="h5">Your next actions</Typography>
+                <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+                  Work due today and follow-ups that need attention.
+                </Typography>
+              </Box>
+              <Link
+                to="/organizations/$organizationId/tasks"
+                params={{ organizationId: org.id }}
+                style={{ textDecoration: 'none' }}
+              >
+                <Button component="span" endIcon={<ArrowForwardRounded />}>
+                  Open tasks
+                </Button>
+              </Link>
+            </Stack>
+            {todayTasks.data.length ? (
+              <Stack divider={<Divider />}>
+                {todayTasks.data.slice(0, 4).map((task) => (
+                  <Stack
+                    key={task.id}
+                    direction="row"
+                    sx={{ justifyContent: 'space-between', gap: 2, py: 1.25 }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 700 }} noWrap>
+                        {task.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {task.company_name}
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+                    >
+                      {new Intl.DateTimeFormat(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }).format(new Date(task.due_at))}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            ) : (
+              <Typography color="text.secondary">Nothing else due today.</Typography>
+            )}
+          </Box>
+          <Box
+            sx={(theme) => ({
+              p: { xs: 3, md: 4 },
+              minWidth: { md: 280 },
+              bgcolor: overdueTasks.data.length
+                ? alpha(theme.palette.error.main, 0.055)
+                : theme.palette.action.hover,
+            })}
+          >
+            <Typography color="text.secondary" variant="body2">
+              Overdue follow-ups
+            </Typography>
+            <Typography
+              variant="h3"
+              color={overdueTasks.data.length ? 'error.main' : 'text.primary'}
+              sx={{ my: 1.5, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {overdueTasks.data.length}
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              {overdueTasks.data.length
+                ? 'Open the list and decide the next action.'
+                : 'You are caught up.'}
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
       <Paper variant="outlined" sx={{ mb: 4, overflow: 'hidden' }}>
         <Stack
           direction={{ xs: 'column', md: 'row' }}

@@ -5,6 +5,7 @@ const orgs = [
   { id: 'beta', name: 'Beta Studio', slug: 'beta', current_user_role: 'viewer' },
 ]
 async function mockApi(page: Page) {
+  const tasks: Array<Record<string, unknown>> = []
   const subscriptions = [
     {
       id: 'sub-a',
@@ -99,6 +100,39 @@ async function mockApi(page: Page) {
     }
     if (path === '/api/v1/organizations/alpha/companies/assignees/') {
       return route.fulfill({ json: [{ id: 1, name: 'Demo User', role: 'owner' }] })
+    }
+    if (path === '/api/v1/organizations/alpha/tasks/') {
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON()
+        const task = {
+          ...body,
+          id: 'task-a',
+          organization: 'alpha',
+          company_name: 'Acme Ltd',
+          contact_name: '',
+          deal_title: '',
+          assigned_to_name: body.assigned_to ? 'Demo User' : '',
+          created_by_name: 'Demo User',
+          completed_by_name: '',
+          effective_status: 'open',
+          completed_at: null,
+          created_at: '2030-01-01T00:00:00Z',
+          updated_at: '2030-01-01T00:00:00Z',
+        }
+        tasks.push(task)
+        return route.fulfill({ status: 201, json: task })
+      }
+      return route.fulfill({ json: tasks })
+    }
+    if (path === '/api/v1/organizations/alpha/tasks/task-a/complete/') {
+      const completedTask = {
+        ...tasks[0],
+        effective_status: 'completed',
+        completed_at: '2030-01-01T10:00:00Z',
+        completed_by_name: 'Demo User',
+      }
+      tasks.splice(0, 1)
+      return route.fulfill({ json: completedTask })
     }
     if (path === '/api/v1/organizations/alpha/services/overview/') {
       return route.fulfill({
@@ -359,6 +393,44 @@ test('subscription cancellation remains active through the paid period and can r
   await expect(page.getByText(/Service remains active through/)).toBeVisible()
   await page.getByRole('button', { name: 'Keep active' }).click()
   await expect(page.getByText('Active', { exact: true })).toBeVisible()
+})
+
+test('creates and completes a customer follow-up', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('link', { name: 'Tasks', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Tasks & follow-ups' })).toBeVisible()
+  await page.getByRole('button', { name: 'Add task' }).click()
+  await page.getByLabel('What needs to happen?').fill('Call about renewal')
+  await page.getByRole('combobox', { name: 'Activity' }).click()
+  await page.getByRole('option', { name: 'Call', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Company' }).click()
+  await page.getByRole('option', { name: 'Acme Ltd' }).click()
+  await page.getByRole('combobox', { name: 'Owner' }).click()
+  await page.getByRole('option', { name: 'Demo User' }).click()
+  const createRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/tasks/'),
+  )
+  await page.getByRole('button', { name: 'Add task', exact: true }).click()
+  expect((await createRequest).postDataJSON()).toMatchObject({
+    company: 'co-a',
+    title: 'Call about renewal',
+    kind: 'call',
+    assigned_to: 1,
+  })
+  await expect(page.getByText('Call about renewal')).toBeVisible()
+  await page.screenshot({ path: test.info().outputPath('tasks-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: test.info().outputPath('tasks-mobile.png'), fullPage: true })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  const completeRequest = page.waitForRequest((request) =>
+    request.url().endsWith('/tasks/task-a/complete/'),
+  )
+  await page.getByRole('checkbox', { name: 'Complete Call about renewal' }).click()
+  await completeRequest
+  await expect(page.getByText('Call about renewal')).toHaveCount(0)
 })
 
 test('workspace owner safely updates and tests invitation email', async ({ page }) => {

@@ -161,9 +161,14 @@ class CompanyDetailAPIView(APIView):
         company = get_company_by_public_reference(
             organization=organization, reference=company_id
         )
-        if company.contacts.exists():
+        if (
+            company.contacts.exists()
+            or company.deals.exists()
+            or company.tasks.exists()
+            or company.subscriptions.exists()
+        ):
             return Response(
-                {"detail": "Archive this company before removing its connected contacts."},
+                {"detail": "Archive this company before removing its connected CRM records."},
                 status=status.HTTP_409_CONFLICT,
             )
         company.delete()

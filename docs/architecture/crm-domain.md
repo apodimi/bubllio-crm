@@ -15,6 +15,7 @@ Organization
   -> Company
        -> Contact
        -> Deal
+       -> Task
   -> Automation
        -> AutomationRun
 
@@ -33,6 +34,7 @@ An organization owns its CRM data:
 - companies
 - contacts
 - deals and sales pipeline
+- tasks and follow-ups
 - automations
 - users and role-based permissions through memberships
 - pending invitations to users who are not members yet
@@ -156,6 +158,7 @@ Later, if the product needs more advanced account management, we can introduce a
 Organization 1 -> many Companies
 Organization 1 -> many Contacts
 Organization 1 -> many Deals
+Organization 1 -> many Tasks
 Organization 1 -> many ServiceCatalogItems
 Organization 1 -> many CustomerSubscriptions
 Organization 1 -> many Charges
@@ -165,6 +168,7 @@ User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
 Company 1 -> many CompanyActivities
 Company 1 -> many Deals
+Company 1 -> many Tasks
 Company 1 -> many CustomerSubscriptions
 User 1 -> many assigned Companies
 Organization 1 -> many Automations
@@ -175,6 +179,21 @@ User 1 -> 0 or 1 personal Organization
 CustomerSubscription 1 -> many Charges
 Charge 1 -> many Payments
 ```
+
+## Tasks and next actions
+
+`Task` is an organization-owned follow-up anchored to one company and optionally
+linked to a contact or deal from that same company. It records a task, call,
+email or meeting with an owner, priority, due time, optional reminder time and
+notes. Organization ownership always comes from the authorized URL; related
+records and assignees are validated against that organization.
+
+Completion is recorded with `completed_at` and `completed_by`. Overdue is a
+derived status for an incomplete task whose due time has passed, not a mutable
+database flag. Complete and reopen operations lock the task row and are
+idempotent. The earliest incomplete task linked to a deal is its next action in
+the frontend. Reminder delivery and the unified customer timeline are not yet
+implemented.
 
 ## Services and billing
 

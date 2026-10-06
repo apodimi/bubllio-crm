@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import AddRounded from '@mui/icons-material/AddRounded'
 import {
   closestCorners,
@@ -16,6 +16,7 @@ import { Empty, Failure, Loading, PageHeading } from '../../components/common/Fe
 import { useCompanies } from '../../features/companies'
 import { useDeals, useMoveDeal } from '../../features/deals'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
+import { useTasks } from '../../features/tasks'
 import type { Deal, DealStage } from '../../types/deal.types'
 import { DealDragPreview } from './DealCard'
 import { DealDrawer } from './DealDrawer'
@@ -36,6 +37,7 @@ export function DealsPage() {
   const org = useWorkspace()
   const deals = useDeals(org.id)
   const companies = useCompanies(org.id, { archived: 'active' })
+  const tasks = useTasks(org.id, { bucket: 'open' })
   const move = useMoveDeal(org.id)
   const [drawer, setDrawer] = useState<{ deal?: Deal; initialStage?: DealStage } | null>(null)
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null)
@@ -59,6 +61,14 @@ export function DealsPage() {
   )
   const laneDeals = (stage: DealStage) =>
     rows.filter((deal) => deal.stage === stage).sort((a, b) => a.sort_order - b.sort_order)
+  const taskRows = tasks.data
+  const nextActionByDeal = useMemo(() => {
+    const result = new Map<string, NonNullable<typeof taskRows>[number]>()
+    for (const task of taskRows ?? []) {
+      if (task.deal && !result.has(task.deal)) result.set(task.deal, task)
+    }
+    return result
+  }, [taskRows])
 
   function dragEnd(event: DragEndEvent) {
     setActiveDeal(null)
@@ -108,6 +118,11 @@ export function DealsPage() {
       />
       <Stack direction="row" spacing={1.5} useFlexGap sx={{ mb: 3, flexWrap: 'wrap' }}>
         <Chip label={`${open.length} open deals`} variant="outlined" />
+        <Chip
+          label={`${open.filter((deal) => !nextActionByDeal.has(deal.id)).length} without next action`}
+          color={open.some((deal) => !nextActionByDeal.has(deal.id)) ? 'warning' : 'default'}
+          variant="outlined"
+        />
         {forecasts.map((forecast) => (
           <Box key={forecast.currency} sx={{ display: 'contents' }}>
             <Chip
@@ -127,7 +142,7 @@ export function DealsPage() {
           {mutationError.message}
         </Alert>
       ) : null}
-      {deals.isPending || companies.isPending ? (
+      {deals.isPending || companies.isPending || tasks.isPending ? (
         <Loading />
       ) : deals.isError ? (
         <Failure error={deals.error} retry={() => void deals.refetch()} />
@@ -163,6 +178,7 @@ export function DealsPage() {
                 label={stage.label}
                 accent={stage.accent}
                 deals={laneDeals(stage.value)}
+                nextActionByDeal={nextActionByDeal}
                 onEdit={(deal) => setDrawer({ deal })}
               />
             ))}

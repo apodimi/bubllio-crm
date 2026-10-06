@@ -51,6 +51,27 @@ def build_workspace_data_export(organization):
                      "created_at": c.created_at, "updated_at": c.updated_at}
                     for c in organization.contacts.all()
                 ],
+                "tasks": [
+                    {
+                        "id": task.id,
+                        "company_id": task.company_id,
+                        "contact_id": task.contact_id,
+                        "deal_id": task.deal_id,
+                        "assigned_to_id": task.assigned_to_id,
+                        "created_by_id": task.created_by_id,
+                        "completed_by_id": task.completed_by_id,
+                        "title": task.title,
+                        "kind": task.kind,
+                        "priority": task.priority,
+                        "due_at": task.due_at,
+                        "reminder_at": task.reminder_at,
+                        "notes": task.notes,
+                        "completed_at": task.completed_at,
+                        "created_at": task.created_at,
+                        "updated_at": task.updated_at,
+                    }
+                    for task in organization.tasks.all()
+                ],
                 "automations": [
                     {"id": a.id, "name": a.name, "trigger": a.trigger,
                      "action_type": a.action_type, "action_config": a.action_config,
@@ -71,6 +92,7 @@ def build_installation_data_export():
         "email_accounts",
         "companies",
         "contacts",
+        "tasks",
         "automations__runs",
     ).select_related("settings")
 

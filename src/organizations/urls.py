@@ -41,6 +41,7 @@ urlpatterns = [
     path("<uuid:organization_id>/companies/", include("companies.urls")),
     path("<uuid:organization_id>/contacts/", include("contacts.urls")),
     path("<uuid:organization_id>/deals/", include("deals.urls")),
+    path("<uuid:organization_id>/tasks/", include("activities.urls")),
     path("<uuid:organization_id>/services/", include("subscriptions.urls")),
     path("<uuid:organization_id>/automations/", include("automations.urls")),
 ]

@@ -217,6 +217,8 @@ Start here:
 - [CRM Domain Model](docs/architecture/crm-domain.md)
 - [Authentication and Roles](docs/architecture/authentication-and-roles.md)
 - [Roles and Access — Plain-language Guide](docs/guides/roles-and-access.md)
+- [Tasks and Follow-ups — Plain-language Guide](docs/guides/tasks-and-follow-ups.md)
+- [Services and Billing — Plain-language Guide](docs/guides/services-and-billing.md)
 - [Installation Settings — Plain-language Guide](docs/guides/installation-settings.md)
 - [Workspace Access Model: Research and Proposed Direction](docs/research/access-model-comparison.md)
 - [Automations Architecture](docs/architecture/automations.md)

@@ -22,6 +22,7 @@ import SettingsRounded from '@mui/icons-material/SettingsRounded'
 import BoltRounded from '@mui/icons-material/BoltRounded'
 import TrendingUpRounded from '@mui/icons-material/TrendingUpRounded'
 import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
+import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
 import CheckRounded from '@mui/icons-material/CheckRounded'
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
 import { BrandLogo } from '../common/BrandLogo'
@@ -44,6 +45,7 @@ type NavigationItem = {
     | '/organizations/$organizationId/companies'
     | '/organizations/$organizationId/contacts'
     | '/organizations/$organizationId/deals'
+    | '/organizations/$organizationId/tasks'
     | '/organizations/$organizationId/services'
     | '/organizations/$organizationId/automations'
     | '/organizations/$organizationId/members'
@@ -93,8 +95,24 @@ export function WorkspaceSidebar({
       path: `${basePath}/contacts`,
       icon: <PeopleAltRounded />,
     },
-    { text: 'Deals', to: '/organizations/$organizationId/deals', path: `${basePath}/deals`, icon: <TrendingUpRounded /> },
-    { text: 'Services', to: '/organizations/$organizationId/services', path: `${basePath}/services`, icon: <SubscriptionsRounded /> },
+    {
+      text: 'Deals',
+      to: '/organizations/$organizationId/deals',
+      path: `${basePath}/deals`,
+      icon: <TrendingUpRounded />,
+    },
+    {
+      text: 'Tasks',
+      to: '/organizations/$organizationId/tasks',
+      path: `${basePath}/tasks`,
+      icon: <TaskAltRounded />,
+    },
+    {
+      text: 'Services',
+      to: '/organizations/$organizationId/services',
+      path: `${basePath}/services`,
+      icon: <SubscriptionsRounded />,
+    },
     {
       text: 'Automations',
       to: '/organizations/$organizationId/automations',
@@ -129,7 +147,11 @@ export function WorkspaceSidebar({
       >
         <BrandLogo product="CRM" />
       </Box>
-      <Typography variant="overline" color="text.secondary" sx={{ px: 1, mb: 1, letterSpacing: '.13em', fontSize: 10 }}>
+      <Typography
+        variant="overline"
+        color="text.secondary"
+        sx={{ px: 1, mb: 1, letterSpacing: '.13em', fontSize: 10 }}
+      >
         WORKSPACE
       </Typography>
       <Select
@@ -227,7 +249,8 @@ export function WorkspaceSidebar({
                 sx={{
                   py: 1.05,
                   '&.Mui-selected': { boxShadow: '0 8px 22px rgba(0,91,239,.11)' },
-                  transition: 'transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms cubic-bezier(.2,.8,.2,1)',
+                  transition:
+                    'transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms cubic-bezier(.2,.8,.2,1)',
                   '&:hover': { transform: 'translateX(3px)' },
                 }}
               >

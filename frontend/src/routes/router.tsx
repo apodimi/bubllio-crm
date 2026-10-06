@@ -109,8 +109,21 @@ const contacts = createRoute({
   path: '/contacts',
   component: lazyRouteComponent(() => import('../pages/Contacts/ContactsPage'), 'ContactsPage'),
 })
-const deals = createRoute({ getParentRoute: () => workspace, path: '/deals', component: lazyRouteComponent(() => import('../pages/Deals/DealsPage'), 'DealsPage') })
-const services = createRoute({ getParentRoute: () => workspace, path: '/services', component: lazyRouteComponent(() => import('../pages/Services/ServicesPage'), 'ServicesPage') })
+const deals = createRoute({
+  getParentRoute: () => workspace,
+  path: '/deals',
+  component: lazyRouteComponent(() => import('../pages/Deals/DealsPage'), 'DealsPage'),
+})
+const tasks = createRoute({
+  getParentRoute: () => workspace,
+  path: '/tasks',
+  component: lazyRouteComponent(() => import('../pages/Tasks/TasksPage'), 'TasksPage'),
+})
+const services = createRoute({
+  getParentRoute: () => workspace,
+  path: '/services',
+  component: lazyRouteComponent(() => import('../pages/Services/ServicesPage'), 'ServicesPage'),
+})
 const automations = createRoute({
   getParentRoute: () => workspace,
   path: '/automations',
@@ -144,6 +157,7 @@ export const router = createRouter({
       companyDetail,
       contacts,
       deals,
+      tasks,
       services,
       automations,
       members,
