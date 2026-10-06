@@ -6,6 +6,8 @@ import EditRounded from '@mui/icons-material/EditRounded'
 import EmailRounded from '@mui/icons-material/EmailRounded'
 import EventRounded from '@mui/icons-material/EventRounded'
 import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
+import ViewKanbanRounded from '@mui/icons-material/ViewKanbanRounded'
+import ViewListRounded from '@mui/icons-material/ViewListRounded'
 import {
   Alert,
   Avatar,
@@ -21,15 +23,21 @@ import {
   Tabs,
   TextField,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
 import { useCompanies } from '../../features/companies'
+import { useAuthStore } from '../../features/auth'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
-import { useCompleteTask, useReopenTask, useTasks } from '../../features/tasks'
+import { useCompleteTask, useMoveTask, useReopenTask, useTasks } from '../../features/tasks'
 import type { TaskBucket } from '../../features/tasks'
 import { TaskDrawer } from '../../features/tasks/components/TaskDrawer'
-import type { CrmTask, TaskKind } from '../../types/task.types'
+import { TaskBoard } from '../../features/tasks/components/TaskBoard'
+import type { CrmTask, TaskKind, TaskWorkflowStatus } from '../../types/task.types'
+
+type TaskView = 'list' | 'board'
 
 const tabs: Array<{ value: TaskBucket; label: string }> = [
   { value: 'today', label: 'Today' },
@@ -57,25 +65,52 @@ const dueLabel = (value: string) =>
 
 export function TasksPage() {
   const organization = useWorkspace()
+  const userId = useAuthStore((state) => state.user?.id)
   const canManage = canCreateRecords(organization)
+  const preferenceKey = `bubllio:tasks-view:v1:${userId ?? 'anonymous'}:${organization.id}`
+  const [view, setView] = useState<TaskView>(() => {
+    try {
+      return localStorage.getItem(preferenceKey) === 'board' ? 'board' : 'list'
+    } catch {
+      return 'list'
+    }
+  })
   const [bucket, setBucket] = useState<TaskBucket>('today')
   const [owner, setOwner] = useState<'me' | 'all' | 'unassigned'>('me')
   const [kind, setKind] = useState<TaskKind | 'all'>('all')
   const [drawer, setDrawer] = useState<CrmTask | true | null>(null)
   const tasks = useTasks(organization.id, {
-    bucket,
+    bucket: view === 'board' ? 'all' : bucket,
     assignedTo: owner === 'all' ? '' : owner,
     kind: kind === 'all' ? '' : kind,
   })
   const companies = useCompanies(organization.id, { archived: 'active' })
   const complete = useCompleteTask(organization.id)
   const reopen = useReopenTask(organization.id)
-  const mutationError = complete.error || reopen.error
+  const move = useMoveTask(organization.id)
+  const mutationError = complete.error || reopen.error || move.error
+
+  function changeView(next: TaskView) {
+    setView(next)
+    try {
+      localStorage.setItem(preferenceKey, next)
+    } catch {
+      // A disabled local store should not block task management.
+    }
+  }
 
   async function toggleComplete(task: CrmTask) {
     try {
       if (task.completed_at) await reopen.mutateAsync(task.id)
       else await complete.mutateAsync(task.id)
+    } catch {
+      /* Normalized API error is rendered below. */
+    }
+  }
+
+  async function moveTask(task: CrmTask, workflowStatus: TaskWorkflowStatus) {
+    try {
+      await move.mutateAsync({ taskId: task.id, workflowStatus })
     } catch {
       /* Normalized API error is rendered below. */
     }
@@ -101,18 +136,59 @@ export function TasksPage() {
         }
       />
       <Paper variant="outlined" sx={{ mb: 3, overflow: 'hidden' }}>
-        <Tabs
-          value={bucket}
-          onChange={(_, value: TaskBucket) => setBucket(value)}
-          aria-label="Task date filters"
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{ px: 1.5, borderBottom: 1, borderColor: 'divider' }}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          sx={{
+            px: 2,
+            py: 1.5,
+            alignItems: { sm: 'center' },
+            justifyContent: 'space-between',
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
         >
-          {tabs.map((tab) => (
-            <Tab key={tab.value} value={tab.value} label={tab.label} />
-          ))}
-        </Tabs>
+          <Box>
+            <Typography sx={{ fontWeight: 750 }}>
+              {view === 'list' ? 'Schedule view' : 'Workflow view'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {view === 'list' ? 'Prioritize work by due date.' : 'Move work as it progresses.'}
+            </Typography>
+          </Box>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={view}
+            onChange={(_, next: TaskView | null) => {
+              if (next) changeView(next)
+            }}
+            aria-label="Task view"
+          >
+            <ToggleButton value="list" aria-label="List view">
+              <ViewListRounded fontSize="small" sx={{ mr: 0.75 }} />
+              List
+            </ToggleButton>
+            <ToggleButton value="board" aria-label="Board view">
+              <ViewKanbanRounded fontSize="small" sx={{ mr: 0.75 }} />
+              Board
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+        {view === 'list' ? (
+          <Tabs
+            value={bucket}
+            onChange={(_, value: TaskBucket) => setBucket(value)}
+            aria-label="Task date filters"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ px: 1.5, borderBottom: 1, borderColor: 'divider' }}
+          >
+            {tabs.map((tab) => (
+              <Tab key={tab.value} value={tab.value} label={tab.label} />
+            ))}
+          </Tabs>
+        ) : null}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={1.5}
@@ -163,6 +239,14 @@ export function TasksPage() {
               ? 'Add the next action for a customer or deal when you are ready.'
               : 'Try another date, owner or activity filter.'
           }
+        />
+      ) : view === 'board' ? (
+        <TaskBoard
+          tasks={rows}
+          canManage={canManage}
+          moving={move.isPending}
+          onMove={(task, status) => void moveTask(task, status)}
+          onEdit={(task) => setDrawer(task)}
         />
       ) : (
         <Paper variant="outlined" sx={{ overflow: 'hidden' }}>

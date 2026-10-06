@@ -1,6 +1,7 @@
 export type TaskKind = 'task' | 'call' | 'email' | 'meeting'
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
 export type TaskStatus = 'open' | 'overdue' | 'completed'
+export type TaskWorkflowStatus = 'todo' | 'in_progress' | 'waiting' | 'completed'
 
 export interface CrmTask {
   id: string
@@ -18,6 +19,7 @@ export interface CrmTask {
   title: string
   kind: TaskKind
   priority: TaskPriority
+  workflow_status: TaskWorkflowStatus
   due_at: string
   reminder_at: string | null
   notes: string

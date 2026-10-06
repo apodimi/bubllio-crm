@@ -63,6 +63,7 @@ def build_workspace_data_export(organization):
                         "title": task.title,
                         "kind": task.kind,
                         "priority": task.priority,
+                        "workflow_status": task.workflow_status,
                         "due_at": task.due_at,
                         "reminder_at": task.reminder_at,
                         "notes": task.notes,

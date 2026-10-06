@@ -188,11 +188,14 @@ email or meeting with an owner, priority, due time, optional reminder time and
 notes. Organization ownership always comes from the authorized URL; related
 records and assignees are validated against that organization.
 
-Completion is recorded with `completed_at` and `completed_by`. Overdue is a
-derived status for an incomplete task whose due time has passed, not a mutable
-database flag. Complete and reopen operations lock the task row and are
-idempotent. The earliest incomplete task linked to a deal is its next action in
-the frontend. Reminder delivery and the unified customer timeline are not yet
+Workflow is stored separately as `todo`, `in_progress`, `waiting` or
+`completed`. Completion is recorded with `completed_at` and `completed_by`.
+Moving to `completed` fills that audit metadata; moving out of it clears the
+metadata. All move, complete and reopen operations use the same row-locking
+service so these values cannot drift apart. Overdue remains a derived status
+for an incomplete task whose due time has passed, not a mutable database flag.
+The earliest incomplete task linked to a deal is its next action in the
+frontend. Reminder delivery and the unified customer timeline are not yet
 implemented.
 
 ## Services and billing

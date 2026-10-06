@@ -90,6 +90,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "kind",
             "priority",
+            "workflow_status",
             "due_at",
             "reminder_at",
             "notes",
@@ -107,9 +108,9 @@ class TaskSerializer(serializers.ModelSerializer):
             "assigned_to_name",
             "created_by_name",
             "completed_by_name",
+            "workflow_status",
             "effective_status",
             "completed_at",
             "created_at",
             "updated_at",
         )
-

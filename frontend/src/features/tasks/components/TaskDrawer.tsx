@@ -21,7 +21,7 @@ import type { Company } from '../../../types/company.types'
 import type { CrmTask, TaskInput } from '../../../types/task.types'
 import { taskSchema } from '../taskSchema'
 import type { TaskFormValues } from '../taskSchema'
-import { useCreateTask, useDeleteTask, useUpdateTask } from '../hooks/useTasks'
+import { useCreateTask, useDeleteTask, useMoveTask, useUpdateTask } from '../hooks/useTasks'
 
 const toLocalInput = (value: string | null) => {
   if (!value) return ''
@@ -45,6 +45,7 @@ const taskValues = (task: CrmTask | undefined, currentUserId: number | null): Ta
   title: task?.title ?? '',
   kind: task?.kind ?? 'task',
   priority: task?.priority ?? 'normal',
+  workflow_status: task?.workflow_status ?? 'todo',
   due_at: toLocalInput(task?.due_at ?? null) || tomorrowMorning(),
   reminder_at: toLocalInput(task?.reminder_at ?? null) || null,
   notes: task?.notes ?? '',
@@ -64,6 +65,7 @@ export function TaskDrawer({
   const create = useCreateTask(organizationId)
   const update = useUpdateTask(organizationId, task?.id ?? '')
   const remove = useDeleteTask(organizationId)
+  const move = useMoveTask(organizationId)
   const mutation = task ? update : create
   const contacts = useContacts(organizationId, { archived: 'active' })
   const deals = useDeals(organizationId)
@@ -84,17 +86,21 @@ export function TaskDrawer({
   const companyId = useWatch({ control, name: 'company' })
   const companyContacts = (contacts.data ?? []).filter((contact) => contact.company === companyId)
   const companyDeals = (deals.data ?? []).filter((deal) => deal.company === companyId)
-  const pending = mutation.isPending || remove.isPending
-  const error = mutation.error || remove.error
+  const pending = mutation.isPending || remove.isPending || move.isPending
+  const error = mutation.error || remove.error || move.error
 
   async function submit(values: TaskFormValues) {
+    const { workflow_status, ...editableValues } = values
     const body: TaskInput = {
-      ...values,
+      ...editableValues,
       due_at: new Date(values.due_at).toISOString(),
       reminder_at: values.reminder_at ? new Date(values.reminder_at).toISOString() : null,
     }
     try {
       await mutation.mutateAsync(body)
+      if (task && workflow_status !== task.workflow_status) {
+        await move.mutateAsync({ taskId: task.id, workflowStatus: workflow_status })
+      }
       onClose()
     } catch {
       /* Normalized API error is rendered below. */
@@ -286,6 +292,20 @@ export function TaskDrawer({
               </TextField>
             )}
           />
+          {task ? (
+            <Controller
+              name="workflow_status"
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} select label="Status" disabled={pending}>
+                  <MenuItem value="todo">To do</MenuItem>
+                  <MenuItem value="in_progress">In progress</MenuItem>
+                  <MenuItem value="waiting">Waiting</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                </TextField>
+              )}
+            />
+          ) : null}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <Controller
               name="due_at"

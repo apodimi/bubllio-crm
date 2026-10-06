@@ -4,6 +4,7 @@ from .views import (
     TaskCompletionAPIView,
     TaskDetailAPIView,
     TaskListCreateAPIView,
+    TaskMoveAPIView,
     TaskReopenAPIView,
 )
 
@@ -18,5 +19,5 @@ urlpatterns = [
     path(
         "<uuid:task_id>/reopen/", TaskReopenAPIView.as_view(), name="task-reopen"
     ),
+    path("<uuid:task_id>/move/", TaskMoveAPIView.as_view(), name="task-move"),
 ]
-

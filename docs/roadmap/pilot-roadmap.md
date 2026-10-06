@@ -24,7 +24,8 @@
 - Deals με pipeline, drag and drop, status, owner, contact, probability,
   ημερομηνία κλεισίματος, ΦΠΑ και lost reason.
 - Tasks και follow-ups με company/contact/deal, owner, due time, reminder,
-  priority, today/upcoming/overdue views και next action στα deals.
+  priority, date-based list, workflow board με drag and drop και next action στα
+  deals.
 - Services, subscriptions, renewals, εσωτερικές χρεώσεις και recurring revenue.
 - Actionable Overview με προσωπικά tasks, overdue follow-ups και billing attention.
 - Organization και ERP defaults.

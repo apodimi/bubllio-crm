@@ -1,6 +1,6 @@
 import { request } from '../../../services/api'
 import { organizationPath } from '../../organizations'
-import type { CrmTask, TaskInput, TaskKind } from '../../../types/task.types'
+import type { CrmTask, TaskInput, TaskKind, TaskWorkflowStatus } from '../../../types/task.types'
 
 export type TaskBucket = 'today' | 'upcoming' | 'overdue' | 'open' | 'completed' | 'all'
 export interface TaskFilters {
@@ -39,4 +39,8 @@ export const taskService = {
     request<CrmTask>(`${taskPath(organizationId, taskId)}complete/`, { body: {} }),
   reopen: (organizationId: string, taskId: string) =>
     request<CrmTask>(`${taskPath(organizationId, taskId)}reopen/`, { body: {} }),
+  move: (organizationId: string, taskId: string, workflowStatus: TaskWorkflowStatus) =>
+    request<CrmTask>(`${taskPath(organizationId, taskId)}move/`, {
+      body: { workflow_status: workflowStatus },
+    }),
 }

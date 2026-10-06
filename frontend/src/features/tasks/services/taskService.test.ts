@@ -28,4 +28,14 @@ describe('taskService', () => {
       body: {},
     })
   })
+
+  it('moves a task through its workflow endpoint', async () => {
+    vi.mocked(request).mockResolvedValueOnce({})
+
+    await taskService.move('org-a', 'task-a', 'waiting')
+
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/tasks/task-a/move/', {
+      body: { workflow_status: 'waiting' },
+    })
+  })
 })

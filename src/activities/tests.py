@@ -87,6 +87,7 @@ class TaskApiTests(APITestCase):
         self.assertEqual(response.data["deal_title"], "Renewal")
         self.assertEqual(response.data["assigned_to"], self.teammate.id)
         self.assertEqual(response.data["effective_status"], "open")
+        self.assertEqual(response.data["workflow_status"], "todo")
         self.assertEqual(Task.objects.get().organization, self.organization)
         self.assertEqual(Task.objects.get().created_by, self.user)
 
@@ -180,11 +181,13 @@ class TaskApiTests(APITestCase):
 
         self.assertEqual(completed.status_code, status.HTTP_200_OK)
         self.assertEqual(completed.data["effective_status"], "completed")
+        self.assertEqual(completed.data["workflow_status"], "completed")
         self.assertEqual(completed.data["completed_by_name"], "operator")
         self.assertEqual(
             completed.data["completed_at"], completed_again.data["completed_at"]
         )
         self.assertEqual(reopened.data["effective_status"], "open")
+        self.assertEqual(reopened.data["workflow_status"], "todo")
         self.assertIsNone(reopened.data["completed_at"])
         self.assertEqual(Task.objects.filter(id=task.id).count(), 1)
 
@@ -196,9 +199,12 @@ class TaskApiTests(APITestCase):
             title="Upcoming", assigned_to=self.teammate, due_at=timezone.now() + timedelta(days=2)
         )
         completed = self.create_task(title="Completed", assigned_to=self.user)
+        completed.workflow_status = Task.WorkflowStatus.COMPLETED
         completed.completed_at = timezone.now()
         completed.completed_by = self.user
-        completed.save(update_fields=("completed_at", "completed_by"))
+        completed.save(
+            update_fields=("workflow_status", "completed_at", "completed_by")
+        )
 
         overdue_response = self.client.get(
             self.list_url(), {"bucket": "overdue", "assigned_to": "me"}
@@ -219,13 +225,62 @@ class TaskApiTests(APITestCase):
             title="Hidden",
             due_at=timezone.now() + timedelta(days=1),
         )
-        for route in ("task-detail", "task-complete", "task-reopen"):
+        for route in ("task-detail", "task-complete", "task-reopen", "task-move"):
             url = reverse(
                 route,
                 kwargs={"organization_id": self.organization.id, "task_id": hidden.id},
             )
             response = self.client.get(url) if route == "task-detail" else self.client.post(url, {})
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, route)
+
+    def test_move_changes_workflow_and_keeps_completion_in_sync(self):
+        task = self.create_task()
+        url = reverse(
+            "task-move",
+            kwargs={"organization_id": self.organization.id, "task_id": task.id},
+        )
+
+        in_progress = self.client.post(
+            url, {"workflow_status": "in_progress"}, format="json"
+        )
+        completed = self.client.post(
+            url, {"workflow_status": "completed"}, format="json"
+        )
+        waiting = self.client.post(
+            url, {"workflow_status": "waiting"}, format="json"
+        )
+
+        self.assertEqual(in_progress.data["workflow_status"], "in_progress")
+        self.assertIsNone(in_progress.data["completed_at"])
+        self.assertEqual(completed.data["workflow_status"], "completed")
+        self.assertIsNotNone(completed.data["completed_at"])
+        self.assertEqual(completed.data["completed_by_name"], "operator")
+        self.assertEqual(waiting.data["workflow_status"], "waiting")
+        self.assertIsNone(waiting.data["completed_at"])
+        self.assertEqual(waiting.data["completed_by_name"], "")
+
+    def test_move_rejects_invalid_status_and_patch_cannot_bypass_service(self):
+        task = self.create_task()
+        move_url = reverse(
+            "task-move",
+            kwargs={"organization_id": self.organization.id, "task_id": task.id},
+        )
+        detail_url = reverse(
+            "task-detail",
+            kwargs={"organization_id": self.organization.id, "task_id": task.id},
+        )
+
+        invalid = self.client.post(
+            move_url, {"workflow_status": "unknown"}, format="json"
+        )
+        patched = self.client.patch(
+            detail_url, {"workflow_status": "completed"}, format="json"
+        )
+
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+        self.assertEqual(patched.data["workflow_status"], "todo")
+        self.assertIsNone(patched.data["completed_at"])
 
     def test_non_member_cannot_list_tasks(self):
         self.client.force_authenticate(self.outsider)

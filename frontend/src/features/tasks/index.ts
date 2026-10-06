@@ -4,6 +4,7 @@ export {
   useCreateTask,
   useDeleteTask,
   useReopenTask,
+  useMoveTask,
   useTasks,
   useUpdateTask,
 } from './hooks/useTasks'

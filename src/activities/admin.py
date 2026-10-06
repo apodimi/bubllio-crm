@@ -11,10 +11,10 @@ class TaskAdmin(admin.ModelAdmin):
         "company",
         "kind",
         "priority",
+        "workflow_status",
         "assigned_to",
         "due_at",
         "completed_at",
     )
-    list_filter = ("organization", "kind", "priority", "completed_at")
+    list_filter = ("organization", "kind", "priority", "workflow_status")
     search_fields = ("title", "company__name", "contact__first_name", "contact__last_name")
-

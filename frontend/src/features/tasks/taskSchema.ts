@@ -9,6 +9,7 @@ export const taskSchema = z
     title: z.string().trim().min(1, 'Task title is required.').max(255),
     kind: z.enum(['task', 'call', 'email', 'meeting']),
     priority: z.enum(['low', 'normal', 'high', 'urgent']),
+    workflow_status: z.enum(['todo', 'in_progress', 'waiting', 'completed']),
     due_at: z.string().min(1, 'Due date and time are required.'),
     reminder_at: z.string().nullable(),
     notes: z.string().trim().max(5000, 'Use at most 5,000 characters.'),

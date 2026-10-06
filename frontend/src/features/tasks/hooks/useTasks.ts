@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { TaskInput } from '../../../types/task.types'
+import type { TaskInput, TaskWorkflowStatus } from '../../../types/task.types'
 import { taskService } from '../services/taskService'
 import type { TaskFilters } from '../services/taskService'
 
@@ -48,6 +48,20 @@ export function useReopenTask(organizationId: string) {
   const invalidate = useInvalidateTasks(organizationId)
   return useMutation({
     mutationFn: (taskId: string) => taskService.reopen(organizationId, taskId),
+    onSuccess: invalidate,
+  })
+}
+
+export function useMoveTask(organizationId: string) {
+  const invalidate = useInvalidateTasks(organizationId)
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      workflowStatus,
+    }: {
+      taskId: string
+      workflowStatus: TaskWorkflowStatus
+    }) => taskService.move(organizationId, taskId, workflowStatus),
     onSuccess: invalidate,
   })
 }

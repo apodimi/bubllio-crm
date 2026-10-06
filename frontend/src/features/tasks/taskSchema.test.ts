@@ -9,6 +9,7 @@ const validTask = {
   title: 'Call about renewal',
   kind: 'call' as const,
   priority: 'high' as const,
+  workflow_status: 'todo' as const,
   due_at: '2026-10-08T10:00',
   reminder_at: '2026-10-08T09:00',
   notes: '',

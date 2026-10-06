@@ -11,7 +11,7 @@ from access.permissions import Capability, get_organization_for_user
 
 from .models import Task
 from .serializers import TaskSerializer
-from .services import complete_task, reopen_task
+from .services import complete_task, move_task, reopen_task
 
 
 def _task_queryset(organization):
@@ -162,4 +162,27 @@ class TaskReopenAPIView(APIView):
             capability=Capability.MANAGE_CRM,
         )
         task = get_object_or_404(_task_queryset(organization), id=task_id)
-        return Response(TaskSerializer(reopen_task(task=task)).data)
+        return Response(TaskSerializer(reopen_task(task=task, user=request.user)).data)
+
+
+class TaskMoveAPIView(APIView):
+    def post(self, request, organization_id, task_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        task = get_object_or_404(_task_queryset(organization), id=task_id)
+        workflow_status = request.data.get("workflow_status")
+        if workflow_status not in Task.WorkflowStatus.values:
+            return Response(
+                {"workflow_status": ["Select a valid workflow status."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            TaskSerializer(
+                move_task(
+                    task=task, workflow_status=workflow_status, user=request.user
+                )
+            ).data
+        )

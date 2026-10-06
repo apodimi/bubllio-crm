@@ -6,6 +6,12 @@ from django.utils import timezone
 
 
 class Task(models.Model):
+    class WorkflowStatus(models.TextChoices):
+        TODO = "todo", "To do"
+        IN_PROGRESS = "in_progress", "In progress"
+        WAITING = "waiting", "Waiting"
+        COMPLETED = "completed", "Completed"
+
     class Kind(models.TextChoices):
         TASK = "task", "Task"
         CALL = "call", "Call"
@@ -57,6 +63,9 @@ class Task(models.Model):
     priority = models.CharField(
         max_length=20, choices=Priority.choices, default=Priority.NORMAL
     )
+    workflow_status = models.CharField(
+        max_length=20, choices=WorkflowStatus.choices, default=WorkflowStatus.TODO
+    )
     due_at = models.DateTimeField()
     reminder_at = models.DateTimeField(blank=True, null=True)
     notes = models.TextField(blank=True)
@@ -77,13 +86,27 @@ class Task(models.Model):
             ),
             models.Index(fields=("organization", "deal"), name="task_org_deal_idx"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        workflow_status="completed",
+                        completed_at__isnull=False,
+                    )
+                    | models.Q(
+                        ~models.Q(workflow_status="completed"),
+                        completed_at__isnull=True,
+                    )
+                ),
+                name="task_completion_matches_workflow",
+            )
+        ]
 
     @property
     def effective_status(self):
-        if self.completed_at:
+        if self.workflow_status == self.WorkflowStatus.COMPLETED:
             return "completed"
         return "overdue" if self.due_at < timezone.now() else "open"
 
     def __str__(self):
         return self.title
-

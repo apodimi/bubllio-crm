@@ -114,6 +114,7 @@ async function mockApi(page: Page) {
           assigned_to_name: body.assigned_to ? 'Demo User' : '',
           created_by_name: 'Demo User',
           completed_by_name: '',
+          workflow_status: 'todo',
           effective_status: 'open',
           completed_at: null,
           created_at: '2030-01-01T00:00:00Z',
@@ -124,9 +125,21 @@ async function mockApi(page: Page) {
       }
       return route.fulfill({ json: tasks })
     }
+    if (
+      path === '/api/v1/organizations/alpha/tasks/task-a/' &&
+      route.request().method() === 'PATCH'
+    ) {
+      tasks[0] = { ...tasks[0], ...route.request().postDataJSON() }
+      return route.fulfill({ json: tasks[0] })
+    }
+    if (path === '/api/v1/organizations/alpha/tasks/task-a/move/') {
+      tasks[0] = { ...tasks[0], workflow_status: route.request().postDataJSON().workflow_status }
+      return route.fulfill({ json: tasks[0] })
+    }
     if (path === '/api/v1/organizations/alpha/tasks/task-a/complete/') {
       const completedTask = {
         ...tasks[0],
+        workflow_status: 'completed',
         effective_status: 'completed',
         completed_at: '2030-01-01T10:00:00Z',
         completed_by_name: 'Demo User',
@@ -419,12 +432,24 @@ test('creates and completes a customer follow-up', async ({ page }) => {
     assigned_to: 1,
   })
   await expect(page.getByText('Call about renewal')).toBeVisible()
+  await page.getByRole('button', { name: 'Board view' }).click()
+  await expect(page.getByText('In progress', { exact: true })).toBeVisible()
+  await expect(page.getByText('Waiting', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Open and edit' }).click()
+  await page.getByRole('combobox', { name: 'Status' }).click()
+  await page.getByRole('option', { name: 'Waiting', exact: true }).click()
+  const moveRequest = page.waitForRequest((request) =>
+    request.url().endsWith('/tasks/task-a/move/'),
+  )
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  expect((await moveRequest).postDataJSON()).toEqual({ workflow_status: 'waiting' })
   await page.screenshot({ path: test.info().outputPath('tasks-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: test.info().outputPath('tasks-mobile.png'), fullPage: true })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
+  await page.getByRole('button', { name: 'List view' }).click()
   const completeRequest = page.waitForRequest((request) =>
     request.url().endsWith('/tasks/task-a/complete/'),
   )
