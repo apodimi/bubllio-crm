@@ -9,5 +9,5 @@ exec .venv/bin/gunicorn bubllio_crm.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers "${GUNICORN_WORKERS:-3}" \
     --timeout "${GUNICORN_TIMEOUT:-60}" \
-    --access-logfile - \
+    --access-logfile /dev/null \
     --error-logfile -

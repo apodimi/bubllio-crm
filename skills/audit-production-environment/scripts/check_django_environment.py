@@ -37,7 +37,6 @@ def main() -> int:
         "DJANGO_SECRET_KEY",
         "DATABASE_URL",
         "BUBLLIO_APP_URL",
-        "BUBLLIO_EMAIL_ENCRYPTION_KEY",
     )
     for name in required_environment:
         configured = bool(os.environ.get(name))
@@ -47,6 +46,17 @@ def main() -> int:
             configured,
             "configured" if configured else "missing",
         )
+
+    encryption_keys_configured = bool(
+        os.environ.get("BUBLLIO_EMAIL_ENCRYPTION_KEYS")
+        or os.environ.get("BUBLLIO_EMAIL_ENCRYPTION_KEY")
+    )
+    record(
+        results,
+        "environment:BUBLLIO_EMAIL_ENCRYPTION_KEYS",
+        encryption_keys_configured,
+        "configured" if encryption_keys_configured else "missing",
+    )
 
     record(results, "django:DEBUG", not settings.DEBUG, "disabled" if not settings.DEBUG else "enabled")
     allowed_hosts = list(settings.ALLOWED_HOSTS)

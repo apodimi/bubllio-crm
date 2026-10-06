@@ -36,7 +36,7 @@ jobs:
       - run: uv sync --extra postgres
       - run: uv run python src/manage.py check
       - run: uv run python src/manage.py makemigrations --check --dry-run
-      - run: uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
+      - run: uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts deals subscriptions accounts activities automations
       - name: Verify production security settings
         env:
           DJANGO_DEBUG: "false"
@@ -48,7 +48,7 @@ jobs:
           DJANGO_CSRF_COOKIE_SECURE: "true"
           DJANGO_SECURE_HSTS_SECONDS: "3600"
           BUBLLIO_APP_URL: https://crm.example.com
-          BUBLLIO_EMAIL_ENCRYPTION_KEY: bUPlTTVfJnkhIWpMJTdA7p9Xk0EuPgGDfJnGZhr2hMI=
+          BUBLLIO_EMAIL_ENCRYPTION_KEYS: bUPlTTVfJnkhIWpMJTdA7p9Xk0EuPgGDfJnGZhr2hMI=
         run: uv run python src/manage.py check --deploy
 
   frontend:

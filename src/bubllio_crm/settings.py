@@ -233,10 +233,16 @@ LOGGING = {
             "style": "{",
         },
     },
+    "filters": {
+        "redact_sensitive_paths": {
+            "()": "bubllio_crm.logging_security.SensitivePathFilter",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "standard",
+            "filters": ["redact_sensitive_paths"],
         },
     },
     "root": {

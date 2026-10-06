@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from unittest.mock import patch
 
@@ -7,6 +8,7 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .database import get_database_config
+from .logging_security import SensitivePathFilter, redact_sensitive_paths
 
 
 class DatabaseConfigurationTests(SimpleTestCase):
@@ -60,6 +62,37 @@ class DatabaseConfigurationTests(SimpleTestCase):
     def test_invalid_database_url_has_clear_error(self):
         with self.assertRaisesMessage(ImproperlyConfigured, "DATABASE_URL is invalid"):
             get_database_config(self.base_dir, database_url="not-a-database-url")
+
+
+class SensitiveLoggingTests(SimpleTestCase):
+    def test_redacts_invitation_and_password_reset_credentials(self):
+        message = (
+            "Failed /api/v1/invitations/invite-secret/accept/ "
+            "/api/v1/installation-admin-invitations/admin-secret/ "
+            "/api/v1/auth/password-reset/user-id/reset-secret/"
+        )
+
+        redacted = redact_sensitive_paths(message)
+
+        self.assertNotIn("invite-secret", redacted)
+        self.assertNotIn("admin-secret", redacted)
+        self.assertNotIn("reset-secret", redacted)
+        self.assertIn("/api/v1/invitations/<redacted>/accept/", redacted)
+        self.assertIn("/api/v1/auth/password-reset/<redacted>/", redacted)
+
+    def test_logging_filter_handles_parameterized_messages(self):
+        record = logging.LogRecord(
+            name="django.request",
+            level=logging.WARNING,
+            pathname=__file__,
+            lineno=1,
+            msg="Not Found: %s",
+            args=("/api/v1/invitations/secret-token/",),
+            exc_info=None,
+        )
+
+        self.assertTrue(SensitivePathFilter().filter(record))
+        self.assertEqual(record.getMessage(), "Not Found: /api/v1/invitations/<redacted>/")
 
 
 class HealthCheckTests(TestCase):
