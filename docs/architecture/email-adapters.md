@@ -51,22 +51,33 @@ The installation administrator can view or replace the fallback account from
 Account settings in the React application. This uses
 `/api/v1/organizations/installation-settings/` and is restricted to active Django
 superusers. It never returns the stored password. Saving a new password
-re-encrypts it with the current `BUBLLIO_EMAIL_ENCRYPTION_KEY`.
+re-encrypts it with the primary key in `BUBLLIO_EMAIL_ENCRYPTION_KEYS`.
 
-Set `BUBLLIO_EMAIL_ENCRYPTION_KEY` before storing passwords. Generate a Fernet key:
+Set `BUBLLIO_EMAIL_ENCRYPTION_KEYS` before storing passwords. Generate a Fernet key:
 
 ```bash
 uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Keep it in a secret manager or ignored `.env`. The same key must be available
-every time the application reads an existing SMTP account. Losing the key, or
-replacing it without re-entering the SMTP password, makes existing passwords
-unusable because Fernet encryption cannot be reversed without the original key.
-If the original key is lost, generate a new one, restart the application with
-it, then save the SMTP account again from workspace Settings; the new password
-will be encrypted with the new key. Never put passwords or encryption keys in
-version control.
+Keep it in a secret manager or ignored `.env`. `BUBLLIO_EMAIL_ENCRYPTION_KEY`
+remains supported for existing single-key installations, but new deployments
+should use the plural setting.
+
+To rotate a key without losing saved credentials:
+
+1. Generate a new key.
+2. Set `BUBLLIO_EMAIL_ENCRYPTION_KEYS=new-key,previous-key`; the first key is
+   always used for new encryption and the remaining keys are decrypt-only
+   fallbacks.
+3. Back up the database and run
+   `uv run python src/manage.py rotate_email_encryption`.
+4. Verify one SMTP connection, then change the setting to contain only the new
+   key.
+
+The rotation command locks the credential rows and uses one database
+transaction. If any value cannot be decrypted, the whole operation rolls back.
+Losing every key that can decrypt an existing value is not recoverable. Never
+put passwords or encryption keys in version control.
 
 ## Next Integration: Reuse Django SMTP Sending
 

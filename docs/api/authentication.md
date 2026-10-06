@@ -43,7 +43,7 @@ least 32 characters, empty user and organization tables, and an unfinished insta
 request contains `setup_token`, `username`, `email`, `password`,
 `organization_name`, and `organization_slug`; `smtp` may contain the existing
 email-account fields including its password. SMTP requires a valid server-side
-`BUBLLIO_EMAIL_ENCRYPTION_KEY`. Success returns `201` and permanently closes
+`BUBLLIO_EMAIL_ENCRYPTION_KEYS`. Success returns `201` and permanently closes
 setup in that database. The API rate-limits setup POST attempts. See
 [Getting Started](../getting-started.md) for the complete operator procedure.
 

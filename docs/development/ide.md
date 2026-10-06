@@ -14,7 +14,7 @@ This starts:
 - Vite at `http://127.0.0.1:5173` with `/api` proxied to Django.
 
 The backend reads the root `.env` file through the application settings. Copy
-`.env.example` to `.env` and set `BUBLLIO_EMAIL_ENCRYPTION_KEY` if you need to
+`.env.example` to `.env` and set `BUBLLIO_EMAIL_ENCRYPTION_KEYS` if you need to
 create or use SMTP accounts. Never commit `.env`.
 
 If you want to run only one side, select `Bubllio CRM — Backend` or

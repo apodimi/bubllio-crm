@@ -40,7 +40,7 @@ Bearer token. Use HTTPS outside localhost.
 | `email_account_id` | Created SMTP account UUID |
 | `company_search`, `contact_search` | Search values |
 
-For UI-managed SMTP testing, also set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in the
+For UI-managed SMTP testing, also set `BUBLLIO_EMAIL_ENCRYPTION_KEYS` in the
 server's ignored `.env` file. Postman never stores that encryption key.
 
 Organization, company, and automation creation requests save returned

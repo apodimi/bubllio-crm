@@ -16,11 +16,16 @@ def _check(key, label, meaning, passed, guidance):
 
 
 def _has_valid_encryption_key():
-    key = os.environ.get("BUBLLIO_EMAIL_ENCRYPTION_KEY", "")
-    if not key:
+    key_ring = os.environ.get("BUBLLIO_EMAIL_ENCRYPTION_KEYS", "").strip()
+    legacy_key = os.environ.get("BUBLLIO_EMAIL_ENCRYPTION_KEY", "").strip()
+    keys = [key.strip() for key in key_ring.split(",") if key.strip()]
+    if not keys and legacy_key:
+        keys = [legacy_key]
+    if not keys:
         return False
     try:
-        Fernet(key.encode())
+        for key in keys:
+            Fernet(key.encode())
     except (TypeError, ValueError):
         return False
     return True
@@ -109,7 +114,7 @@ def get_production_readiness():
             "Saved email passwords can be encrypted",
             "Protects SMTP passwords stored in the database.",
             _has_valid_encryption_key(),
-            "Generate a Fernet key, store it as BUBLLIO_EMAIL_ENCRYPTION_KEY, and keep a secure copy outside the server.",
+            "Generate a Fernet key, store it as BUBLLIO_EMAIL_ENCRYPTION_KEYS, and keep a secure copy outside the server.",
         ),
     ]
     passed = sum(check["status"] == "pass" for check in checks)

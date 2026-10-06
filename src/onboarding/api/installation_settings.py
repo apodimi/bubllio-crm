@@ -30,7 +30,9 @@ class InstallationSettingsAPIView(APIView):
 
     @transaction.atomic
     def patch(self, request):
-        state = InstallationState.objects.select_for_update().select_related("fallback_email_account").get(pk=1)
+        # Lock only the singleton state row. PostgreSQL cannot apply FOR UPDATE
+        # to the nullable side of the outer join produced by select_related().
+        state = InstallationState.objects.select_for_update().get(pk=1)
         allow_personal_workspaces = request.data.get("allow_personal_workspaces")
         if allow_personal_workspaces is not None and not isinstance(allow_personal_workspaces, bool):
             return Response(

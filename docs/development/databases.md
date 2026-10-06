@@ -82,7 +82,7 @@ without relying on a file.
 Never commit `.env` or real credentials. `.env.example` contains safe examples.
 
 Email account encryption is separate from database configuration. If the UI is
-used to create SMTP accounts, set `BUBLLIO_EMAIL_ENCRYPTION_KEY` in `.env` as
+used to create SMTP accounts, set `BUBLLIO_EMAIL_ENCRYPTION_KEYS` in `.env` as
 described in `docs/architecture/email-adapters.md`.
 
 ## Migration history

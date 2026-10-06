@@ -75,7 +75,7 @@ class InstallationSetupAPIView(APIView):
                 encrypted_password = encrypt_secret(smtp_values["password"])
             except ImproperlyConfigured:
                 return Response(
-                    {"smtp": ["Set a valid BUBLLIO_EMAIL_ENCRYPTION_KEY on the server before adding SMTP."]},
+                    {"smtp": ["Set a valid BUBLLIO_EMAIL_ENCRYPTION_KEYS value on the server before adding SMTP."]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

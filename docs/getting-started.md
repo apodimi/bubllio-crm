@@ -73,7 +73,7 @@ superuser who is also the workspace owner. Sign in with that account afterward.
 SMTP is optional. The setup screen has four steps: Admin, Workspace, Email, and
 Review. You can move back without losing entered values, skip SMTP, and review
 the details before creating anything. To add SMTP during setup, first set
-`BUBLLIO_EMAIL_ENCRYPTION_KEY` on the server as described in
+`BUBLLIO_EMAIL_ENCRYPTION_KEYS` on the server as described in
 [Email Sending](architecture/email-adapters.md). Setup stores the SMTP password
 encrypted in the existing organization email-account model only when you finish.
 The Email step has a **Send test email** button: enter a recipient address and
@@ -184,9 +184,9 @@ DJANGO_SECRET_KEY
 ```
 
 Local development has a non-production fallback. Optional `DATABASE_URL` selects
-the database; `BUBLLIO_EMAIL_ENCRYPTION_KEY` is needed for stored SMTP passwords.
-Keep this key stable across restarts. If it is lost, create a new key and
-re-enter the SMTP password in workspace Settings so the account can be
-encrypted again. The first-setup SMTP account is the installation fallback for
+the database; `BUBLLIO_EMAIL_ENCRYPTION_KEYS` is needed for stored SMTP passwords.
+Keep the active key ring stable across restarts and use the documented rotation
+command before removing an old key. If every usable key is lost, the SMTP
+password must be entered again. The first-setup SMTP account is the installation fallback for
 workspaces that do not define their own active default account.
 See [Database Setup](development/databases.md) and [Email Sending](architecture/email-adapters.md).

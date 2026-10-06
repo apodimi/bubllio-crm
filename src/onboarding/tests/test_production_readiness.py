@@ -32,7 +32,13 @@ class ProductionReadinessTests(APITestCase):
     def test_admin_sees_ready_status_without_secret_values(self):
         self.client.force_authenticate(self.admin)
         encryption_key = Fernet.generate_key().decode()
-        with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": encryption_key}):
+        with patch.dict(
+            "os.environ",
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": encryption_key,
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": "",
+            },
+        ):
             response = self.client.get(self.url, secure=True)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -72,7 +78,13 @@ class ProductionReadinessTests(APITestCase):
     )
     def test_unsafe_configuration_returns_actionable_failed_checks(self):
         self.client.force_authenticate(self.admin)
-        with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": ""}):
+        with patch.dict(
+            "os.environ",
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": "",
+            },
+        ):
             response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
