@@ -1,33 +1,14 @@
 import { request } from '../../../services/api'
+import type {
+  Invitation,
+  InvitationAcceptance,
+  InvitationRegistration,
+  InvitationRole,
+  WorkspaceMember,
+  WorkspaceRole,
+  InvitationPreview,
+} from '../../../types/invitation.types'
 import { organizationPath } from '../../organizations/services/organizationService'
-
-export type InvitationRole = 'admin' | 'member' | 'viewer'
-export type Invitation = { id: string; email: string; role: InvitationRole; expires_at: string }
-export type WorkspaceMember = {
-  id: string
-  username: string
-  email: string
-  role: InvitationRole | 'owner'
-}
-export type InvitationPreview = {
-  email: string
-  organization_name?: string
-  role?: InvitationRole | 'owner'
-  expires_at: string
-}
-export type InvitationAcceptance = {
-  organization_id?: string
-  role?: InvitationRole | 'owner'
-  tokens: { access: string; refresh: string } | null
-}
-export type InvitationRegistration = {
-  username: string
-  password: string
-  display_name: string
-  first_name?: string
-  last_name?: string
-  date_of_birth?: string | null
-}
 
 const invitationPath = (token: string) => `/invitations/${encodeURIComponent(token)}/`
 const adminInvitationPath = (token: string) =>
@@ -40,10 +21,25 @@ export const invitationService = {
     request<WorkspaceMember[]>(`${organizationPath(organizationId)}members/`, { signal }),
   create: (organizationId: string, input: { email: string; role: InvitationRole }) =>
     request<Invitation>(`${organizationPath(organizationId)}invitations/`, { body: input }),
-  updateMember: (organizationId: string, memberId: string, role: InvitationRole | 'owner') =>
-    request<WorkspaceMember>(`${organizationPath(organizationId)}members/${encodeURIComponent(memberId)}/`, { method: 'PATCH', body: { role } }),
+  resend: (organizationId: string, invitationId: string) =>
+    request<Invitation>(
+      `${organizationPath(organizationId)}invitations/${encodeURIComponent(invitationId)}/resend/`,
+      { body: {} },
+    ),
+  revoke: (organizationId: string, invitationId: string) =>
+    request<void>(
+      `${organizationPath(organizationId)}invitations/${encodeURIComponent(invitationId)}/`,
+      { method: 'DELETE' },
+    ),
+  updateMember: (organizationId: string, memberId: string, role: WorkspaceRole) =>
+    request<WorkspaceMember>(
+      `${organizationPath(organizationId)}members/${encodeURIComponent(memberId)}/`,
+      { method: 'PATCH', body: { role } },
+    ),
   removeMember: (organizationId: string, memberId: string) =>
-    request<void>(`${organizationPath(organizationId)}members/${encodeURIComponent(memberId)}/`, { method: 'DELETE' }),
+    request<void>(`${organizationPath(organizationId)}members/${encodeURIComponent(memberId)}/`, {
+      method: 'DELETE',
+    }),
   preview: (token: string, signal?: AbortSignal, installationAdmin = false) =>
     request<InvitationPreview>(
       installationAdmin ? adminInvitationPath(token) : invitationPath(token),

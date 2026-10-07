@@ -3,7 +3,11 @@ from django.urls import include, path
 from .api.email_accounts import EmailAccountDetailAPIView, EmailAccountListCreateAPIView, EmailAccountTestAPIView
 from onboarding.api.installation_admins import InstallationAdminInvitationListCreateAPIView
 from onboarding.api.installation_settings import InstallationSettingsAPIView
-from access.api.invitations import OrganizationInvitationListCreateAPIView
+from access.api.invitations import (
+    OrganizationInvitationDetailAPIView,
+    OrganizationInvitationListCreateAPIView,
+    OrganizationInvitationResendAPIView,
+)
 from access.api.memberships import OrganizationMembershipDetailAPIView, OrganizationMembershipListAPIView
 from .api.provisioning import (
     WorkspaceProvisioningListAPIView, WorkspaceProvisioningDetailAPIView,
@@ -22,6 +26,16 @@ urlpatterns = [
     path("settings/options/", OrganizationSettingsOptionsAPIView.as_view(), name="organization-settings-options"),
     path("<uuid:organization_id>/", OrganizationDetailAPIView.as_view(), name="organization-detail"),
     path("<uuid:organization_id>/invitations/", OrganizationInvitationListCreateAPIView.as_view(), name="organization-invitation-list"),
+    path(
+        "<uuid:organization_id>/invitations/<uuid:invitation_id>/",
+        OrganizationInvitationDetailAPIView.as_view(),
+        name="organization-invitation-detail",
+    ),
+    path(
+        "<uuid:organization_id>/invitations/<uuid:invitation_id>/resend/",
+        OrganizationInvitationResendAPIView.as_view(),
+        name="organization-invitation-resend",
+    ),
     path(
         "<uuid:organization_id>/members/",
         OrganizationMembershipListAPIView.as_view(),

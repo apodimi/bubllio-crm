@@ -188,12 +188,25 @@ requires the email invitation and acceptance flow below.
 Owners and administrators invite by email through
 `POST /api/v1/organizations/<organization_id>/invitations/` with `email` and
 `role`. Owners may invite `admin`, `member`, or `viewer`; administrators may
-invite only `member` or `viewer`. `GET` on the same route lists unexpired,
-unaccepted invitations. The server sends through that organization's active
+invite only `member` or `viewer`. `GET` on the same route returns the latest 100
+invitations, including their typed `pending`, `accepted`, `expired`, or
+`revoked` status and timestamps. The server sends through that organization's active
 default SMTP account, or the installation fallback SMTP if the workspace has
 none. It returns an error and saves no invitation if neither is available or
-delivery fails. A new invitation to the same email replaces the
-earlier pending one. Invitation POST requests are limited to 20 per user per day.
+delivery fails. A new invitation to the same email revokes the earlier active
+link while preserving its history. Invitation POST and resend requests share a
+limit of 20 per user per day.
+
+Owners and administrators may resend or revoke invitations through tenant-scoped
+actions. Resending creates a fresh seven-day link and revokes every earlier
+active link for that email. Revoking immediately invalidates the selected link.
+Administrators cannot resend or revoke an administrator invitation; that remains
+owner-only.
+
+```text
+POST   /api/v1/organizations/<organization_id>/invitations/<invitation_id>/resend/
+DELETE /api/v1/organizations/<organization_id>/invitations/<invitation_id>/
+```
 
 Invitation links contain a random token. Only its SHA-256 hash is stored, and
 the link expires after seven days. `GET /api/v1/invitations/<token>/` previews
@@ -264,7 +277,6 @@ existing personal workspaces.
 
 ## Future security work
 
-- general invitation revocation;
 - a future HttpOnly-cookie refresh transport if the deployment needs stronger browser-side token protection;
 - inactive/suspended memberships;
 - audit coverage for personal-account profile and sign-in changes;

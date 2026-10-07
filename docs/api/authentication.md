@@ -25,7 +25,9 @@ debugging a browser login.
 | POST | `/api/v1/organizations/` | installation admin Bearer token | create a shared workspace with `owner_email`; a different owner receives an email invitation |
 | GET | `/api/v1/organizations/provisioning/` | authenticated Bearer token | list own pending handoffs; installation admins see all |
 | POST/DELETE | `/api/v1/organizations/provisioning/<organization_id>/` | provisioning creator or installation admin Bearer token | resend owner invitation or cancel pending workspace |
-| GET/POST | `/api/v1/organizations/<organization_id>/invitations/` | owner/admin Bearer token | list pending invitations or email a new invitation |
+| GET/POST | `/api/v1/organizations/<organization_id>/invitations/` | owner/admin Bearer token | list invitation history or email a new invitation |
+| DELETE | `/api/v1/organizations/<organization_id>/invitations/<invitation_id>/` | owner/admin Bearer token | revoke an invitation and invalidate its link |
+| POST | `/api/v1/organizations/<organization_id>/invitations/<invitation_id>/resend/` | owner/admin Bearer token | revoke previous links and email a fresh seven-day invitation |
 | GET | `/api/v1/organizations/<organization_id>/members/` | owner/admin Bearer token | list members; direct membership creation is unavailable |
 | GET/POST | `/api/v1/organizations/installation-admin-invitations/` | installation admin Bearer token | list IT admins and pending invitations, or invite another IT admin |
 | GET | `/api/v1/installation-admin-invitations/<token>/` | invitation token in URL | preview an IT admin invitation |
@@ -81,6 +83,12 @@ belongs to another person, the workspace remains hidden until that owner accepts
 and the administrator's temporary membership is removed. See the
 [role guide](../architecture/authentication-and-roles.md) for the handoff and
 recovery flow.
+
+Workspace invitation history exposes one of four status values: `pending`,
+`accepted`, `expired`, or `revoked`. Expiry is derived from `expires_at`, so it
+does not depend on a background job. Resend and revoke operations remain scoped
+to the authorized organization; administrators cannot manage invitations for
+the administrator role.
 
 IT administrator invitations use installation fallback SMTP and the separate
 `/installation-admin-invite/<token>` browser route. An existing account must

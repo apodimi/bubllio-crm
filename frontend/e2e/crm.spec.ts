@@ -664,7 +664,12 @@ test('workspace owner can send an invite with a selected role', async ({ page })
           id: 'invite-1',
           email: 'new@example.com',
           role: 'viewer',
+          status: 'pending',
+          invited_by: 'demo',
+          created_at: '2029-12-25T00:00:00Z',
           expires_at: '2030-01-01T00:00:00Z',
+          accepted_at: null,
+          revoked_at: null,
         },
       })
     }
@@ -675,7 +680,12 @@ test('workspace owner can send an invite with a selected role', async ({ page })
               id: 'invite-1',
               email: 'new@example.com',
               role: 'viewer',
+              status: 'pending',
+              invited_by: 'demo',
+              created_at: '2029-12-25T00:00:00Z',
               expires_at: '2030-01-01T00:00:00Z',
+              accepted_at: null,
+              revoked_at: null,
             },
           ]
         : [],
@@ -690,6 +700,105 @@ test('workspace owner can send an invite with a selected role', async ({ page })
   await page.getByRole('button', { name: 'Send invitation' }).click()
   await expect(page.getByText('Invitation sent to new@example.com.')).toBeVisible()
   expect(sent).toBe(true)
+})
+
+test('workspace owner sees pending invitations on the dashboard', async ({ page }) => {
+  await page.route('**/api/v1/organizations/alpha/invitations/', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'dashboard-invite',
+          email: 'waiting@example.com',
+          role: 'member',
+          status: 'pending',
+          invited_by: 'demo',
+          created_at: '2029-12-25T00:00:00Z',
+          expires_at: '2030-01-01T00:00:00Z',
+          accepted_at: null,
+          revoked_at: null,
+        },
+      ],
+    }),
+  )
+
+  await login(page)
+  await openAlpha(page)
+  await expect(page.getByRole('heading', { name: 'Pending invitations' })).toBeVisible()
+  await expect(page.getByText('waiting@example.com')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Manage invitations' })).toBeVisible()
+})
+
+test('workspace owner can filter, resend, and revoke invitations', async ({ page }) => {
+  let resent = false
+  let revoked = false
+  const baseInvitation = {
+    email: 'pending@example.com',
+    role: 'member',
+    invited_by: 'demo',
+    created_at: '2029-12-25T00:00:00Z',
+    expires_at: '2030-01-01T00:00:00Z',
+    accepted_at: null,
+  }
+  await page.route('**/api/v1/organizations/alpha/members/', (route) =>
+    route.fulfill({
+      json: [{ id: 'member-1', username: 'demo', email: 'demo@example.com', role: 'owner' }],
+    }),
+  )
+  await page.route('**/api/v1/organizations/alpha/invitations/', (route) =>
+    route.fulfill({
+      json: resent
+        ? [
+            {
+              ...baseInvitation,
+              id: 'invite-2',
+              status: revoked ? 'revoked' : 'pending',
+              revoked_at: revoked ? '2029-12-26T00:00:00Z' : null,
+            },
+            {
+              ...baseInvitation,
+              id: 'invite-1',
+              status: 'revoked',
+              revoked_at: '2029-12-25T01:00:00Z',
+            },
+          ]
+        : [
+            {
+              ...baseInvitation,
+              id: 'invite-1',
+              status: 'pending',
+              revoked_at: null,
+            },
+          ],
+    }),
+  )
+  await page.route('**/api/v1/organizations/alpha/invitations/invite-1/resend/', (route) => {
+    resent = true
+    return route.fulfill({
+      status: 201,
+      json: {
+        ...baseInvitation,
+        id: 'invite-2',
+        status: 'pending',
+        revoked_at: null,
+      },
+    })
+  })
+  await page.route('**/api/v1/organizations/alpha/invitations/invite-2/', (route) => {
+    revoked = true
+    return route.fulfill({ status: 204 })
+  })
+
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('link', { name: 'People' }).click()
+  await expect(page.getByRole('cell', { name: 'Pending', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Resend' }).click()
+  await expect(page.getByText('A new invitation was sent to pending@example.com.')).toBeVisible()
+  page.once('dialog', (dialog) => void dialog.accept())
+  await page.getByRole('button', { name: 'Revoke', exact: true }).click()
+  await expect(page.getByText('Invitation for pending@example.com revoked.')).toBeVisible()
+  await page.getByRole('button', { name: 'Pending (0)' }).click()
+  await expect(page.getByText('No invitations match this status.')).toBeVisible()
 })
 
 test('first installation superuser can reach workspace invitations', async ({ page }) => {

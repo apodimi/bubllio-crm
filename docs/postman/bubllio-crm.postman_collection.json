@@ -113,17 +113,43 @@
       "name": "Members",
       "item": [
         {
+          "name": "List Invitation History",
+          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/invitations/", "description": "Returns the latest 100 invitations with pending, accepted, expired, or revoked status."}
+        },
+        {
           "name": "List Members",
           "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/members/"}
         },
         {
           "name": "Invite Member",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "const data = pm.response.json();",
+            "if (data.id) pm.environment.set(\"invitation_id\", data.id);"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {"mode": "raw", "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"member\"\n}"},
             "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/invitations/",
             "description": "Sends an email invitation; the recipient must accept it before membership exists."
+          }
+        },
+        {
+          "name": "Resend Invitation",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{}"},
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/invitations/{{invitation_id}}/resend/",
+            "description": "Sends a fresh seven-day link and revokes earlier active links for the same email."
+          }
+        },
+        {
+          "name": "Revoke Invitation",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/invitations/{{invitation_id}}/",
+            "description": "Immediately invalidates an unaccepted invitation link."
           }
         },
         {

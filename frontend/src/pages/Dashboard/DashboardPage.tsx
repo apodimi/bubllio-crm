@@ -5,10 +5,12 @@ import { alpha, lighten } from '@mui/material/styles'
 import { useAutomations } from '../../features/automations'
 import { useCompanies } from '../../features/companies'
 import { useContacts } from '../../features/contacts'
+import { useInvitations } from '../../features/invitations/hooks/useInvitations'
 import { useWorkspace } from '../../features/organizations'
 import { useSubscriptionOverview } from '../../features/subscriptions'
 import { useTasks } from '../../features/tasks'
 import { Failure, Loading, PageHeading } from '../../components/common/Feedback'
+import { INVITATION_STATUS } from '../../types/invitation.types'
 
 export function DashboardPage() {
   const org = useWorkspace()
@@ -18,13 +20,16 @@ export function DashboardPage() {
   const billing = useSubscriptionOverview(org.id)
   const todayTasks = useTasks(org.id, { bucket: 'today', assignedTo: 'me' })
   const overdueTasks = useTasks(org.id, { bucket: 'overdue', assignedTo: 'me' })
+  const canManagePeople = org.current_user_role === 'owner' || org.current_user_role === 'admin'
+  const invitations = useInvitations(org.id, canManagePeople)
   const error =
     companies.error ||
     contacts.error ||
     automations.error ||
     billing.error ||
     todayTasks.error ||
-    overdueTasks.error
+    overdueTasks.error ||
+    (canManagePeople ? invitations.error : null)
   if (error) return <Failure error={error} />
   if (
     !companies.data ||
@@ -32,9 +37,13 @@ export function DashboardPage() {
     !automations.data ||
     !billing.data ||
     !todayTasks.data ||
-    !overdueTasks.data
+    !overdueTasks.data ||
+    (canManagePeople && !invitations.data)
   )
     return <Loading />
+  const pendingInvitations = (invitations.data ?? []).filter(
+    (invitation) => invitation.status === INVITATION_STATUS.PENDING,
+  )
   const stats = [
     { label: 'Companies', value: companies.data.length, note: 'Relationships in your pipeline' },
     { label: 'Contacts', value: contacts.data.length, note: 'People you work with' },
@@ -108,6 +117,61 @@ export function DashboardPage() {
           </Paper>
         ))}
       </Box>
+      {canManagePeople && (
+        <Paper variant="outlined" sx={{ mb: 4, p: { xs: 3, md: 4 } }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            sx={{ justifyContent: 'space-between', alignItems: { sm: 'flex-start' }, gap: 2 }}
+          >
+            <Box>
+              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                <Typography variant="h5">Pending invitations</Typography>
+                <Chip size="small" label={pendingInvitations.length} color="warning" />
+              </Stack>
+              <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+                People who have not joined this workspace yet.
+              </Typography>
+            </Box>
+            <Link
+              to="/organizations/$organizationId/members"
+              params={{ organizationId: org.id }}
+              style={{ textDecoration: 'none' }}
+            >
+              <Button component="span" endIcon={<ArrowForwardRounded />}>
+                Manage invitations
+              </Button>
+            </Link>
+          </Stack>
+          {pendingInvitations.length ? (
+            <Stack divider={<Divider />} sx={{ mt: 2.5 }}>
+              {pendingInvitations.slice(0, 3).map((invitation) => (
+                <Stack
+                  key={invitation.id}
+                  direction={{ xs: 'column', sm: 'row' }}
+                  sx={{ justifyContent: 'space-between', gap: 1, py: 1.25 }}
+                >
+                  <Box>
+                    <Typography sx={{ fontWeight: 700 }}>{invitation.email}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Invited by {invitation.invited_by ?? 'Deleted user'} · {invitation.role}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Expires{' '}
+                    {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
+                      new Date(invitation.expires_at),
+                    )}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Typography color="text.secondary" sx={{ mt: 2.5 }}>
+              No invitations are waiting for acceptance.
+            </Typography>
+          )}
+        </Paper>
+      )}
       <Paper variant="outlined" sx={{ mb: 4, overflow: 'hidden' }}>
         <Stack
           direction={{ xs: 'column', md: 'row' }}

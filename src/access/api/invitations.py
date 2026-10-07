@@ -1,9 +1,5 @@
-import hashlib
 import logging
-import secrets
-from datetime import timedelta
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -17,19 +13,20 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from organizations.services.email_service import send_invitation_email
 from organizations.models import (
     EmailAccount, InstallationState, Organization, OrganizationInvitation,
     OrganizationMembership, OrganizationProvisioning, WorkspaceAccessEvent,
 )
 from accounts.models import UserProfile
 from access.permissions import Capability, get_membership, get_organization_for_user
+from access.services.invitations import (
+    InvitationAlreadyMemberError,
+    InvitationRolePermissionError,
+    deliver_workspace_invitation,
+    token_hash,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def token_hash(token):
-    return hashlib.sha256(token.encode()).hexdigest()
 
 
 class InvitationCreateSerializer(serializers.Serializer):
@@ -69,6 +66,61 @@ class InvitationRegistrationSerializer(serializers.Serializer):
         return attrs
 
 
+class OrganizationInvitationSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(
+        choices=OrganizationInvitation.Status.choices,
+        read_only=True,
+    )
+    invited_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrganizationInvitation
+        fields = (
+            "id",
+            "email",
+            "role",
+            "status",
+            "invited_by",
+            "created_at",
+            "expires_at",
+            "accepted_at",
+            "revoked_at",
+        )
+
+    def get_invited_by(self, invitation):
+        return invitation.invited_by.username if invitation.invited_by else None
+
+
+def _invitation_account(organization):
+    account = EmailAccount.objects.filter(
+        organization=organization,
+        is_default=True,
+        is_active=True,
+    ).first()
+    if account is None:
+        fallback_id = InstallationState.objects.values_list(
+            "fallback_email_account_id",
+            flat=True,
+        ).first()
+        account = (
+            EmailAccount.objects.filter(id=fallback_id, is_active=True).first()
+            if fallback_id
+            else None
+        )
+    return account
+
+
+def _can_manage_invitation_role(requester, role):
+    return not (
+        requester.role == OrganizationMembership.Role.ADMIN
+        and role in {OrganizationMembership.Role.ADMIN, OrganizationMembership.Role.OWNER}
+    )
+
+
+def _serialize_invitation(invitation):
+    return OrganizationInvitationSerializer(invitation).data
+
+
 class OrganizationInvitationListCreateAPIView(APIView):
     throttle_scope = "organization_invitation"
 
@@ -86,11 +138,8 @@ class OrganizationInvitationListCreateAPIView(APIView):
         organization = self._organization(request, organization_id)
         if organization.is_personal:
             return Response([])
-        invitations = organization.invitations.filter(accepted_at__isnull=True, expires_at__gt=timezone.now()).order_by("-created_at")
-        return Response([{
-            "id": str(invite.id), "email": invite.email, "role": invite.role,
-            "expires_at": invite.expires_at,
-        } for invite in invitations])
+        invitations = organization.invitations.select_related("invited_by").order_by("-created_at")[:100]
+        return Response(OrganizationInvitationSerializer(invitations, many=True).data)
 
     def post(self, request, organization_id):
         organization = self._organization(request, organization_id)
@@ -104,40 +153,34 @@ class OrganizationInvitationListCreateAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data["email"]
         role = serializer.validated_data["role"]
-        if requester and requester.role == OrganizationMembership.Role.ADMIN and role == OrganizationMembership.Role.ADMIN:
+        if not _can_manage_invitation_role(requester, role):
             return Response({"role": "Only an owner can invite administrators."}, status=status.HTTP_403_FORBIDDEN)
         if organization.memberships.filter(user__email__iexact=email).exists():
             return Response({"email": "This person already belongs to the workspace."}, status=status.HTTP_400_BAD_REQUEST)
-        account = EmailAccount.objects.filter(organization=organization, is_default=True, is_active=True).first()
-        if account is None:
-            fallback_id = InstallationState.objects.values_list("fallback_email_account_id", flat=True).first()
-            account = EmailAccount.objects.filter(id=fallback_id, is_active=True).first() if fallback_id else None
+        account = _invitation_account(organization)
         if account is None:
             return Response({"detail": "Configure an SMTP account in workspace Settings, or configure the installation fallback SMTP first."}, status=status.HTTP_400_BAD_REQUEST)
 
-        token = secrets.token_urlsafe(32)
-        base_url = getattr(settings, "BUBLLIO_APP_URL", "").rstrip("/") or request.build_absolute_uri("/").rstrip("/")
-        invite_url = f"{base_url}/invite/{token}"
         try:
-            with transaction.atomic():
-                OrganizationInvitation.objects.filter(
-                    organization=organization, email__iexact=email, accepted_at__isnull=True,
-                ).delete()
-                invitation = OrganizationInvitation.objects.create(
-                    organization=organization, email=email, role=role,
-                    token_hash=token_hash(token), invited_by=request.user,
-                    expires_at=timezone.now() + timedelta(days=7),
-                )
-                send_invitation_email(
-                    account=account, recipient=email,
-                    organization_name=organization.name, invite_url=invite_url,
-                )
-                WorkspaceAccessEvent.objects.create(
-                    action=WorkspaceAccessEvent.Action.INVITE_MEMBER,
-                    actor=request.user,
-                    organization_id=organization.id,
-                    details={"email": email, "role": role},
-                )
+            invitation = deliver_workspace_invitation(
+                organization=organization,
+                email=email,
+                role=role,
+                actor=request.user,
+                actor_role=requester.role,
+                account=account,
+                audit_action=WorkspaceAccessEvent.Action.INVITE_MEMBER,
+            )
+        except InvitationRolePermissionError:
+            return Response(
+                {"detail": "Only an owner can replace an administrator invitation."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except InvitationAlreadyMemberError:
+            return Response(
+                {"email": "This person already belongs to the workspace."},
+                status=status.HTTP_409_CONFLICT,
+            )
         except Exception:
             logger.exception(
                 "Invitation email delivery failed for organization=%s recipient=%s account=%s",
@@ -146,10 +189,122 @@ class OrganizationInvitationListCreateAPIView(APIView):
                 account.pk,
             )
             return Response({"detail": "The invitation email could not be sent. Check the workspace SMTP account."}, status=status.HTTP_502_BAD_GATEWAY)
-        return Response({
-            "id": str(invitation.id), "email": email, "role": role,
-            "expires_at": invitation.expires_at,
-        }, status=status.HTTP_201_CREATED)
+        return Response(_serialize_invitation(invitation), status=status.HTTP_201_CREATED)
+
+
+class OrganizationInvitationDetailAPIView(APIView):
+    @transaction.atomic
+    def delete(self, request, organization_id, invitation_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_MEMBERS,
+        )
+        requester = get_membership(user=request.user, organization=organization)
+        Organization.objects.select_for_update().get(pk=organization.pk)
+        invitation = get_object_or_404(
+            OrganizationInvitation.objects.select_for_update(),
+            id=invitation_id,
+            organization=organization,
+        )
+        if not _can_manage_invitation_role(requester, invitation.role):
+            return Response(
+                {"detail": "Only an owner can revoke administrator invitations."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if invitation.status == OrganizationInvitation.Status.ACCEPTED:
+            return Response(
+                {"detail": "Accepted invitations cannot be revoked."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if invitation.status == OrganizationInvitation.Status.REVOKED:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        invitation.revoked_at = timezone.now()
+        invitation.save(update_fields=("revoked_at",))
+        WorkspaceAccessEvent.objects.create(
+            action=WorkspaceAccessEvent.Action.REVOKE_MEMBER_INVITATION,
+            actor=request.user,
+            organization_id=organization.id,
+            details={
+                "email": invitation.email,
+                "role": invitation.role,
+                "invitation_id": str(invitation.id),
+            },
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OrganizationInvitationResendAPIView(APIView):
+    throttle_scope = "organization_invitation"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    def post(self, request, organization_id, invitation_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_MEMBERS,
+        )
+        requester = get_membership(user=request.user, organization=organization)
+        invitation = get_object_or_404(
+            OrganizationInvitation,
+            id=invitation_id,
+            organization=organization,
+        )
+        if not _can_manage_invitation_role(requester, invitation.role):
+            return Response(
+                {"detail": "Only an owner can resend administrator invitations."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if invitation.status == OrganizationInvitation.Status.ACCEPTED:
+            return Response(
+                {"detail": "This person has already accepted the invitation."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if organization.memberships.filter(user__email__iexact=invitation.email).exists():
+            return Response(
+                {"detail": "This person already belongs to the workspace."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        account = _invitation_account(organization)
+        if account is None:
+            return Response(
+                {"detail": "Configure an SMTP account before resending invitations."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            replacement = deliver_workspace_invitation(
+                organization=organization,
+                email=invitation.email,
+                role=invitation.role,
+                actor=request.user,
+                actor_role=requester.role,
+                account=account,
+                audit_action=WorkspaceAccessEvent.Action.RESEND_MEMBER_INVITATION,
+            )
+        except InvitationRolePermissionError:
+            return Response(
+                {"detail": "Only an owner can replace an administrator invitation."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except InvitationAlreadyMemberError:
+            return Response(
+                {"detail": "This person already belongs to the workspace."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except Exception:
+            logger.exception(
+                "Invitation resend failed for organization=%s invitation=%s account=%s",
+                organization.pk,
+                invitation.pk,
+                account.pk,
+            )
+            return Response(
+                {"detail": "The invitation email could not be resent. Check the workspace SMTP account."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(_serialize_invitation(replacement), status=status.HTTP_201_CREATED)
 
 
 class InvitationDetailAPIView(APIView):
@@ -158,7 +313,7 @@ class InvitationDetailAPIView(APIView):
     def get(self, request, token):
         invitation = get_object_or_404(
             OrganizationInvitation.objects.select_related("organization"),
-            token_hash=token_hash(token), accepted_at__isnull=True,
+            token_hash=token_hash(token), accepted_at__isnull=True, revoked_at__isnull=True,
             expires_at__gt=timezone.now(),
         )
         return Response({
@@ -177,14 +332,13 @@ class InvitationAcceptAPIView(APIView):
         token_digest = token_hash(token)
         organization_id = get_object_or_404(
             OrganizationInvitation,
-            token_hash=token_digest,
-            accepted_at__isnull=True,
+            token_hash=token_digest, accepted_at__isnull=True, revoked_at__isnull=True,
             expires_at__gt=timezone.now(),
         ).organization_id
         get_object_or_404(Organization.objects.select_for_update(), id=organization_id)
         invitation = get_object_or_404(
             OrganizationInvitation.objects.select_for_update().select_related("organization"),
-            token_hash=token_digest, accepted_at__isnull=True,
+            token_hash=token_digest, accepted_at__isnull=True, revoked_at__isnull=True,
             expires_at__gt=timezone.now(),
         )
         provisioning = OrganizationProvisioning.objects.select_for_update().filter(

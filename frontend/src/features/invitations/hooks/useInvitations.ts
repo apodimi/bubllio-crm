@@ -1,11 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type {
+  InvitationRegistration,
+  InvitationRole,
+  WorkspaceRole,
+} from '../../../types/invitation.types'
 import { invitationService } from '../services/invitationService'
-import type { InvitationRegistration, InvitationRole } from '../services/invitationService'
 
-export const useInvitations = (organizationId: string) =>
+export const invitationKeys = {
+  byOrganization: (organizationId: string) =>
+    ['organizations', organizationId, 'invitations'] as const,
+}
+
+export const useInvitations = (organizationId: string, enabled = true) =>
   useQuery({
-    queryKey: ['organizations', organizationId, 'invitations'],
+    queryKey: invitationKeys.byOrganization(organizationId),
     queryFn: ({ signal }) => invitationService.list(organizationId, signal),
+    enabled,
   })
 
 export const useWorkspaceMembers = (organizationId: string) =>
@@ -27,15 +37,32 @@ export function useCreateInvitation(organizationId: string) {
     mutationFn: (input: { email: string; role: InvitationRole }) =>
       invitationService.create(organizationId, input),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'invitations'] }),
+      queryClient.invalidateQueries({ queryKey: invitationKeys.byOrganization(organizationId) }),
   })
+}
+
+export function useInvitationActions(organizationId: string) {
+  const queryClient = useQueryClient()
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: invitationKeys.byOrganization(organizationId) })
+  const resend = useMutation({
+    mutationFn: (invitationId: string) => invitationService.resend(organizationId, invitationId),
+    onSuccess: refresh,
+  })
+  const revoke = useMutation({
+    mutationFn: (invitationId: string) => invitationService.revoke(organizationId, invitationId),
+    onSuccess: refresh,
+  })
+  return { resend, revoke }
 }
 
 export function useMemberActions(organizationId: string) {
   const queryClient = useQueryClient()
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] })
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] })
   const update = useMutation({
-    mutationFn: ({ memberId, role }: { memberId: string; role: InvitationRole | 'owner' }) => invitationService.updateMember(organizationId, memberId, role),
+    mutationFn: ({ memberId, role }: { memberId: string; role: WorkspaceRole }) =>
+      invitationService.updateMember(organizationId, memberId, role),
     onSuccess: refresh,
   })
   const remove = useMutation({

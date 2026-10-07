@@ -35,7 +35,7 @@ class InvitationTests(APITestCase):
 
     def invite(self, email="new@example.com", role="viewer"):
         self.client.force_authenticate(self.owner)
-        with patch("access.api.invitations.send_invitation_email") as sender:
+        with patch("access.services.invitations.send_invitation_email") as sender:
             response = self.client.post(self.url, {"email": email, "role": role}, format="json")
         return response, sender
 
@@ -50,7 +50,9 @@ class InvitationTests(APITestCase):
         invited_event = WorkspaceAccessEvent.objects.get(action="invite_member")
         self.assertEqual(invited_event.actor, self.owner)
         self.assertEqual(invited_event.organization_id, self.organization.id)
-        self.assertEqual(invited_event.details, {"email": "new@example.com", "role": "viewer"})
+        self.assertEqual(invited_event.details["email"], "new@example.com")
+        self.assertEqual(invited_event.details["role"], "viewer")
+        self.assertEqual(invited_event.details["invitation_id"], str(invitation.id))
         self.assertNotIn(token, str(invited_event.details))
         self.client.force_authenticate(user=None)
         preview = self.client.get(reverse("invitation-detail", kwargs={"token": token}))
@@ -97,7 +99,7 @@ class InvitationTests(APITestCase):
         self.account.is_active = True
         self.account.save(update_fields=("is_active",))
         self.client.force_authenticate(self.owner)
-        with patch("access.api.invitations.send_invitation_email", side_effect=RuntimeError("SMTP down")):
+        with patch("access.services.invitations.send_invitation_email", side_effect=RuntimeError("SMTP down")):
             response = self.client.post(self.url, {"email": "new@example.com", "role": "viewer"}, format="json")
         self.assertEqual(response.status_code, 502)
         self.assertFalse(OrganizationInvitation.objects.exists())
@@ -114,6 +116,136 @@ class InvitationTests(APITestCase):
         invitation.save(update_fields=("expires_at",))
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.post(reverse("invitation-accept", kwargs={"token": second_token})).status_code, 404)
+
+    def test_list_returns_typed_invitation_history(self):
+        _, sender = self.invite(email="pending@example.com")
+        pending_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        pending = OrganizationInvitation.objects.get(token_hash__isnull=False, email="pending@example.com")
+        expired = OrganizationInvitation.objects.create(
+            organization=self.organization,
+            email="expired@example.com",
+            role="member",
+            token_hash="expired-token-hash",
+            invited_by=self.owner,
+            expires_at=timezone.now() - timedelta(days=1),
+        )
+        accepted = OrganizationInvitation.objects.create(
+            organization=self.organization,
+            email="accepted@example.com",
+            role="viewer",
+            token_hash="accepted-token-hash",
+            invited_by=self.owner,
+            expires_at=timezone.now() + timedelta(days=1),
+            accepted_at=timezone.now(),
+        )
+        revoked = OrganizationInvitation.objects.create(
+            organization=self.organization,
+            email="revoked@example.com",
+            role="viewer",
+            token_hash="revoked-token-hash",
+            invited_by=self.owner,
+            expires_at=timezone.now() + timedelta(days=1),
+            revoked_at=timezone.now(),
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        statuses = {item["id"]: item["status"] for item in response.data}
+        self.assertEqual(statuses[str(pending.id)], "pending")
+        self.assertEqual(statuses[str(expired.id)], "expired")
+        self.assertEqual(statuses[str(accepted.id)], "accepted")
+        self.assertEqual(statuses[str(revoked.id)], "revoked")
+        self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": pending_token})).status_code, 200)
+        pending_row = next(item for item in response.data if item["id"] == str(pending.id))
+        self.assertEqual(pending_row["invited_by"], self.owner.username)
+        self.assertIn("created_at", pending_row)
+
+    def test_owner_can_resend_and_revoke_invitation(self):
+        _, sender = self.invite()
+        original_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        original = OrganizationInvitation.objects.get(email="new@example.com")
+        resend_url = reverse(
+            "organization-invitation-resend",
+            kwargs={"organization_id": self.organization.id, "invitation_id": original.id},
+        )
+        with patch("access.services.invitations.send_invitation_email") as resend:
+            response = self.client.post(resend_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        original.refresh_from_db()
+        self.assertEqual(original.status, OrganizationInvitation.Status.REVOKED)
+        replacement = OrganizationInvitation.objects.get(id=response.data["id"])
+        self.assertEqual(replacement.status, OrganizationInvitation.Status.PENDING)
+        replacement_token = resend.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": original_token})).status_code, 404)
+        self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": replacement_token})).status_code, 200)
+        self.assertTrue(WorkspaceAccessEvent.objects.filter(
+            action=WorkspaceAccessEvent.Action.RESEND_MEMBER_INVITATION,
+            organization_id=self.organization.id,
+        ).exists())
+
+        self.client.force_authenticate(self.owner)
+        revoke_url = reverse(
+            "organization-invitation-detail",
+            kwargs={"organization_id": self.organization.id, "invitation_id": replacement.id},
+        )
+        revoked = self.client.delete(revoke_url)
+        self.assertEqual(revoked.status_code, status.HTTP_204_NO_CONTENT)
+        replacement.refresh_from_db()
+        self.assertEqual(replacement.status, OrganizationInvitation.Status.REVOKED)
+        self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": replacement_token})).status_code, 404)
+        self.assertTrue(WorkspaceAccessEvent.objects.filter(
+            action=WorkspaceAccessEvent.Action.REVOKE_MEMBER_INVITATION,
+            organization_id=self.organization.id,
+        ).exists())
+
+    def test_invitation_actions_are_tenant_scoped_and_role_protected(self):
+        _, _ = self.invite(email="admin-invite@example.com", role="admin")
+        invitation = OrganizationInvitation.objects.get(email="admin-invite@example.com")
+        other = Organization.objects.create(name="Other", slug="other")
+        other_owner = User.objects.create_user(username="other-owner", email="other@example.com")
+        OrganizationMembership.objects.create(organization=other, user=other_owner, role="owner")
+
+        self.client.force_authenticate(other_owner)
+        cross_tenant = self.client.delete(reverse(
+            "organization-invitation-detail",
+            kwargs={"organization_id": other.id, "invitation_id": invitation.id},
+        ))
+        self.assertEqual(cross_tenant.status_code, status.HTTP_404_NOT_FOUND)
+
+        admin = User.objects.create_user(username="workspace-admin", email="workspace-admin@example.com")
+        OrganizationMembership.objects.create(organization=self.organization, user=admin, role="admin")
+        self.client.force_authenticate(admin)
+        forbidden = self.client.post(reverse(
+            "organization-invitation-resend",
+            kwargs={"organization_id": self.organization.id, "invitation_id": invitation.id},
+        ))
+        self.assertEqual(forbidden.status_code, status.HTTP_403_FORBIDDEN)
+        replace_forbidden = self.client.post(
+            self.url,
+            {"email": invitation.email, "role": "member"},
+            format="json",
+        )
+        self.assertEqual(replace_forbidden.status_code, status.HTTP_403_FORBIDDEN)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, OrganizationInvitation.Status.PENDING)
+
+    def test_failed_resend_preserves_the_original_invitation(self):
+        _, sender = self.invite()
+        original_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        invitation = OrganizationInvitation.objects.get(email="new@example.com")
+        with patch("access.services.invitations.send_invitation_email", side_effect=RuntimeError("SMTP down")):
+            response = self.client.post(reverse(
+                "organization-invitation-resend",
+                kwargs={"organization_id": self.organization.id, "invitation_id": invitation.id},
+            ))
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, OrganizationInvitation.Status.PENDING)
+        self.assertEqual(OrganizationInvitation.objects.filter(email="new@example.com").count(), 1)
+        self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": original_token})).status_code, 200)
 
     def test_invited_user_cannot_create_a_separate_workspace(self):
         _, sender = self.invite(role="member")

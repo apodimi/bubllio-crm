@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Organization(models.Model):
@@ -62,6 +63,8 @@ class WorkspaceAccessEvent(models.Model):
         ACCEPT_OWNER_INVITATION = "accept_owner_invitation", "Accept owner invitation"
         DOWNLOAD_DATA_EXPORT = "download_data_export", "Download installation data export"
         INVITE_MEMBER = "invite_member", "Invite workspace member"
+        RESEND_MEMBER_INVITATION = "resend_member_invitation", "Resend member invitation"
+        REVOKE_MEMBER_INVITATION = "revoke_member_invitation", "Revoke member invitation"
         ACCEPT_MEMBER_INVITATION = "accept_member_invitation", "Accept member invitation"
         CHANGE_MEMBER_ROLE = "change_member_role", "Change member role"
         REMOVE_MEMBER = "remove_member", "Remove workspace member"
@@ -245,6 +248,12 @@ class OrganizationMembership(models.Model):
 
 
 class OrganizationInvitation(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        EXPIRED = "expired", "Expired"
+        REVOKED = "revoked", "Revoked"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invitations")
     email = models.EmailField()
@@ -253,6 +262,7 @@ class OrganizationInvitation(models.Model):
     invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     expires_at = models.DateTimeField()
     accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -260,10 +270,20 @@ class OrganizationInvitation(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("organization", "email"),
-                condition=models.Q(accepted_at__isnull=True),
+                condition=models.Q(accepted_at__isnull=True, revoked_at__isnull=True),
                 name="unique_pending_invitation_per_email",
             ),
         ]
+
+    @property
+    def status(self):
+        if self.accepted_at is not None:
+            return self.Status.ACCEPTED
+        if self.revoked_at is not None:
+            return self.Status.REVOKED
+        if self.expires_at <= timezone.now():
+            return self.Status.EXPIRED
+        return self.Status.PENDING
 
 
 class InstallationAdminInvitation(models.Model):
