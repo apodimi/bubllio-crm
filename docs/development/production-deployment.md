@@ -1,5 +1,8 @@
 # Production deployment
 
+For a guided Dokploy installation, use
+[Install Bubllio CRM with Dokploy](dokploy-deployment.md).
+
 This runbook deploys Bubllio CRM as three containers: PostgreSQL, the Django API
 behind Gunicorn, and the React application behind Nginx. Put a TLS-terminating
 reverse proxy or managed load balancer in front of port 8080. Do not expose the
@@ -25,6 +28,8 @@ PostgreSQL or Django containers directly to the internet.
 
 6. Open the application, complete the supported setup flow, and test an
    invitation, password reset, and installation SMTP message.
+7. Remove `BUBLLIO_SETUP_TOKEN` from the environment and restart the backend
+   after first-run setup succeeds.
 
 The backend entrypoint applies migrations before Gunicorn starts and collects
 Django admin static files. The public frontend sends same-origin `/api/`

@@ -45,6 +45,22 @@ jobs:
       DATABASE_URL: postgresql://bubllio:bubllio@127.0.0.1:5432/bubllio_test
     steps:
       - uses: actions/checkout@v4
+      - name: Verify deployment manifests
+        env:
+          POSTGRES_PASSWORD: ci-database-password
+          DATABASE_URL: postgresql://bubllio:ci-database-password@postgres:5432/bubllio
+          DJANGO_SECRET_KEY: ci-only-production-check-secret-with-more-than-fifty-characters
+          DJANGO_ALLOWED_HOSTS: crm.example.com
+          DJANGO_CSRF_TRUSTED_ORIGINS: https://crm.example.com
+          BUBLLIO_APP_URL: https://crm.example.com
+          BUBLLIO_EMAIL_ENCRYPTION_KEYS: bUPlTTVfJnkhIWpMJTdA7p9Xk0EuPgGDfJnGZhr2hMI=
+          DJANGO_EMAIL_HOST: smtp.example.com
+          DJANGO_EMAIL_HOST_USER: ci-user
+          DJANGO_EMAIL_HOST_PASSWORD: ci-password
+          DJANGO_DEFAULT_FROM_EMAIL: no-reply@example.com
+        run: |
+          docker compose -f compose.production.yaml config --quiet
+          docker compose -f compose.dokploy.yaml config --quiet
       - uses: astral-sh/setup-uv@v6
         with:
           version: latest
