@@ -74,6 +74,12 @@ Account settings in the React application. This uses
 superusers. It never returns the stored password. Saving a new password
 re-encrypts it with the primary key in `BUBLLIO_EMAIL_ENCRYPTION_KEYS`.
 
+For normal production installation, enter SMTP once in the first-run setup.
+The deployment Compose files do not require duplicate `DJANGO_EMAIL_*` values.
+Django's global email backend remains an advanced fallback only when no saved
+installation account is available; operators who need it can pass those
+settings through a deployment-specific Compose override.
+
 Set `BUBLLIO_EMAIL_ENCRYPTION_KEYS` before storing passwords. Generate a Fernet key:
 
 ```bash

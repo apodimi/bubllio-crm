@@ -3,6 +3,17 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.1.1 — 2026-10-08
+
+### Fixed
+
+- production and Dokploy installations now collect SMTP credentials once in the
+  first-run setup instead of requiring duplicate environment configuration;
+- deployment guidance now reflects that setup locks automatically after success
+  and that removing the setup token is optional defense in depth;
+- added concrete Google Workspace authenticated relay values to the Dokploy
+  operator guide.
+
 ## 0.1.0 — 2026-10-07
 
 First internal production release.

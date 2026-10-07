@@ -54,10 +54,6 @@ jobs:
           DJANGO_CSRF_TRUSTED_ORIGINS: https://crm.example.com
           BUBLLIO_APP_URL: https://crm.example.com
           BUBLLIO_EMAIL_ENCRYPTION_KEYS: bUPlTTVfJnkhIWpMJTdA7p9Xk0EuPgGDfJnGZhr2hMI=
-          DJANGO_EMAIL_HOST: smtp.example.com
-          DJANGO_EMAIL_HOST_USER: ci-user
-          DJANGO_EMAIL_HOST_PASSWORD: ci-password
-          DJANGO_DEFAULT_FROM_EMAIL: no-reply@example.com
         run: |
           docker compose -f compose.production.yaml config --quiet
           docker compose -f compose.dokploy.yaml config --quiet

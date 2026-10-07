@@ -28,8 +28,9 @@ PostgreSQL or Django containers directly to the internet.
 
 6. Open the application, complete the supported setup flow, and test an
    invitation, password reset, and installation SMTP message.
-7. Remove `BUBLLIO_SETUP_TOKEN` from the environment and restart the backend
-   after first-run setup succeeds.
+7. Setup locks itself automatically after success. Optionally remove
+   `BUBLLIO_SETUP_TOKEN` during a later maintenance deployment as defense in
+   depth; an immediate restart is not required.
 
 The backend entrypoint applies migrations before Gunicorn starts and collects
 Django admin static files. The public frontend sends same-origin `/api/`

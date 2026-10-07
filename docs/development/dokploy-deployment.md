@@ -18,7 +18,7 @@ Have these ready:
 - a Dokploy server with a public IP;
 - a DNS name such as `crm.example.com` pointing to that IP;
 - access to the Bubllio Git repository;
-- SMTP credentials for invitations and password resets;
+- SMTP credentials for invitations and password resets, entered during setup;
 - an S3-compatible destination for off-server backups.
 
 Generate two independent secrets on a trusted computer. Do not paste their
@@ -64,13 +64,6 @@ DJANGO_SECURE_HSTS_PRELOAD=false
 BUBLLIO_APP_URL=https://crm.example.com
 BUBLLIO_SETUP_TOKEN=replace-with-a-random-one-time-token-at-least-32-characters
 BUBLLIO_EMAIL_ENCRYPTION_KEYS=replace-with-the-generated-fernet-key
-
-DJANGO_EMAIL_HOST=smtp.example.com
-DJANGO_EMAIL_PORT=587
-DJANGO_EMAIL_HOST_USER=replace-with-the-smtp-user
-DJANGO_EMAIL_HOST_PASSWORD=replace-with-the-smtp-password
-DJANGO_EMAIL_USE_TLS=true
-DJANGO_DEFAULT_FROM_EMAIL=Bubllio CRM <crm@example.com>
 ```
 
 If the database password contains reserved URL characters, URL-encode it only in
@@ -104,7 +97,13 @@ Verify from a browser or terminal:
 curl --fail --show-error https://crm.example.com/health/
 ```
 
-Then open `https://crm.example.com`, complete first-run setup, and test:
+Then open `https://crm.example.com` and complete first-run setup. Enter the SMTP
+account once in the **Email** step; Bubllio encrypts its password and uses that
+account for installation invitations and password resets. For Google Workspace
+authenticated relay, use `smtp-relay.gmail.com`, port `587`, the full mailbox as
+the username, its app password, and STARTTLS (leave SSL unchecked).
+
+Test:
 
 1. installation administrator login;
 2. workspace creation;
@@ -113,9 +112,10 @@ Then open `https://crm.example.com`, complete first-run setup, and test:
 5. password reset delivery;
 6. logout and login again.
 
-After setup succeeds, remove `BUBLLIO_SETUP_TOKEN` from the Dokploy environment
-and redeploy. The first-run endpoint also locks itself after completion, but the
-one-time secret should not remain configured.
+After setup succeeds, the first-run endpoint locks itself automatically. Removing
+`BUBLLIO_SETUP_TOKEN` from Dokploy later is optional defense in depth; it is not
+required for normal operation and does not require interrupting the initial
+deployment flow.
 
 A green container state alone is not acceptance evidence. The public health URL
 and the user journey must both work.

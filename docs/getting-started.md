@@ -83,12 +83,13 @@ delivery. The test does not save the account and can be skipped. Setup does not
 route automation emails through that account. You may skip SMTP
 and configure it later via the authenticated organization API or Django admin.
 
-The endpoint is rate-limited, checks the setup token, and closes after success.
-Remove `BUBLLIO_SETUP_TOKEN` from the environment afterward. Never place it in
-`VITE_*` variables, a public URL, logs, or version control. Use HTTPS if setup
-is reached across a network. `DJANGO_SECRET_KEY`, database configuration,
-allowed hosts, and other deployment security settings remain environment
-configuration, not browser form fields.
+The endpoint is rate-limited, checks the setup token, and closes automatically
+after success. You may remove `BUBLLIO_SETUP_TOKEN` during a later maintenance
+deployment as defense in depth, but an immediate restart is not required. Never
+place it in `VITE_*` variables, a public URL, logs, or version control. Use HTTPS
+if setup is reached across a network. `DJANGO_SECRET_KEY`, database
+configuration, allowed hosts, and other deployment security settings remain
+environment configuration, not browser form fields.
 
 ## Invite teammates
 
