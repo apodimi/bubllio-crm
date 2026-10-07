@@ -133,8 +133,13 @@ is not a verified backup.
 
 ## Updating
 
+For a private repository with custom code, enable the automatic update pull
+request described in [Updating a self-hosted installation](updating.md). Review
+and merge its green PR before deploying; do not pull source code inside the
+server or running containers.
+
 1. Take and verify a database backup.
-2. Select the exact new Bubllio release tag or commit.
+2. Select the exact merged commit from the private repository's `main` branch.
 3. Deploy from Dokploy.
 4. Confirm all services are healthy and call `/health/`.
 5. Run login, workspace access, invitation, and one critical CRM flow.

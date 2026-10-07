@@ -3,6 +3,15 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.1.2 — 2026-10-08
+
+### Added
+
+- opt-in daily update pull requests for private installations with custom code;
+- explicit full-CI verification for every automatically proposed update branch;
+- a documented review, backup, merge, and Dokploy deployment workflow that does
+  not require pulling source code on the production server.
+
 ## 0.1.1 — 2026-10-08
 
 ### Fixed
