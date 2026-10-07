@@ -31,42 +31,6 @@ the installation's process manager, and verify sign-in plus one representative
 workspace flow. Release-specific steps take precedence over this general
 checklist.
 
-## Automatic update pull requests for a private installation
-
-Private installations that keep custom code can use the included
-`Propose upstream release` GitHub Actions workflow. It checks the latest stable
-upstream release only when an operator starts it manually by default. When an
-update is available, it merges the release into a dedicated branch and opens a
-pull request. The normal repository CI then verifies the combined code before
-the operator decides whether to merge it.
-
-Configure it once in the private GitHub repository:
-
-1. Open **Settings → Secrets and variables → Actions → Variables**.
-2. Add `BUBLLIO_UPSTREAM_REPOSITORY` with the value `apodimi/bubllio-crm`.
-3. Open **Settings → Actions → General → Workflow permissions**.
-4. Select **Read and write permissions** and allow GitHub Actions to create and
-   approve pull requests.
-5. Open **Actions → Propose upstream release → Run workflow** for the first
-   check.
-
-Daily checks are separately opt-in. Add the repository variable
-`BUBLLIO_SCHEDULED_UPDATE_PRS=true` only when the installation owner wants the
-workflow to check automatically. Scheduled checks can create an update branch
-and pull request, but they never merge the PR or deploy the application.
-
-No SMTP, database, Dokploy, or application secrets are needed by this workflow.
-It uses the repository-scoped GitHub token, validates the upstream repository and
-release tag, never pushes directly to `main`, and explicitly starts the full CI
-workflow for the proposed branch. If custom changes conflict with the upstream
-release, the job stops and reports that a manual merge is required.
-
-For production, keep deployment approval separate from source updates. After the
-update PR passes CI and is merged, take and verify a database backup, select the
-updated `main` commit in Dokploy, and deploy manually. This preserves a deliberate
-rollback and backup checkpoint while reducing routine updates to review, merge,
-and deploy.
-
 ## Configuration and privacy
 
 The backend checks
