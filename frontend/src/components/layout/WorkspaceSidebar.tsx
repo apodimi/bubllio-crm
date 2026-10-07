@@ -276,6 +276,14 @@ export function WorkspaceSidebar({
       <Typography variant="caption" color="text.secondary" noWrap sx={{ px: 1 }}>
         Signed in as {username}
       </Typography>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        aria-label="Bubllio CRM version"
+        sx={{ px: 1, mt: 0.5, opacity: 0.72 }}
+      >
+        Bubllio CRM v{__APP_VERSION__}
+      </Typography>
     </Stack>
   )
 }

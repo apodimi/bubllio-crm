@@ -80,7 +80,9 @@ it is not a replacement for a database-native backup and tested restore.
 
 ## Publishing a release
 
-1. Update the version in `pyproject.toml` using `MAJOR.MINOR.PATCH`.
+1. Update the matching version in `pyproject.toml` and `frontend/package.json`
+   using `MAJOR.MINOR.PATCH`, then run
+   `uv run python scripts/check_release_version.py`.
 2. Run the full backend, frontend, and browser verification gates.
 3. Merge the release-ready changes and create a matching tag such as `v0.2.0`.
 4. Publish a non-draft, non-prerelease GitHub Release for that tag.

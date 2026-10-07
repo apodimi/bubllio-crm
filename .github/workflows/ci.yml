@@ -67,6 +67,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+      - name: Verify release version alignment
+        run: python scripts/check_release_version.py
       - run: uv sync --extra postgres
       - run: uv run python src/manage.py check
       - run: uv run python src/manage.py makemigrations --check --dry-run

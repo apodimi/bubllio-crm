@@ -245,6 +245,7 @@ test.beforeEach(async ({ page }) => mockApi(page))
 test('login, tenant switch, permissions and logout isolate data', async ({ page }) => {
   await login(page)
   await openAlpha(page)
+  await expect(page.getByLabel('Bubllio CRM version')).toHaveText(/^Bubllio CRM v\d+\.\d+\.\d+$/)
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
   await expect(page.getByRole('row', { name: /Open Acme Ltd/ })).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('companies-desktop.png'), fullPage: true })
