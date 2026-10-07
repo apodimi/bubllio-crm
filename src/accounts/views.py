@@ -4,7 +4,6 @@ import logging
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.http import JsonResponse
@@ -143,16 +142,11 @@ class PasswordResetRequestAPIView(APIView):
             account_id = InstallationState.objects.values_list("fallback_email_account_id", flat=True).first()
             account = EmailAccount.objects.filter(id=account_id, is_active=True).first() if account_id else None
             try:
-                if account:
-                    send_password_reset_email(account=account, recipient=user.email, reset_url=reset_url)
-                else:
-                    send_mail(
-                        "Reset your Bubllio CRM password",
-                        f"Reset your password here: {reset_url}",
-                        settings.DEFAULT_FROM_EMAIL,
-                        [user.email],
-                        fail_silently=False,
-                    )
+                send_password_reset_email(
+                    account=account,
+                    recipient=user.email,
+                    reset_url=reset_url,
+                )
             except Exception:
                 logger.exception("Password reset email delivery failed for user=%s", user.pk)
         return Response({"detail": "If an account exists for that email, reset instructions have been sent."})

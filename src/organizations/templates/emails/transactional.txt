@@ -1,0 +1,11 @@
+{% autoescape off %}{{ heading }}
+
+{{ message }}
+{% if action_url %}
+{{ action_label }}: {{ action_url }}
+{% endif %}
+{{ notice }}
+
+Sent securely by Bubllio CRM.
+This is a transactional message about your account or workspace.
+{% endautoescape %}

@@ -6,6 +6,24 @@ permissions:
   contents: read
 
 jobs:
+  email-templates:
+    name: Verify email templates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: email_templates
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: email_templates/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Verify compiled email is current
+        run: git diff --exit-code -- ../src/organizations/templates/emails/transactional.html
+
   backend:
     name: Verify backend
     runs-on: ubuntu-latest

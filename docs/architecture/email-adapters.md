@@ -1,6 +1,6 @@
 # Email Sending: Current Behavior and Direction
 
-There are currently four separate sending paths. Configuring an organization SMTP
+There are currently several sending paths. Configuring an organization SMTP
 account does not switch automation emails to that account.
 
 | Caller | Implementation | Transport |
@@ -9,9 +9,30 @@ account does not switch automation emails to that account.
 | Email account test endpoint | `organizations/services/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
 | First-run setup test email | `organizations/services/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
 | Workspace invitation | `organizations/services/email_service.py` sends the invitation link | Active default SMTP account of the inviting organization |
+| Installation-admin invitation | `organizations/services/email_service.py` sends the invitation link | Installation fallback SMTP account |
+| Password reset | `organizations/services/email_service.py` sends the reset link | Installation fallback SMTP account, or the global backend when none is configured |
 
-The first path prints email in the terminal with checked-in settings. The second
-attempts a real network send. Tests use mocked or test email boundaries.
+Transactional account emails use one branded Bubllio layout for workspace and
+installation-admin invitations, password resets, and SMTP test messages. Every
+message is multipart: responsive HTML for modern clients and a plain-text fallback
+for accessibility and restrictive clients.
+
+The editable source is `email_templates/src/transactional.mjml`. Build it with:
+
+```bash
+cd email_templates
+npm ci
+npm run build
+```
+
+The build writes `src/organizations/templates/emails/transactional.html`. Commit
+both the MJML source and compiled HTML. Production reads the compiled Django
+template, so Node and MJML are not production runtime dependencies. CI rebuilds
+the template and fails when the committed HTML is out of date.
+
+The automation path prints email in the terminal with checked-in settings. Saved
+or unsaved SMTP accounts attempt a real network send. Tests use mocked or test
+email boundaries.
 
 ## Organization SMTP Accounts Are Implemented
 

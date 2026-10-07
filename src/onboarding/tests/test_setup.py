@@ -186,7 +186,7 @@ class InstallationSetupTests(APITestCase):
             "from_name": "Bubllio", "use_tls": False, "use_ssl": True,
         }
         with patch("organizations.services.email_service.get_connection") as get_connection, patch(
-            "organizations.services.email_service.EmailMessage"
+            "organizations.services.email_service.EmailMultiAlternatives"
         ) as message_class:
             message_class.return_value.send.return_value = 1
             send_setup_test_email(smtp=smtp, recipient="admin@example.com")
@@ -196,12 +196,17 @@ class InstallationSetupTests(APITestCase):
             password="smtp-secret", use_tls=False, use_ssl=True,
             timeout=10, fail_silently=False,
         )
-        message_class.assert_called_once_with(
-            subject="Bubllio CRM setup test email",
-            body="Your SMTP settings sent this test email successfully. You can finish setting up Bubllio CRM.",
-            from_email="Bubllio <hello@example.com>",
-            to=["admin@example.com"],
-            connection=get_connection.return_value,
+        message_class.assert_called_once()
+        message_kwargs = message_class.call_args.kwargs
+        self.assertEqual(message_kwargs["subject"], "Bubllio CRM setup test email")
+        self.assertIn("sent this test email successfully", message_kwargs["body"])
+        self.assertEqual(message_kwargs["from_email"], "Bubllio <hello@example.com>")
+        self.assertEqual(message_kwargs["to"], ["admin@example.com"])
+        self.assertEqual(message_kwargs["connection"], get_connection.return_value)
+        message_class.return_value.attach_alternative.assert_called_once()
+        self.assertEqual(
+            message_class.return_value.attach_alternative.call_args.args[1],
+            "text/html",
         )
         message_class.return_value.send.assert_called_once_with(fail_silently=False)
 
@@ -211,7 +216,7 @@ class InstallationSetupTests(APITestCase):
             "password": "smtp-secret", "from_email": "hello@example.com",
         }
         with patch("organizations.services.email_service.get_connection"), patch(
-            "organizations.services.email_service.EmailMessage"
+            "organizations.services.email_service.EmailMultiAlternatives"
         ) as message_class:
             message_class.return_value.send.return_value = 0
             with self.assertRaises(RuntimeError):

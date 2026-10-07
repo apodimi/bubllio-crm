@@ -1,0 +1,11 @@
+{
+  "name": "bubllio-crm-email-templates",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "mjml src/transactional.mjml -o ../src/organizations/templates/emails/transactional.html --config.validationLevel=strict"
+  },
+  "devDependencies": {
+    "mjml": "^4.18.0"
+  }
+}
