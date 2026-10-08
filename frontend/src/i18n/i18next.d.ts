@@ -1,11 +1,9 @@
 import 'i18next'
-import en from './locales/en.json'
+import { defaultNamespace, resources } from './resources'
 
 declare module 'i18next' {
   interface CustomTypeOptions {
-    defaultNS: 'translation'
-    resources: {
-      translation: typeof en
-    }
+    defaultNS: typeof defaultNamespace
+    resources: (typeof resources)['en']
   }
 }

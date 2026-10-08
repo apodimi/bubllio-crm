@@ -1,0 +1,18 @@
+{
+  "overview": "Overview",
+  "companies": "Companies",
+  "contacts": "Contacts",
+  "deals": "Deals",
+  "tasks": "Tasks",
+  "services": "Services",
+  "automations": "Automations",
+  "people": "People",
+  "settings": "Settings",
+  "accountSettings": "Account settings",
+  "accountMenu": "Account menu",
+  "openAccountMenu": "Open account menu",
+  "openNavigation": "Open navigation",
+  "signOut": "Sign out",
+  "installationAdministrator": "Installation administrator",
+  "workspaceMember": "Workspace member"
+}

@@ -1,0 +1,20 @@
+{
+  "language": "Language",
+  "english": "English",
+  "greek": "Greek",
+  "loading": "Loading",
+  "retry": "Retry",
+  "workspace": "Workspace",
+  "allWorkspaces": "All workspaces",
+  "selectWorkspace": "Select workspace",
+  "signedInAs": "Signed in as {{username}}",
+  "cancel": "Cancel",
+  "save": "Save",
+  "close": "Close",
+  "delete": "Delete",
+  "edit": "Edit",
+  "create": "Create",
+  "search": "Search",
+  "all": "All",
+  "none": "None"
+}

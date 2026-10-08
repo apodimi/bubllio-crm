@@ -1,0 +1,18 @@
+{
+  "overview": "Επισκόπηση",
+  "companies": "Εταιρείες",
+  "contacts": "Επαφές",
+  "deals": "Συμφωνίες",
+  "tasks": "Εργασίες",
+  "services": "Υπηρεσίες",
+  "automations": "Αυτοματισμοί",
+  "people": "Μέλη",
+  "settings": "Ρυθμίσεις",
+  "accountSettings": "Ρυθμίσεις λογαριασμού",
+  "accountMenu": "Μενού λογαριασμού",
+  "openAccountMenu": "Άνοιγμα μενού λογαριασμού",
+  "openNavigation": "Άνοιγμα πλοήγησης",
+  "signOut": "Αποσύνδεση",
+  "installationAdministrator": "Διαχειριστής εγκατάστασης",
+  "workspaceMember": "Μέλος χώρου εργασίας"
+}
