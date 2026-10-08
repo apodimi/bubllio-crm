@@ -1,11 +1,10 @@
 import base64
 import logging
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
@@ -13,12 +12,15 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 
-from organizations.services.email_service import send_password_reset_email
-from organizations.models import EmailAccount, InstallationState
+from delivery.models import OutboxMessage
+from delivery.services import queue_outbox_message
 from .models import UserProfile
 from .serializers import (
     AccountSettingsSerializer,
+    AccountDeleteSerializer,
+    AccountExportSerializer,
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -30,6 +32,7 @@ User = get_user_model()
 
 
 class CurrentUserProfileAPIView(APIView):
+    serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
 
     def get_profile(self, request):
@@ -47,6 +50,7 @@ class CurrentUserProfileAPIView(APIView):
 
 
 class CurrentAccountSettingsAPIView(APIView):
+    serializer_class = AccountSettingsSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -61,6 +65,7 @@ class CurrentAccountSettingsAPIView(APIView):
 
 
 class PasswordChangeAPIView(APIView):
+    serializer_class = PasswordChangeSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -72,6 +77,7 @@ class PasswordChangeAPIView(APIView):
 
 
 class CurrentUserExportAPIView(APIView):
+    serializer_class = AccountExportSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -108,6 +114,7 @@ class CurrentUserExportAPIView(APIView):
 
 
 class CurrentUserDeleteAPIView(APIView):
+    serializer_class = AccountDeleteSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -125,36 +132,39 @@ class CurrentUserDeleteAPIView(APIView):
 
 
 class PasswordResetRequestAPIView(APIView):
+    serializer_class = PasswordResetRequestSerializer
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "password_reset"
 
+    @extend_schema(operation_id="request_password_reset")
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data["email"].strip().lower()
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user:
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            base_url = getattr(settings, "BUBLLIO_APP_URL", "").rstrip("/")
-            reset_url = f"{base_url}/reset-password/{uid}/{token}"
-            account_id = InstallationState.objects.values_list("fallback_email_account_id", flat=True).first()
-            account = EmailAccount.objects.filter(id=account_id, is_active=True).first() if account_id else None
             try:
-                send_password_reset_email(
-                    account=account,
-                    recipient=user.email,
-                    reset_url=reset_url,
+                queue_outbox_message(
+                    kind=OutboxMessage.Kind.PASSWORD_RESET,
+                    payload={"user_id": user.id},
                 )
             except Exception:
-                logger.exception("Password reset email delivery failed for user=%s", user.pk)
+                logger.exception("Password reset email could not be queued for user=%s", user.pk)
         return Response({"detail": "If an account exists for that email, reset instructions have been sent."})
 
 
 class PasswordResetConfirmAPIView(APIView):
+    serializer_class = PasswordResetConfirmSerializer
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="confirm_password_reset",
+        parameters=[
+            OpenApiParameter("uidb64", str, OpenApiParameter.PATH),
+            OpenApiParameter("token", str, OpenApiParameter.PATH),
+        ],
+    )
     def post(self, request, uidb64, token):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -10,7 +10,7 @@ class ContactSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     assigned_to_name = serializers.SerializerMethodField()
 
-    def get_assigned_to_name(self, contact):
+    def get_assigned_to_name(self, contact) -> str | None:
         if not contact.assigned_to:
             return ""
         return contact.assigned_to.get_full_name() or contact.assigned_to.username
@@ -82,7 +82,7 @@ class ContactSerializer(serializers.ModelSerializer):
 class ContactActivitySerializer(serializers.ModelSerializer):
     actor_name = serializers.SerializerMethodField()
 
-    def get_actor_name(self, activity):
+    def get_actor_name(self, activity) -> str | None:
         return (activity.actor.get_full_name() or activity.actor.username) if activity.actor else "System"
 
     class Meta:

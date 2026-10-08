@@ -42,6 +42,7 @@ def setup_access_error(request):
 
 
 class InstallationSetupAPIView(APIView):
+    serializer_class = InstallationSetupSerializer
     authentication_classes = []
     permission_classes = [AllowAny]
     throttle_classes = [SetupAttemptThrottle]
@@ -98,6 +99,7 @@ class InstallationSetupAPIView(APIView):
 
 
 class InstallationSmtpTestAPIView(APIView):
+    serializer_class = InstallationSmtpTestSerializer
     authentication_classes = []
     permission_classes = [AllowAny]
     throttle_classes = [SetupAttemptThrottle]

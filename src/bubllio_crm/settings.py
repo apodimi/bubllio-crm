@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'drf_spectacular',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
 
@@ -91,6 +92,7 @@ INSTALLED_APPS = [
     'activities.apps.ActivitiesConfig',
     'subscriptions.apps.SubscriptionsConfig',
     'automations',
+    'delivery.apps.DeliveryConfig',
 ]
 
 EMAIL_BACKEND = os.environ.get(
@@ -114,6 +116,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Bubllio CRM API",
+    "DESCRIPTION": "Public REST API contract for Bubllio CRM.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
@@ -130,6 +140,24 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
+}
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_HEARTBEAT = 30
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 120
+CELERY_TASK_SOFT_TIME_LIMIT = 110
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_RESULT_BACKEND = None
+CELERY_BEAT_SCHEDULE = {
+    "dispatch-pending-outbox": {
+        "task": "delivery.tasks.dispatch_pending_outbox",
+        "schedule": 60.0,
+    },
 }
 
 MIDDLEWARE = [

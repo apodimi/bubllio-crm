@@ -7,12 +7,15 @@ from django.db import transaction
 from django.utils import timezone
 
 from organizations.models import (
+    EmailAccount,
+    InstallationState,
     Organization,
     OrganizationInvitation,
     OrganizationMembership,
     WorkspaceAccessEvent,
 )
-from organizations.services.email_service import send_invitation_email
+from delivery.models import OutboxMessage
+from delivery.services import queue_outbox_message
 
 
 class InvitationRolePermissionError(Exception):
@@ -27,13 +30,31 @@ def token_hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def invitation_email_account(organization):
+    account = EmailAccount.objects.filter(
+        organization=organization,
+        is_default=True,
+        is_active=True,
+    ).first()
+    if account is not None:
+        return account
+    fallback_id = InstallationState.objects.values_list(
+        "fallback_email_account_id", flat=True
+    ).first()
+    return (
+        EmailAccount.objects.filter(id=fallback_id, is_active=True).first()
+        if fallback_id
+        else None
+    )
+
+
 def deliver_workspace_invitation(
-    *, organization, email, role, actor, actor_role, account, audit_action
+    *, organization, email, role, actor, actor_role, account, audit_action,
+    outbox_kind=OutboxMessage.Kind.WORKSPACE_INVITATION,
 ):
-    """Create and deliver a fresh invitation while invalidating older active links."""
+    """Create and queue a fresh invitation while invalidating older active links."""
     token = secrets.token_urlsafe(32)
     base_url = settings.BUBLLIO_APP_URL.rstrip("/")
-    invite_url = f"{base_url}/invite/{token}"
     now = timezone.now()
 
     with transaction.atomic():
@@ -62,11 +83,14 @@ def deliver_workspace_invitation(
             invited_by=actor,
             expires_at=now + timedelta(days=7),
         )
-        send_invitation_email(
-            account=account,
-            recipient=email,
-            organization_name=organization.name,
-            invite_url=invite_url,
+        queue_outbox_message(
+            kind=outbox_kind,
+            payload={
+                "invitation_id": str(invitation.id),
+                "account_id": str(account.id),
+                "app_url": base_url,
+            },
+            secret=token,
         )
         WorkspaceAccessEvent.objects.create(
             action=audit_action,

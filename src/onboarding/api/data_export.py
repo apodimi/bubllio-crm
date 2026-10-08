@@ -6,9 +6,11 @@ from rest_framework.views import APIView
 from access.permissions import IsInstallationAdmin
 from onboarding.services.data_export import build_installation_data_export
 from organizations.models import WorkspaceAccessEvent
+from .schema_serializers import DataExportSerializer
 
 
 class InstallationDataExportAPIView(APIView):
+    serializer_class = DataExportSerializer
     permission_classes = [IsInstallationAdmin]
 
     @transaction.atomic

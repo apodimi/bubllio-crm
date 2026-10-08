@@ -3,9 +3,11 @@ from rest_framework.views import APIView
 
 from access.permissions import IsInstallationAdmin
 from onboarding.services.backup_status import get_backup_status
+from .schema_serializers import BackupStatusSerializer
 
 
 class InstallationBackupStatusAPIView(APIView):
+    serializer_class = BackupStatusSerializer
     permission_classes = [IsInstallationAdmin]
 
     def get(self, request):

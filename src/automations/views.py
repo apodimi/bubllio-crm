@@ -9,6 +9,8 @@ from .services import run_automation
 
 
 class AutomationListCreateAPIView(APIView):
+    serializer_class = AutomationSerializer
+
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -35,6 +37,8 @@ class AutomationListCreateAPIView(APIView):
 
 
 class AutomationRunListAPIView(APIView):
+    serializer_class = AutomationRunSerializer
+
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -49,6 +53,8 @@ class AutomationRunListAPIView(APIView):
 
 
 class AutomationTestAPIView(APIView):
+    serializer_class = AutomationRunSerializer
+
     def post(self, request, organization_id, automation_id):
         organization = get_organization_for_user(
             user=request.user,

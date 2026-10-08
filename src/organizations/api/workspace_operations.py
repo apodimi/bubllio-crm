@@ -8,9 +8,11 @@ from rest_framework.views import APIView
 from access.permissions import Capability, get_organization_for_user
 from onboarding.services.data_export import build_workspace_data_export
 from organizations.models import WorkspaceAccessEvent
+from .schema_serializers import WorkspaceAuditEventSerializer, WorkspaceDataExportSerializer
 
 
 class WorkspaceActivityAPIView(APIView):
+    serializer_class = WorkspaceAuditEventSerializer
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -38,6 +40,7 @@ class WorkspaceActivityAPIView(APIView):
 
 
 class WorkspaceDataExportAPIView(APIView):
+    serializer_class = WorkspaceDataExportSerializer
     @transaction.atomic
     def get(self, request, organization_id):
         organization = get_organization_for_user(

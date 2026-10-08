@@ -15,12 +15,18 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import UserProfile
-from organizations.services.email_service import send_installation_admin_invitation_email
 from access.api.invitations import InvitationRegistrationSerializer, token_hash
+from delivery.models import OutboxMessage
+from delivery.services import queue_outbox_message
 from organizations.models import (
     EmailAccount, InstallationAdminInvitation, InstallationState, WorkspaceAccessEvent,
 )
 from access.permissions import IsInstallationAdmin
+from .schema_serializers import (
+    InstallationAdminInvitationSerializer,
+    InstallationAdminListSerializer,
+    InstallationAdminAcceptanceSerializer,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -34,6 +40,7 @@ class InstallationAdminInviteSerializer(serializers.Serializer):
 
 
 class InstallationAdminInvitationListCreateAPIView(APIView):
+    serializer_class = InstallationAdminListSerializer
     permission_classes = [IsInstallationAdmin]
     throttle_scope = "installation_admin_invitation"
 
@@ -65,7 +72,6 @@ class InstallationAdminInvitationListCreateAPIView(APIView):
 
         token = secrets.token_urlsafe(32)
         base_url = getattr(settings, "BUBLLIO_APP_URL", "").rstrip("/") or request.build_absolute_uri("/").rstrip("/")
-        invite_url = f"{base_url}/installation-admin-invite/{token}"
         try:
             with transaction.atomic():
                 InstallationAdminInvitation.objects.filter(email__iexact=email, accepted_at__isnull=True).delete()
@@ -73,19 +79,28 @@ class InstallationAdminInvitationListCreateAPIView(APIView):
                     email=email, token_hash=token_hash(token), invited_by=request.user,
                     expires_at=timezone.now() + timedelta(days=7),
                 )
-                send_installation_admin_invitation_email(account=account, recipient=email, invite_url=invite_url)
+                queue_outbox_message(
+                    kind=OutboxMessage.Kind.INSTALLATION_ADMIN_INVITATION,
+                    payload={
+                        "invitation_id": str(invitation.id),
+                        "account_id": str(account.id),
+                        "app_url": base_url,
+                    },
+                    secret=token,
+                )
                 WorkspaceAccessEvent.objects.create(
                     action=WorkspaceAccessEvent.Action.INVITE_INSTALLATION_ADMIN,
                     actor=request.user,
                     details={"email": email},
                 )
         except Exception:
-            logger.exception("Installation administrator invitation delivery failed for invitation email=%s", email)
-            return Response({"detail": "The invitation email could not be sent. Check installation SMTP."}, status=502)
+            logger.exception("Installation administrator invitation could not be queued for email=%s", email)
+            return Response({"detail": "The invitation could not be queued. Check the server logs."}, status=500)
         return Response({"id": str(invitation.id), "email": email, "expires_at": invitation.expires_at}, status=201)
 
 
 class InstallationAdminInvitationDetailAPIView(APIView):
+    serializer_class = InstallationAdminInvitationSerializer
     permission_classes = [AllowAny]
 
     def get(self, request, token):
@@ -98,6 +113,7 @@ class InstallationAdminInvitationDetailAPIView(APIView):
 
 
 class InstallationAdminInvitationAcceptAPIView(APIView):
+    serializer_class = InstallationAdminAcceptanceSerializer
     permission_classes = [AllowAny]
 
     @transaction.atomic

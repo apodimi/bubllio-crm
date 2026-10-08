@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
 
@@ -27,6 +28,9 @@ def _day_bounds(day):
 
 
 class TaskListCreateAPIView(APIView):
+    serializer_class = TaskSerializer
+
+    @extend_schema(operation_id="list_tasks")
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -105,6 +109,8 @@ class TaskListCreateAPIView(APIView):
 
 
 class TaskDetailAPIView(APIView):
+    serializer_class = TaskSerializer
+
     def _task(self, request, organization_id, task_id, capability):
         organization = get_organization_for_user(
             user=request.user,
@@ -115,6 +121,7 @@ class TaskDetailAPIView(APIView):
             _task_queryset(organization), id=task_id
         )
 
+    @extend_schema(operation_id="retrieve_task")
     def get(self, request, organization_id, task_id):
         _, task = self._task(
             request, organization_id, task_id, Capability.VIEW_CRM
@@ -144,6 +151,8 @@ class TaskDetailAPIView(APIView):
 
 
 class TaskCompletionAPIView(APIView):
+    serializer_class = TaskSerializer
+
     def post(self, request, organization_id, task_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -155,6 +164,8 @@ class TaskCompletionAPIView(APIView):
 
 
 class TaskReopenAPIView(APIView):
+    serializer_class = TaskSerializer
+
     def post(self, request, organization_id, task_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -166,6 +177,8 @@ class TaskReopenAPIView(APIView):
 
 
 class TaskMoveAPIView(APIView):
+    serializer_class = TaskSerializer
+
     def post(self, request, organization_id, task_id):
         organization = get_organization_for_user(
             user=request.user,

@@ -18,11 +18,17 @@ from ..models import (
 )
 from access.permissions import IsInstallationAdmin
 from ..services.provisioning import send_owner_invitation
+from .schema_serializers import (
+    DetailSerializer,
+    WorkspaceCreatorGrantSerializer,
+    WorkspaceProvisioningSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class WorkspaceCreatorGrantAPIView(APIView):
+    serializer_class = WorkspaceCreatorGrantSerializer
     permission_classes = [IsInstallationAdmin]
 
     def get(self, request):
@@ -69,6 +75,7 @@ class WorkspaceCreatorGrantAPIView(APIView):
 
 
 class WorkspaceCreatorGrantDetailAPIView(APIView):
+    serializer_class = WorkspaceCreatorGrantSerializer
     permission_classes = [IsInstallationAdmin]
 
     def delete(self, request, grant_id):
@@ -85,6 +92,7 @@ class WorkspaceCreatorGrantDetailAPIView(APIView):
 
 
 class WorkspaceProvisioningListAPIView(APIView):
+    serializer_class = WorkspaceProvisioningSerializer
     def get(self, request):
         pending = OrganizationProvisioning.objects.select_related("organization")
         if not request.user.is_active:
@@ -106,6 +114,7 @@ class WorkspaceProvisioningListAPIView(APIView):
 
 
 class WorkspaceProvisioningDetailAPIView(APIView):
+    serializer_class = DetailSerializer
     throttle_scope = "workspace_provisioning"
 
     def get_throttles(self):

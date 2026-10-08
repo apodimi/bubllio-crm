@@ -3,9 +3,11 @@ from rest_framework.views import APIView
 
 from access.permissions import IsInstallationAdmin
 from organizations.models import WorkspaceAccessEvent
+from .schema_serializers import AuditEventSerializer
 
 
 class InstallationAuditLogAPIView(APIView):
+    serializer_class = AuditEventSerializer
     permission_classes = [IsInstallationAdmin]
 
     def get(self, request):

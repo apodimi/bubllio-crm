@@ -6,6 +6,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from ..models import InstallationState, Organization
 from access.permissions import Capability, can_create_workspace, get_organization_for_user
@@ -17,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class PersonalWorkspaceAPIView(APIView):
+    serializer_class = OrganizationSerializer
+
     def get(self, request):
         state = InstallationState.objects.get(pk=1)
         return Response({
@@ -45,11 +48,14 @@ class PersonalWorkspaceAPIView(APIView):
 
 
 class OrganizationListCreateAPIView(APIView):
+    serializer_class = OrganizationSerializer
+
     throttle_scope = "workspace_provisioning"
 
     def get_throttles(self):
         return [ScopedRateThrottle()] if self.request.method == "POST" else []
 
+    @extend_schema(operation_id="list_organizations")
     def get(self, request):
         organizations = Organization.objects.filter(
             memberships__user=request.user, provisioning__isnull=True
@@ -101,6 +107,9 @@ class OrganizationListCreateAPIView(APIView):
 
 
 class OrganizationDetailAPIView(APIView):
+    serializer_class = OrganizationSerializer
+
+    @extend_schema(operation_id="retrieve_organization")
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,

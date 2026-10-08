@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
 
@@ -12,10 +13,14 @@ from .serializers import (
     CustomerSubscriptionSerializer,
     PaymentSerializer,
     ServiceCatalogItemSerializer,
+    SubscriptionOverviewSerializer,
 )
 
 
 class CatalogListCreateAPIView(APIView):
+    serializer_class = ServiceCatalogItemSerializer
+
+    @extend_schema(operation_id="list_service_catalog_items")
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM
@@ -36,12 +41,15 @@ class CatalogListCreateAPIView(APIView):
 
 
 class CatalogDetailAPIView(APIView):
+    serializer_class = ServiceCatalogItemSerializer
+
     def _item(self, request, organization_id, item_id, capability):
         organization = get_organization_for_user(
             user=request.user, organization_id=organization_id, capability=capability
         )
         return get_object_or_404(ServiceCatalogItem, organization=organization, id=item_id)
 
+    @extend_schema(operation_id="retrieve_service_catalog_item")
     def get(self, request, organization_id, item_id):
         return Response(ServiceCatalogItemSerializer(self._item(request, organization_id, item_id, Capability.VIEW_CRM)).data)
 
@@ -54,6 +62,9 @@ class CatalogDetailAPIView(APIView):
 
 
 class SubscriptionListCreateAPIView(APIView):
+    serializer_class = CustomerSubscriptionSerializer
+
+    @extend_schema(operation_id="list_customer_subscriptions")
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM
@@ -78,6 +89,8 @@ class SubscriptionListCreateAPIView(APIView):
 
 
 class SubscriptionDetailAPIView(APIView):
+    serializer_class = CustomerSubscriptionSerializer
+
     def _subscription(self, request, organization_id, subscription_id, capability):
         organization = get_organization_for_user(
             user=request.user, organization_id=organization_id, capability=capability
@@ -88,6 +101,7 @@ class SubscriptionDetailAPIView(APIView):
             id=subscription_id,
         )
 
+    @extend_schema(operation_id="retrieve_customer_subscription")
     def get(self, request, organization_id, subscription_id):
         _, subscription = self._subscription(request, organization_id, subscription_id, Capability.VIEW_CRM)
         return Response(CustomerSubscriptionSerializer(subscription).data)
@@ -105,6 +119,8 @@ class SubscriptionDetailAPIView(APIView):
 
 
 class SubscriptionCancelAPIView(APIView):
+    serializer_class = CustomerSubscriptionSerializer
+
     def post(self, request, organization_id, subscription_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -135,6 +151,8 @@ class SubscriptionCancelAPIView(APIView):
 
 
 class SubscriptionResumeAPIView(APIView):
+    serializer_class = CustomerSubscriptionSerializer
+
     def post(self, request, organization_id, subscription_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -152,6 +170,8 @@ class SubscriptionResumeAPIView(APIView):
 
 
 class SubscriptionOverviewAPIView(APIView):
+    serializer_class = SubscriptionOverviewSerializer
+
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -162,6 +182,8 @@ class SubscriptionOverviewAPIView(APIView):
 
 
 class ChargeListAPIView(APIView):
+    serializer_class = ChargeSerializer
+
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM
@@ -177,6 +199,8 @@ class ChargeListAPIView(APIView):
 
 
 class ChargePaymentListCreateAPIView(APIView):
+    serializer_class = PaymentSerializer
+
     def _charge(self, request, organization_id, charge_id, capability):
         organization = get_organization_for_user(
             user=request.user, organization_id=organization_id, capability=capability

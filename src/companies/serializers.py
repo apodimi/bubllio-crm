@@ -8,7 +8,7 @@ from .models import Company, CompanyActivity
 class CompanySerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
 
-    def get_assigned_to_name(self, company):
+    def get_assigned_to_name(self, company) -> str | None:
         if not company.assigned_to:
             return ""
         return company.assigned_to.get_full_name() or company.assigned_to.username
@@ -91,7 +91,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class CompanyActivitySerializer(serializers.ModelSerializer):
     actor_name = serializers.SerializerMethodField()
 
-    def get_actor_name(self, activity):
+    def get_actor_name(self, activity) -> str | None:
         if not activity.actor:
             return "System"
         return activity.actor.get_full_name() or activity.actor.username
@@ -105,7 +105,7 @@ class CompanyAssigneeSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="user_id")
     name = serializers.SerializerMethodField()
 
-    def get_name(self, membership):
+    def get_name(self, membership) -> str:
         return membership.user.get_full_name() or membership.user.username
 
     class Meta:

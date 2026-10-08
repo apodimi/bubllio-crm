@@ -16,6 +16,23 @@ services:
     networks:
       - private
 
+  rabbitmq:
+    image: rabbitmq:4.2-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: bubllio
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: bubllio
+    volumes:
+      - bubllio_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - private
+
   backend:
     build: .
     restart: unless-stopped
@@ -35,13 +52,60 @@ services:
       BUBLLIO_APP_URL: ${BUBLLIO_APP_URL:?Set BUBLLIO_APP_URL}
       BUBLLIO_SETUP_TOKEN: ${BUBLLIO_SETUP_TOKEN:-}
       BUBLLIO_EMAIL_ENCRYPTION_KEYS: ${BUBLLIO_EMAIL_ENCRYPTION_KEYS:?Set BUBLLIO_EMAIL_ENCRYPTION_KEYS}
+      BUBLLIO_EMAIL_ENCRYPTION_KEY: ${BUBLLIO_EMAIL_ENCRYPTION_KEY:-}
+      CELERY_BROKER_URL: amqp://bubllio:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672/bubllio
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     expose:
       - "8000"
+    networks:
+      - private
+
+  worker:
+    build: .
+    restart: unless-stopped
+    entrypoint: []
+    command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "worker", "--loglevel=INFO"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      BUBLLIO_APP_URL: ${BUBLLIO_APP_URL:?Set BUBLLIO_APP_URL}
+      BUBLLIO_EMAIL_ENCRYPTION_KEYS: ${BUBLLIO_EMAIL_ENCRYPTION_KEYS:?Set BUBLLIO_EMAIL_ENCRYPTION_KEYS}
+      BUBLLIO_EMAIL_ENCRYPTION_KEY: ${BUBLLIO_EMAIL_ENCRYPTION_KEY:-}
+      CELERY_BROKER_URL: amqp://bubllio:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672/bubllio
+    depends_on:
+      backend:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    networks:
+      - private
+
+  beat:
+    build: .
+    restart: unless-stopped
+    entrypoint: []
+    command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "beat", "--loglevel=INFO", "--schedule=/tmp/celerybeat-schedule"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      CELERY_BROKER_URL: amqp://bubllio:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672/bubllio
+    depends_on:
+      backend:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      disable: true
     networks:
       - private
 
@@ -58,6 +122,7 @@ services:
 
 volumes:
   bubllio_postgres_data:
+  bubllio_rabbitmq_data:
 
 networks:
   private:

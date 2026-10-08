@@ -35,6 +35,7 @@ Start with [Contributing](contributing.md), then open only the guide related to
 your change:
 
 - [Project structure](project-structure.md)
+- [Developer commands](development/developer-experience.md)
 - [Django workflow](development/django-workflow.md)
 - [Frontend workflow](development/frontend-workflow.md)
 - [Migrations](development/migrations.md)

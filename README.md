@@ -17,21 +17,12 @@ Requirements: Python 3.13, `uv`, and Node.js 22.12 or newer.
 Terminal 1 — backend:
 
 ```bash
-uv sync
-uv run python src/manage.py migrate
-uv run python src/manage.py runserver
+./scripts/bootstrap.sh
+./scripts/dev.sh
 ```
 
-Terminal 2 — frontend:
-
-```bash
-cd frontend
-npm ci
-npm run dev
-```
-
-Open `http://127.0.0.1:5173`. The frontend proxies `/api/` to Django on port
-`8000`.
+The development script starts both backend and frontend. Open
+`http://127.0.0.1:5173`.
 
 For the initial administrator and workspace, follow the
 [first-run setup](docs/getting-started.md#first-run-setup). SQLite works without
@@ -46,6 +37,7 @@ configuration; PostgreSQL setup is documented separately.
 | Deploy with Dokploy | [Dokploy guide](docs/development/dokploy-deployment.md) |
 | Understand the product | [Business guides](docs/README.md#using-bubllio) |
 | Contribute code | [Contributing](docs/contributing.md) |
+| Find development commands | [Developer commands](docs/development/developer-experience.md) |
 | Understand the architecture | [System overview](docs/architecture/system-overview.md) |
 | Use the REST API | [API documentation](docs/README.md#api) |
 | Find any other document | [Documentation home](docs/README.md) |
@@ -76,19 +68,13 @@ See [roles and access](docs/guides/roles-and-access.md) for the complete matrix.
 ## Common commands
 
 ```bash
-# Backend
-uv run python src/manage.py check
-uv run python src/manage.py test
-uv run python src/manage.py makemigrations
-uv run python src/manage.py migrate
-
-# Frontend
-cd frontend
-npm run lint
-npm test
-npm run build
-npm run test:e2e
+./scripts/doctor.sh
+./scripts/verify.sh fast
+./scripts/verify.sh full
 ```
+
+See [developer commands](docs/development/developer-experience.md) for demo,
+onboarding, local email, and Git-hook workflows.
 
 ## Self-hosting
 

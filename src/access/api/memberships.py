@@ -12,6 +12,8 @@ from organizations.serializers import OrganizationMembershipSerializer
 
 
 class OrganizationMembershipListAPIView(APIView):
+    serializer_class = OrganizationMembershipSerializer
+
     def _organization(self, request, organization_id):
         return get_organization_for_user(
             user=request.user,
@@ -28,6 +30,8 @@ class OrganizationMembershipListAPIView(APIView):
 
 
 class OrganizationMembershipDetailAPIView(APIView):
+    serializer_class = OrganizationMembershipSerializer
+
     def _context(self, request, organization_id, membership_id):
         organization = get_organization_for_user(
             user=request.user,

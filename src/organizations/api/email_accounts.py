@@ -3,14 +3,18 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from organizations.models import EmailAccount, WorkspaceAccessEvent
 from access.permissions import Capability, get_organization_for_user
 from organizations.serializers import EmailAccountSerializer
 from ..services.email_service import mark_test_failure, mark_test_success, send_test_email
+from .schema_serializers import EmailTestSerializer
 
 
 class EmailAccountListCreateAPIView(APIView):
+    serializer_class = EmailAccountSerializer
+
     def get_organization(self, request, organization_id, capability):
         return get_organization_for_user(
             user=request.user,
@@ -18,6 +22,7 @@ class EmailAccountListCreateAPIView(APIView):
             capability=capability,
         )
 
+    @extend_schema(operation_id="list_email_accounts")
     def get(self, request, organization_id):
         organization = self.get_organization(request, organization_id, Capability.VIEW_CRM)
         accounts = organization.email_accounts.order_by("name")
@@ -44,6 +49,8 @@ class EmailAccountListCreateAPIView(APIView):
 
 
 class EmailAccountDetailAPIView(APIView):
+    serializer_class = EmailAccountSerializer
+
     def get_context(self, request, organization_id, account_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -53,6 +60,7 @@ class EmailAccountDetailAPIView(APIView):
         account = get_object_or_404(EmailAccount, id=account_id, organization=organization)
         return organization, account
 
+    @extend_schema(operation_id="retrieve_email_account")
     def get(self, request, organization_id, account_id):
         _, account = self.get_context(request, organization_id, account_id)
         return Response(EmailAccountSerializer(account).data)
@@ -98,6 +106,7 @@ class EmailAccountDetailAPIView(APIView):
 
 
 class EmailAccountTestAPIView(APIView):
+    serializer_class = EmailTestSerializer
     def post(self, request, organization_id, account_id):
         organization = get_organization_for_user(
             user=request.user,

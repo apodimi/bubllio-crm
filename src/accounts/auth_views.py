@@ -8,9 +8,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from organizations.models import Organization
 from access.permissions import can_create_workspace
 from organizations.serializers import OrganizationSerializer
+from .serializers import CurrentUserSerializer, LogoutSerializer
 
 
 class CurrentUserAPIView(APIView):
+    serializer_class = CurrentUserSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -33,6 +35,7 @@ class CurrentUserAPIView(APIView):
 
 
 class LogoutAPIView(APIView):
+    serializer_class = LogoutSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

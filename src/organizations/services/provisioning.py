@@ -1,16 +1,10 @@
-import hashlib
-import secrets
-from datetime import timedelta
-
-from django.conf import settings
 from django.db import transaction
-from django.utils import timezone
 
-from .email_service import send_invitation_email
+from access.services.invitations import deliver_workspace_invitation
+from delivery.models import OutboxMessage
 from ..models import (
     EmailAccount,
     InstallationState,
-    OrganizationInvitation,
     OrganizationMembership,
     OrganizationProvisioning,
     OrganizationSettings,
@@ -28,32 +22,22 @@ def installation_email_account():
 
 
 def send_owner_invitation(*, organization, owner_email, creator, request):
-    """Must run inside an atomic transaction so failed delivery leaves no invite."""
+    """Queue an owner invitation inside the workspace-creation transaction."""
     account = installation_email_account()
     if account is None:
         raise ValueError(
             "Configure installation fallback SMTP before creating a workspace for another owner."
         )
-    token = secrets.token_urlsafe(32)
-    base_url = getattr(settings, "BUBLLIO_APP_URL", "").rstrip("/")
-    if not base_url:
-        base_url = request.build_absolute_uri("/").rstrip("/")
-    invitation = OrganizationInvitation.objects.create(
+    return deliver_workspace_invitation(
         organization=organization,
         email=owner_email,
         role=OrganizationMembership.Role.OWNER,
-        token_hash=hashlib.sha256(token.encode()).hexdigest(),
-        invited_by=creator,
-        expires_at=timezone.now() + timedelta(days=7),
-    )
-    send_invitation_email(
+        actor=creator,
+        actor_role=OrganizationMembership.Role.OWNER,
         account=account,
-        recipient=owner_email,
-        organization_name=organization.name,
-        invite_url=f"{base_url}/invite/{token}",
-        initial_owner=True,
+        audit_action=WorkspaceAccessEvent.Action.INVITE_MEMBER,
+        outbox_kind=OutboxMessage.Kind.OWNER_INVITATION,
     )
-    return invitation
 
 
 @transaction.atomic

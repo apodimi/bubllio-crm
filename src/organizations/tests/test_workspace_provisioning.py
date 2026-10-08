@@ -48,9 +48,9 @@ class WorkspaceProvisioningTests(APITestCase):
 
     def test_nominated_owner_sees_workspace_only_after_accepting_invitation(self):
         self.client.force_authenticate(self.it)
-        with patch("organizations.services.provisioning.send_invitation_email") as send:
+        with patch("access.services.invitations.queue_outbox_message") as send:
             created = self.client.post(reverse("organization-list"), {"name": "Client", "slug": "client", "owner_email": self.owner.email}, format="json")
-        token = send.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        token = send.call_args.kwargs["secret"]
         organization_id = created.data["id"]
         self.client.force_authenticate(self.owner)
         self.assertEqual(self.client.get(reverse("organization-list")).data, [])
@@ -62,7 +62,7 @@ class WorkspaceProvisioningTests(APITestCase):
 
     def test_non_admin_cannot_manage_pending_workspace(self):
         self.client.force_authenticate(self.it)
-        with patch("organizations.services.provisioning.send_invitation_email"):
+        with patch("access.services.invitations.queue_outbox_message"):
             created = self.client.post(reverse("organization-list"), {"name": "Client", "slug": "client", "owner_email": self.owner.email}, format="json")
         url = reverse("workspace-provisioning-detail", kwargs={"organization_id": created.data["id"]})
         self.client.force_authenticate(self.member)

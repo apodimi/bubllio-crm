@@ -92,8 +92,8 @@ class UserProfileTests(APITestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("new-strong-password-4938"))
 
-    @patch("accounts.views.send_password_reset_email")
-    def test_password_reset_request_is_generic_and_sends_link(self, send_password_reset_email):
+    @patch("accounts.views.queue_outbox_message")
+    def test_password_reset_request_is_generic_and_queues_delivery(self, queue_outbox_message):
         response = self.client.post(
             reverse("password-reset-request"),
             {"email": self.user.email},
@@ -101,13 +101,9 @@ class UserProfileTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("If an account exists", response.data["detail"])
-        send_password_reset_email.assert_called_once()
-        self.assertIsNone(send_password_reset_email.call_args.kwargs["account"])
-        self.assertEqual(send_password_reset_email.call_args.kwargs["recipient"], self.user.email)
-        self.assertIn(
-            "/reset-password/",
-            send_password_reset_email.call_args.kwargs["reset_url"],
-        )
+        queue_outbox_message.assert_called_once()
+        self.assertEqual(queue_outbox_message.call_args.kwargs["kind"], "password_reset")
+        self.assertEqual(queue_outbox_message.call_args.kwargs["payload"], {"user_id": self.user.id})
 
     def test_password_reset_confirm_changes_password(self):
         uid = urlsafe_base64_encode(force_bytes(self.user.pk))

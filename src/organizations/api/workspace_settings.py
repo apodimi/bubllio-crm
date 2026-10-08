@@ -7,9 +7,12 @@ from ..choices import locale_choices, timezone_choices
 from organizations.models import OrganizationSettings, WorkspaceAccessEvent
 from access.permissions import Capability, get_organization_for_user
 from organizations.serializers import OrganizationSettingsSerializer
+from .schema_serializers import OrganizationSettingsOptionsSerializer
 
 
 class OrganizationSettingsAPIView(APIView):
+    serializer_class = OrganizationSettingsSerializer
+
     def get_organization(self, request, organization_id, capability):
         return get_organization_for_user(
             user=request.user,
@@ -38,6 +41,7 @@ class OrganizationSettingsAPIView(APIView):
 
 
 class OrganizationSettingsOptionsAPIView(APIView):
+    serializer_class = OrganizationSettingsOptionsSerializer
     """Return the choices used by organization-settings forms."""
 
     def get(self, request):

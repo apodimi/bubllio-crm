@@ -9,12 +9,14 @@ from rest_framework.views import APIView
 from organizations.models import EmailAccount, InstallationState, Organization, WorkspaceAccessEvent
 from access.permissions import IsInstallationAdmin
 from organizations.serializers import EmailAccountSerializer
+from .schema_serializers import InstallationSettingsSerializer
 
 
 class InstallationSettingsAPIView(APIView):
     """Manage installation-wide settings reserved for the installation admin."""
 
     permission_classes = [IsInstallationAdmin]
+    serializer_class = InstallationSettingsSerializer
 
     def _state(self):
         return InstallationState.objects.select_related("fallback_email_account").get(pk=1)

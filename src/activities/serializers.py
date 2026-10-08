@@ -18,16 +18,16 @@ class TaskSerializer(serializers.ModelSerializer):
     def _user_name(user):
         return (user.get_full_name() or user.username) if user else ""
 
-    def get_contact_name(self, task):
+    def get_contact_name(self, task) -> str | None:
         return str(task.contact) if task.contact else ""
 
-    def get_assigned_to_name(self, task):
+    def get_assigned_to_name(self, task) -> str | None:
         return self._user_name(task.assigned_to)
 
-    def get_created_by_name(self, task):
+    def get_created_by_name(self, task) -> str | None:
         return self._user_name(task.created_by)
 
-    def get_completed_by_name(self, task):
+    def get_completed_by_name(self, task) -> str | None:
         return self._user_name(task.completed_by)
 
     def validate(self, attrs):

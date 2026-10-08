@@ -103,3 +103,31 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def validate_new_password(self, value):
         validate_password(value)
         return value
+
+
+class AccountDeleteSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+    confirmation = serializers.CharField(write_only=True)
+
+
+class DetailSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(write_only=True)
+
+
+class CurrentUserSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField()
+    is_superuser = serializers.BooleanField()
+    can_create_workspaces = serializers.BooleanField()
+    organizations = serializers.ListField(child=serializers.DictField())
+
+
+class AccountExportSerializer(serializers.Serializer):
+    account = serializers.DictField()
+    profile = serializers.DictField()
+    memberships = serializers.ListField(child=serializers.DictField())

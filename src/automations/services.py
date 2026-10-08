@@ -2,6 +2,8 @@ from django.core.mail import send_mail
 
 from .events import AutomationTrigger
 from .models import Automation, AutomationRun
+from delivery.models import OutboxMessage
+from delivery.services import queue_outbox_message
 
 
 def dispatch_company_created(company):
@@ -26,38 +28,49 @@ def dispatch_automation_event(*, organization, trigger, payload):
     runs = []
 
     for automation in automations:
-        runs.append(run_automation(automation=automation, trigger=trigger, payload=payload))
+        runs.append(queue_automation_run(automation=automation, trigger=trigger, payload=payload))
 
     return runs
 
 
 def run_automation(*, automation, trigger, payload):
-    try:
-        if automation.action_type == Automation.ActionType.SEND_EMAIL:
-            _send_email(action_config=automation.action_config)
-        else:
-            return AutomationRun.objects.create(
-                automation=automation,
-                trigger=trigger,
-                status=AutomationRun.Status.SKIPPED,
-                payload=payload,
-                error_message=f"Unsupported action type: {automation.action_type}",
-            )
+    return queue_automation_run(automation=automation, trigger=trigger, payload=payload)
 
-        return AutomationRun.objects.create(
-            automation=automation,
-            trigger=trigger,
-            status=AutomationRun.Status.SUCCESS,
-            payload=payload,
-        )
+
+def queue_automation_run(*, automation, trigger, payload):
+    run = AutomationRun.objects.create(
+        automation=automation,
+        trigger=trigger,
+        status=AutomationRun.Status.QUEUED,
+        payload=payload,
+    )
+    queue_outbox_message(
+        kind=OutboxMessage.Kind.AUTOMATION_RUN,
+        payload={"run_id": str(run.id)},
+    )
+    return run
+
+
+def execute_automation_run(run):
+    run.status = AutomationRun.Status.PROCESSING
+    run.error_message = ""
+    run.save(update_fields=("status", "error_message"))
+    try:
+        if run.automation.action_type == Automation.ActionType.SEND_EMAIL:
+            _send_email(action_config=run.automation.action_config)
+        else:
+            run.status = AutomationRun.Status.SKIPPED
+            run.error_message = f"Unsupported action type: {run.automation.action_type}"
+            run.save(update_fields=("status", "error_message"))
+            return run
+        run.status = AutomationRun.Status.SUCCESS
+        run.save(update_fields=("status",))
+        return run
     except Exception as exc:
-        return AutomationRun.objects.create(
-            automation=automation,
-            trigger=trigger,
-            status=AutomationRun.Status.FAILED,
-            payload=payload,
-            error_message=str(exc),
-        )
+        run.status = AutomationRun.Status.FAILED
+        run.error_message = str(exc)[:2000]
+        run.save(update_fields=("status", "error_message"))
+        raise
 
 
 def _send_email(*, action_config):

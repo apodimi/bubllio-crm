@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -11,4 +12,4 @@ def dispatch_company_created_automations(sender, instance, created, **kwargs):
     if not created:
         return
 
-    dispatch_company_created(instance)
+    transaction.on_commit(lambda: dispatch_company_created(instance))

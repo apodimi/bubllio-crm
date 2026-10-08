@@ -14,8 +14,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from organizations.models import (
-    EmailAccount, InstallationState, Organization, OrganizationInvitation,
-    OrganizationMembership, OrganizationProvisioning, WorkspaceAccessEvent,
+    Organization, OrganizationInvitation, OrganizationMembership,
+    OrganizationProvisioning, WorkspaceAccessEvent,
 )
 from accounts.models import UserProfile
 from access.permissions import Capability, get_membership, get_organization_for_user
@@ -23,6 +23,7 @@ from access.services.invitations import (
     InvitationAlreadyMemberError,
     InvitationRolePermissionError,
     deliver_workspace_invitation,
+    invitation_email_account,
     token_hash,
 )
 
@@ -87,27 +88,26 @@ class OrganizationInvitationSerializer(serializers.ModelSerializer):
             "revoked_at",
         )
 
-    def get_invited_by(self, invitation):
+    def get_invited_by(self, invitation) -> str | None:
         return invitation.invited_by.username if invitation.invited_by else None
 
 
+class InvitationDetailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    organization_name = serializers.CharField()
+    role = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+
+
+class InvitationAcceptanceSerializer(serializers.Serializer):
+    organization_id = serializers.UUIDField()
+    role = serializers.CharField()
+    membership_created = serializers.BooleanField()
+    tokens = serializers.DictField(allow_null=True)
+
+
 def _invitation_account(organization):
-    account = EmailAccount.objects.filter(
-        organization=organization,
-        is_default=True,
-        is_active=True,
-    ).first()
-    if account is None:
-        fallback_id = InstallationState.objects.values_list(
-            "fallback_email_account_id",
-            flat=True,
-        ).first()
-        account = (
-            EmailAccount.objects.filter(id=fallback_id, is_active=True).first()
-            if fallback_id
-            else None
-        )
-    return account
+    return invitation_email_account(organization)
 
 
 def _can_manage_invitation_role(requester, role):
@@ -122,6 +122,7 @@ def _serialize_invitation(invitation):
 
 
 class OrganizationInvitationListCreateAPIView(APIView):
+    serializer_class = OrganizationInvitationSerializer
     throttle_scope = "organization_invitation"
 
     def get_throttles(self):
@@ -183,16 +184,21 @@ class OrganizationInvitationListCreateAPIView(APIView):
             )
         except Exception:
             logger.exception(
-                "Invitation email delivery failed for organization=%s recipient=%s account=%s",
+                "Invitation could not be queued for organization=%s recipient=%s account=%s",
                 organization.pk,
                 email,
                 account.pk,
             )
-            return Response({"detail": "The invitation email could not be sent. Check the workspace SMTP account."}, status=status.HTTP_502_BAD_GATEWAY)
+            return Response(
+                {"detail": "The invitation could not be queued. Check the server logs."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(_serialize_invitation(invitation), status=status.HTTP_201_CREATED)
 
 
 class OrganizationInvitationDetailAPIView(APIView):
+    serializer_class = OrganizationInvitationSerializer
+
     @transaction.atomic
     def delete(self, request, organization_id, invitation_id):
         organization = get_organization_for_user(
@@ -235,6 +241,7 @@ class OrganizationInvitationDetailAPIView(APIView):
 
 
 class OrganizationInvitationResendAPIView(APIView):
+    serializer_class = OrganizationInvitationSerializer
     throttle_scope = "organization_invitation"
 
     def get_throttles(self):
@@ -295,19 +302,20 @@ class OrganizationInvitationResendAPIView(APIView):
             )
         except Exception:
             logger.exception(
-                "Invitation resend failed for organization=%s invitation=%s account=%s",
+                "Invitation resend could not be queued for organization=%s invitation=%s account=%s",
                 organization.pk,
                 invitation.pk,
                 account.pk,
             )
             return Response(
-                {"detail": "The invitation email could not be resent. Check the workspace SMTP account."},
-                status=status.HTTP_502_BAD_GATEWAY,
+                {"detail": "The invitation could not be queued. Check the server logs."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         return Response(_serialize_invitation(replacement), status=status.HTTP_201_CREATED)
 
 
 class InvitationDetailAPIView(APIView):
+    serializer_class = InvitationDetailSerializer
     permission_classes = [AllowAny]
 
     def get(self, request, token):
@@ -325,6 +333,7 @@ class InvitationDetailAPIView(APIView):
 
 
 class InvitationAcceptAPIView(APIView):
+    serializer_class = InvitationAcceptanceSerializer
     permission_classes = [AllowAny]
 
     @transaction.atomic

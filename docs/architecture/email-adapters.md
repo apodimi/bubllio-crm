@@ -5,12 +5,12 @@ account does not switch automation emails to that account.
 
 | Caller | Implementation | Transport |
 |---|---|---|
-| Automation action and manual automation test | `automations/services.py` calls Django `send_mail` | Global backend, currently console |
+| Automation action and manual automation test | Queued through the database outbox, then Django `send_mail` | Global backend, currently console |
 | Email account test endpoint | `organizations/services/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
 | First-run setup test email | `organizations/services/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
-| Workspace invitation | `organizations/services/email_service.py` sends the invitation link | Active default SMTP account of the inviting organization |
-| Installation-admin invitation | `organizations/services/email_service.py` sends the invitation link | Installation fallback SMTP account |
-| Password reset | `organizations/services/email_service.py` sends the reset link | Installation fallback SMTP account, or the global backend when none is configured |
+| Workspace invitation | Queued, then sent by a worker | Active default SMTP account of the inviting organization |
+| Installation-admin invitation | Queued, then sent by a worker | Installation fallback SMTP account |
+| Password reset | Queued, then sent by a worker | Installation fallback SMTP account, or the global backend when none is configured |
 
 Transactional account emails use one branded Bubllio layout for workspace and
 installation-admin invitations, password resets, and SMTP test messages. Every
@@ -61,12 +61,26 @@ sanitized. The immediate HTTP failure response is generic and uses status 502.
 Treat stored diagnostics as potentially sensitive. Password fields are write-only
 through the API and encrypted at rest.
 
-An owner or administrator can send a workspace invitation when either an active
+An owner or administrator can queue a workspace invitation when either an active
 workspace default SMTP account exists or the installation fallback configured
 during first setup exists. Workspace SMTP wins; the fallback is used only when
-the workspace has no active default. Invitation delivery failure returns `502`
-and rolls back the invitation. The invitation link uses `BUBLLIO_APP_URL`,
+the workspace has no active default. A queue/database failure rolls back the
+invitation; a later SMTP failure is recorded in the outbox and retried. The
+invitation link uses `BUBLLIO_APP_URL`,
 which must be set to the public frontend origin in deployments.
+
+## Background delivery and recovery
+
+Transactional emails and automation runs use Celery with RabbitMQ. PostgreSQL
+stores the authoritative outbox row; RabbitMQ carries only its UUID. Invitation
+tokens are encrypted in the outbox and removed after successful handling.
+Workers retry failures with increasing delays up to six attempts. Celery Beat
+republishes due rows and recovers jobs whose worker lock became stale.
+
+Delivery is at-least-once: a worker can finish an external send and crash before
+marking it complete, so a rare duplicate email is possible. Revoked, accepted,
+or expired invitations are checked again before sending. SMTP test buttons stay
+synchronous so the operator receives an immediate connectivity result.
 
 The installation administrator can view or replace the fallback account from
 Account settings in the React application. This uses

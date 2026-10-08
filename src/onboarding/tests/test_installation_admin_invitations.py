@@ -34,7 +34,7 @@ class InstallationAdminInvitationTests(APITestCase):
 
     def invite(self, email="it-two@example.com"):
         self.client.force_authenticate(self.administrator)
-        with patch("onboarding.api.installation_admins.send_installation_admin_invitation_email") as send:
+        with patch("onboarding.api.installation_admins.queue_outbox_message") as send:
             response = self.client.post(self.url, {"email": email}, format="json")
         return response, send
 
@@ -60,7 +60,7 @@ class InstallationAdminInvitationTests(APITestCase):
     def test_new_admin_accepts_once_without_workspace_access(self):
         response, send = self.invite()
         self.assertEqual(response.status_code, 201)
-        token = send.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        token = send.call_args.kwargs["secret"]
         self.assertNotEqual(InstallationAdminInvitation.objects.get().token_hash, token)
         self.client.force_authenticate(user=None)
         preview = self.client.get(reverse("installation-admin-invitation-detail", kwargs={"token": token}))
@@ -84,7 +84,7 @@ class InstallationAdminInvitationTests(APITestCase):
 
     def test_existing_user_requires_matching_account_then_is_promoted(self):
         _, send = self.invite(email=self.employee.email)
-        token = send.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        token = send.call_args.kwargs["secret"]
         url = reverse("installation-admin-invitation-accept", kwargs={"token": token})
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.post(url, {"username": "duplicate"}).status_code, 409)
@@ -98,14 +98,14 @@ class InstallationAdminInvitationTests(APITestCase):
 
     def test_expired_and_failed_delivery_do_not_grant_admin(self):
         _, send = self.invite()
-        token = send.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        token = send.call_args.kwargs["secret"]
         invitation = InstallationAdminInvitation.objects.get()
         invitation.expires_at = timezone.now() - timedelta(seconds=1)
         invitation.save(update_fields=("expires_at",))
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.post(reverse("installation-admin-invitation-accept", kwargs={"token": token})).status_code, 404)
         self.client.force_authenticate(self.administrator)
-        with patch("onboarding.api.installation_admins.send_installation_admin_invitation_email", side_effect=RuntimeError("SMTP down")):
+        with patch("onboarding.api.installation_admins.queue_outbox_message", side_effect=RuntimeError("Queue down")):
             response = self.client.post(self.url, {"email": "other@example.com"}, format="json")
-        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.status_code, 500)
         self.assertFalse(InstallationAdminInvitation.objects.filter(email="other@example.com").exists())

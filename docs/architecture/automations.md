@@ -1,9 +1,8 @@
 # Automations: Current Behavior
 
 Bubllio currently supports one small automation: when a company is created,
-send a configured email and record the result. Execution happens inside Django,
-in the same process that saves the company. No worker, broker, or external
-workflow service is required.
+queue a configured email action and record the result. Celery workers execute
+jobs from RabbitMQ, while a database outbox preserves recoverable job state.
 
 This page describes implemented behavior. The [workflow roadmap](automation-roadmap.md)
 describes the future visual builder; it is not an API contract or a shipped feature.
@@ -31,16 +30,16 @@ created earlier. Each later matching event can execute it again.
 | Automatically dispatched trigger | `company.created` only |
 | Action | One `send_email` per automation |
 | Rule selection | Same organization, matching trigger, `is_active=True` |
-| Execution | Synchronous; matching rules run sequentially |
+| Execution | Asynchronous through Celery/RabbitMQ and the database outbox |
 | Email content | Fixed recipients, subject and body from `action_config` |
 | Email transport | Global Django backend; currently console output |
-| History | Result per action attempt when the database write succeeds |
+| History | A queued run followed by processing and a terminal result |
 | API | List/create rules, list runs, manually execute a rule |
 | Administration | Django admin can edit existing rules and their active flag |
 
 There is no visual editor, contact-creation action, template interpolation,
-condition, multi-step flow, wait state, retry mechanism, schedule, or background
-queue. The API has no automation detail, update, or delete route.
+condition, multi-step flow, wait state, or user-defined schedule. The API has no
+automation detail, update, or delete route.
 
 ### Declared Triggers Are Not All Connected
 
@@ -67,15 +66,17 @@ New Company saved through API, admin, or ordinary ORM save
   -> companies/signals.py: post_save(created=True)
   -> dispatch_company_created(company): build payload
   -> dispatch_automation_event(...): select active rules in this organization
-  -> run_automation(...): execute each action
+  -> transaction.on_commit(...): dispatch matching rules after the save commits
+  -> queue_automation_run(...): create queued run and durable outbox row
+  -> Celery worker: claim the outbox row and execute the action
   -> _send_email(...): Django send_mail using global backend
-  -> AutomationRun: persist result and payload
+  -> AutomationRun and outbox: persist terminal state
 ```
 
 An update does not emit `company.created`. Bulk operations such as `bulk_create`
 do not take this signal path. With no matching active rule, no run is created.
-If several rules match, all are attempted sequentially; their order is not
-explicitly defined.
+If several rules match, all are queued; worker concurrency determines execution
+order.
 
 | File | Responsibility and reason |
 |---|---|
@@ -142,6 +143,8 @@ to its runs; deleting its organization cascades to both.
 
 | Status | Meaning in current code |
 |---|---|
+| `queued` | Durable outbox work exists and is waiting for a worker |
+| `processing` | A worker has claimed the run |
 | `success` | Action returned without raising an exception |
 | `failed` | Execution raised an exception; its string is recorded |
 | `skipped` | Executor encountered an unsupported action type |
@@ -165,13 +168,13 @@ All routes are below `/api/v1/organizations/<organization_id>/`:
 Superuser access and inaccessible-organization responses follow the shared
 [authorization rules](authentication-and-roles.md).
 
-The test endpoint is a real action execution, not a dry run. It:
+The test endpoint queues a real action, not a dry run. It:
 
 - does not create a company or verify the event signal;
 - executes even when `is_active=False` or the selected trigger is unwired;
 - records supplied `payload`, or a default test payload when it is falsy;
 - returns `status`, `run`, and a console-email `dev_note`;
-- returns HTTP 201 even when the recorded run status is `failed`.
+- returns HTTP 201 with the initial `queued` state.
 
 Clients must inspect the response status field. To test the complete event path,
 create a new company after creating the rule and inspect run history.
@@ -185,15 +188,13 @@ marked default. See [Email Sending](email-adapters.md).
 
 ## Reliability and Review Findings
 
-This synchronous foundation has known limitations:
+This asynchronous foundation has known limitations:
 
-- The company save waits for action execution; slow delivery delays it.
-- Dispatch happens in `post_save`, not after transaction commit. External side
-  effects can happen before an enclosing transaction rolls back.
-- Action errors are normally captured as failed runs, allowing later rules to
-  proceed. A database error while recording a run can still escape to the caller.
-- Sending and recording are separate operations. There is no exactly-once
-  guarantee, deduplication, or retry recovery.
+- Delivery is at-least-once. A worker crash after sending but before recording
+  success can produce a duplicate email.
+- A database error while creating the run/outbox can still escape to the caller.
+- Failed outbox jobs retry up to six attempts; there is not yet a user-facing
+  retry control or dead-letter dashboard.
 - Action exception strings are stored as-is; run history is not a sanitized
   audit log and is readable by organization members.
 - Existing automation tests cover authorization/scoping, but do not establish

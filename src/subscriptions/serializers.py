@@ -106,7 +106,7 @@ class CustomerSubscriptionSerializer(serializers.ModelSerializer):
             "next_billing_date": {"required": False},
         }
 
-    def get_assigned_to_name(self, subscription):
+    def get_assigned_to_name(self, subscription) -> str | None:
         if not subscription.assigned_to:
             return ""
         return subscription.assigned_to.get_full_name() or subscription.assigned_to.username
@@ -234,7 +234,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "note": {"required": False, "default": ""},
         }
 
-    def get_recorded_by_name(self, payment):
+    def get_recorded_by_name(self, payment) -> str | None:
         if not payment.recorded_by:
             return ""
         return payment.recorded_by.get_full_name() or payment.recorded_by.username
@@ -283,3 +283,12 @@ class ChargeSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+class SubscriptionOverviewSerializer(serializers.Serializer):
+    active_subscriptions = serializers.IntegerField()
+    scheduled_cancellations = serializers.IntegerField()
+    renewals_next_30_days = serializers.IntegerField()
+    overdue_charges = serializers.IntegerField()
+    open_balances = serializers.DictField(child=serializers.DecimalField(max_digits=14, decimal_places=2))
+    overdue_balances = serializers.DictField(child=serializers.DecimalField(max_digits=14, decimal_places=2))
+    collected_this_month = serializers.DictField(child=serializers.DecimalField(max_digits=14, decimal_places=2))
+    monthly_recurring_revenue = serializers.DictField(child=serializers.DecimalField(max_digits=14, decimal_places=2))

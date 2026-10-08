@@ -11,10 +11,10 @@ class DealSerializer(serializers.ModelSerializer):
     tax_value = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     gross_value = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
 
-    def get_contact_name(self, deal):
+    def get_contact_name(self, deal) -> str | None:
         return str(deal.contact) if deal.contact else ""
 
-    def get_assigned_to_name(self, deal):
+    def get_assigned_to_name(self, deal) -> str | None:
         return (deal.assigned_to.get_full_name() or deal.assigned_to.username) if deal.assigned_to else ""
 
     def validate(self, attrs):

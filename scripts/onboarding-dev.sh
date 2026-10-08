@@ -6,6 +6,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SANDBOX_DIR="$PROJECT_ROOT/.local/onboarding"
 SANDBOX_DB="$SANDBOX_DIR/db.sqlite3"
 COMMAND="${1:-start}"
+export UV_CACHE_DIR="${UV_CACHE_DIR:-$PROJECT_ROOT/.uv-cache}"
 
 show_help() {
   cat <<'EOF'
@@ -46,9 +47,13 @@ export DATABASE_URL="sqlite:///$SANDBOX_DB"
 export BUBLLIO_SETUP_TOKEN
 export BUBLLIO_EMAIL_ENCRYPTION_KEYS
 export BUBLLIO_UPDATE_CHECK_ENABLED="false"
+export DJANGO_DEBUG="true"
+export DJANGO_SECURE_SSL_REDIRECT="false"
+export DJANGO_SESSION_COOKIE_SECURE="false"
+export DJANGO_CSRF_COOKIE_SECURE="false"
 
-BUBLLIO_SETUP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-BUBLLIO_EMAIL_ENCRYPTION_KEYS="$(python3 -c 'import base64, secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())')"
+BUBLLIO_SETUP_TOKEN="$(cd "$PROJECT_ROOT" && uv run python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+BUBLLIO_EMAIL_ENCRYPTION_KEYS="$(cd "$PROJECT_ROOT" && uv run python -c 'import base64, secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())')"
 
 printf '\nBubllio onboarding sandbox\n'
 printf 'Database: %s\n' "$SANDBOX_DB"

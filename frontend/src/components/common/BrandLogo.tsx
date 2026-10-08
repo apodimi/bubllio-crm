@@ -6,8 +6,9 @@ type BrandLogoProps = {
   product?: string
 }
 
-/** Shared Bubllio identity. Keep the source asset and wordmark together. */
-export function BrandLogo({ inverse = false, product }: BrandLogoProps) {
+export function BrandLogo(props: BrandLogoProps) {
+  const { inverse, product } = props;
+
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
       <Box

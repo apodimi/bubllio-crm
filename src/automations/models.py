@@ -29,6 +29,8 @@ class Automation(models.Model):
 
 class AutomationRun(models.Model):
     class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        PROCESSING = "processing", "Processing"
         SUCCESS = "success", "Success"
         FAILED = "failed", "Failed"
         SKIPPED = "skipped", "Skipped"

@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from delivery.models import OutboxMessage
 from organizations.models import (
     EmailAccount,
     Organization,
@@ -35,16 +36,20 @@ class InvitationTests(APITestCase):
 
     def invite(self, email="new@example.com", role="viewer"):
         self.client.force_authenticate(self.owner)
-        with patch("access.services.invitations.send_invitation_email") as sender:
+        with patch("access.services.invitations.queue_outbox_message") as sender:
             response = self.client.post(self.url, {"email": email, "role": role}, format="json")
         return response, sender
+
+    @staticmethod
+    def queued_token(sender):
+        return sender.call_args.kwargs["secret"]
 
     def test_invite_creates_hashed_token_and_registration_adds_membership(self):
         response, sender = self.invite()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(sender.call_count, 1)
-        invite_url = sender.call_args.kwargs["invite_url"]
-        token = invite_url.rsplit("/", 1)[-1]
+        token = self.queued_token(sender)
+        self.assertEqual(sender.call_args.kwargs["kind"], OutboxMessage.Kind.WORKSPACE_INVITATION)
         invitation = OrganizationInvitation.objects.get(id=response.data["id"])
         self.assertNotEqual(invitation.token_hash, token)
         invited_event = WorkspaceAccessEvent.objects.get(action="invite_member")
@@ -74,7 +79,7 @@ class InvitationTests(APITestCase):
     def test_existing_user_must_sign_in_with_invited_email(self):
         existing = User.objects.create_user(username="existing", email="existing@example.com")
         _, sender = self.invite(email=existing.email)
-        token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        token = self.queued_token(sender)
         url = reverse("invitation-accept", kwargs={"token": token})
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.post(url, {"username": "duplicate", "password": "long-password-4938"}).status_code, 409)
@@ -99,16 +104,16 @@ class InvitationTests(APITestCase):
         self.account.is_active = True
         self.account.save(update_fields=("is_active",))
         self.client.force_authenticate(self.owner)
-        with patch("access.services.invitations.send_invitation_email", side_effect=RuntimeError("SMTP down")):
+        with patch("access.services.invitations.queue_outbox_message", side_effect=RuntimeError("Queue down")):
             response = self.client.post(self.url, {"email": "new@example.com", "role": "viewer"}, format="json")
-        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.status_code, 500)
         self.assertFalse(OrganizationInvitation.objects.exists())
 
     def test_expired_and_replaced_links_cannot_be_accepted(self):
         first, sender = self.invite()
-        first_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        first_token = self.queued_token(sender)
         second, sender = self.invite()
-        second_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        second_token = self.queued_token(sender)
         self.assertNotEqual(first.data["id"], second.data["id"])
         self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": first_token})).status_code, 404)
         invitation = OrganizationInvitation.objects.get(id=second.data["id"])
@@ -119,7 +124,7 @@ class InvitationTests(APITestCase):
 
     def test_list_returns_typed_invitation_history(self):
         _, sender = self.invite(email="pending@example.com")
-        pending_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        pending_token = self.queued_token(sender)
         pending = OrganizationInvitation.objects.get(token_hash__isnull=False, email="pending@example.com")
         expired = OrganizationInvitation.objects.create(
             organization=self.organization,
@@ -163,13 +168,13 @@ class InvitationTests(APITestCase):
 
     def test_owner_can_resend_and_revoke_invitation(self):
         _, sender = self.invite()
-        original_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        original_token = self.queued_token(sender)
         original = OrganizationInvitation.objects.get(email="new@example.com")
         resend_url = reverse(
             "organization-invitation-resend",
             kwargs={"organization_id": self.organization.id, "invitation_id": original.id},
         )
-        with patch("access.services.invitations.send_invitation_email") as resend:
+        with patch("access.services.invitations.queue_outbox_message") as resend:
             response = self.client.post(resend_url, {}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -177,7 +182,7 @@ class InvitationTests(APITestCase):
         self.assertEqual(original.status, OrganizationInvitation.Status.REVOKED)
         replacement = OrganizationInvitation.objects.get(id=response.data["id"])
         self.assertEqual(replacement.status, OrganizationInvitation.Status.PENDING)
-        replacement_token = resend.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        replacement_token = self.queued_token(resend)
         self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": original_token})).status_code, 404)
         self.assertEqual(self.client.get(reverse("invitation-detail", kwargs={"token": replacement_token})).status_code, 200)
         self.assertTrue(WorkspaceAccessEvent.objects.filter(
@@ -233,15 +238,15 @@ class InvitationTests(APITestCase):
 
     def test_failed_resend_preserves_the_original_invitation(self):
         _, sender = self.invite()
-        original_token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        original_token = self.queued_token(sender)
         invitation = OrganizationInvitation.objects.get(email="new@example.com")
-        with patch("access.services.invitations.send_invitation_email", side_effect=RuntimeError("SMTP down")):
+        with patch("access.services.invitations.queue_outbox_message", side_effect=RuntimeError("Queue down")):
             response = self.client.post(reverse(
                 "organization-invitation-resend",
                 kwargs={"organization_id": self.organization.id, "invitation_id": invitation.id},
             ))
 
-        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         invitation.refresh_from_db()
         self.assertEqual(invitation.status, OrganizationInvitation.Status.PENDING)
         self.assertEqual(OrganizationInvitation.objects.filter(email="new@example.com").count(), 1)
@@ -249,7 +254,7 @@ class InvitationTests(APITestCase):
 
     def test_invited_user_cannot_create_a_separate_workspace(self):
         _, sender = self.invite(role="member")
-        token = sender.call_args.kwargs["invite_url"].rsplit("/", 1)[-1]
+        token = self.queued_token(sender)
         self.client.force_authenticate(user=None)
         accepted = self.client.post(
             reverse("invitation-accept", kwargs={"token": token}),

@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 from access.permissions import Capability, get_organization_for_user
 from .models import Deal
 from .serializers import DealSerializer
@@ -11,6 +12,9 @@ from .services import move_deal
 
 
 class DealListCreateAPIView(APIView):
+    serializer_class = DealSerializer
+
+    @extend_schema(operation_id="list_deals")
     def get(self, request, organization_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM)
         deals = Deal.objects.filter(organization=organization).select_related("company", "contact", "assigned_to")
@@ -37,10 +41,13 @@ class DealListCreateAPIView(APIView):
 
 
 class DealDetailAPIView(APIView):
+    serializer_class = DealSerializer
+
     def _deal(self, request, organization_id, deal_id, capability):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=capability)
         return organization, get_object_or_404(Deal.objects.select_related("company", "contact", "assigned_to"), organization=organization, id=deal_id)
 
+    @extend_schema(operation_id="retrieve_deal")
     def get(self, request, organization_id, deal_id):
         _, deal = self._deal(request, organization_id, deal_id, Capability.VIEW_CRM)
         return Response(DealSerializer(deal).data)
@@ -59,6 +66,8 @@ class DealDetailAPIView(APIView):
 
 
 class DealArchiveAPIView(APIView):
+    serializer_class = DealSerializer
+
     def post(self, request, organization_id, deal_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
         deal = get_object_or_404(Deal, organization=organization, id=deal_id)
@@ -68,6 +77,8 @@ class DealArchiveAPIView(APIView):
 
 
 class DealMoveAPIView(APIView):
+    serializer_class = DealSerializer
+
     def post(self, request, organization_id, deal_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
         deal = get_object_or_404(Deal, organization=organization, id=deal_id, archived_at__isnull=True)

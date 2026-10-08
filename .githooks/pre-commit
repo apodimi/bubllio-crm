@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+git diff --cached --check
+
+if printf '%s\n' "$STAGED_FILES" | grep -E '(^|/)(\.env$|\.impeccable/|\.local/|db\.sqlite3$|.*\.(db|log|tmp)$)' >/dev/null; then
+  printf 'Commit blocked: staged local-development or secret-bearing file.\n' >&2
+  exit 1
+fi
+
+if git diff --cached --unified=0 | grep '^+' | grep -E '/Users/[^/]+/|/home/[^/]+/' >/dev/null; then
+  printf 'Commit blocked: staged absolute contributor path.\n' >&2
+  exit 1
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -E '^src/.*\.py$|^pyproject\.toml$' >/dev/null; then
+  (cd "$PROJECT_ROOT" && uv run python src/manage.py check)
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -E '^frontend/.*\.(ts|tsx|js|jsx)$' >/dev/null; then
+  (cd "$PROJECT_ROOT/frontend" && npm run lint)
+fi

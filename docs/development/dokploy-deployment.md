@@ -3,11 +3,14 @@
 This guide is written for the person responsible for the company server. It does
 not require Django, React, or Docker development knowledge.
 
-The Dokploy deployment runs three services:
+The Dokploy deployment runs six services:
 
 - `frontend`: the only public service; Dokploy routes HTTPS traffic to port `8080`;
 - `backend`: the private Bubllio API on port `8000`;
-- `postgres`: the private database with persistent storage.
+- `postgres`: the private database with persistent storage;
+- `rabbitmq`: the private background-job broker;
+- `worker`: processes queued emails and automations;
+- `beat`: republishes pending/recoverable jobs once per minute.
 
 The database and backend are intentionally not published on host ports.
 
@@ -30,7 +33,8 @@ uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_
 ```
 
 Use the first value for `DJANGO_SECRET_KEY` and the second for
-`BUBLLIO_EMAIL_ENCRYPTION_KEYS`. Generate a separate strong database password.
+`BUBLLIO_EMAIL_ENCRYPTION_KEYS`. Generate separate strong database and RabbitMQ
+passwords. Use `openssl rand -hex 32` for RabbitMQ so the value is URL-safe.
 
 ## 1. Create the Compose service
 
@@ -54,6 +58,7 @@ POSTGRES_DB=bubllio
 POSTGRES_USER=bubllio
 POSTGRES_PASSWORD=replace-with-a-strong-database-password
 DATABASE_URL=postgresql://bubllio:replace-with-the-url-encoded-database-password@postgres:5432/bubllio
+RABBITMQ_PASSWORD=replace-with-the-url-safe-rabbitmq-password
 
 DJANGO_SECRET_KEY=replace-with-the-generated-django-secret
 DJANGO_ALLOWED_HOSTS=crm.example.com
@@ -80,14 +85,14 @@ services that need them.
 3. Select service `frontend` and container port `8080`.
 4. Enable HTTPS and certificate generation.
 5. Use Dokploy's **Preview Compose** action and verify that routing targets only
-   `frontend:8080`, never `backend` or `postgres`.
+   `frontend:8080`, never `backend`, `postgres`, or `rabbitmq`.
 
 Use Dokploy's native domain management. Do not add public host ports or custom
 Traefik labels to this repository.
 
 ## 4. Deploy and verify
 
-Click **Deploy** and follow the build logs. A healthy deployment shows all three
+Click **Deploy** and follow the build logs. A healthy deployment shows all six
 services running. The backend startup automatically applies migrations once and
 collects Django static files before Gunicorn starts.
 
@@ -110,7 +115,8 @@ Test:
 3. SMTP test message;
 4. invitation delivery and acceptance;
 5. password reset delivery;
-6. logout and login again.
+6. an automation run reaching `success` or a useful `failed` state;
+7. logout and login again.
 
 After setup succeeds, the first-run endpoint locks itself automatically. Removing
 `BUBLLIO_SETUP_TOKEN` from Dokploy later is optional defense in depth; it is not
@@ -147,7 +153,8 @@ forward fix, so an application rollback does not replace a database backup.
 Do not onboard users when any of these is true:
 
 - HTTPS is invalid or the app is reachable only over HTTP;
-- the backend or database is exposed directly to the internet;
+- the backend, database, or RabbitMQ is exposed directly to the internet;
+- `worker` or `beat` repeatedly restarts, or queued messages never complete;
 - migrations or `/health/` fail;
 - invitations or password resets do not arrive;
 - backups have not completed a restore rehearsal;

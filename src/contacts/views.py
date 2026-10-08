@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
 
@@ -18,6 +19,9 @@ def record_contact_activity(*, contact, actor, action, details=None):
 
 
 class ContactListCreateAPIView(APIView):
+    serializer_class = ContactSerializer
+
+    @extend_schema(operation_id="list_contacts")
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -91,6 +95,9 @@ class ContactListCreateAPIView(APIView):
 
 
 class ContactDetailAPIView(APIView):
+    serializer_class = ContactSerializer
+
+    @extend_schema(operation_id="retrieve_contact")
     def get(self, request, organization_id, contact_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -136,6 +143,8 @@ class ContactDetailAPIView(APIView):
 
 
 class ContactActivityAPIView(APIView):
+    serializer_class = ContactActivitySerializer
+
     def get(self, request, organization_id, contact_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM)
         contact = get_object_or_404(Contact, id=contact_id, organization=organization)
@@ -143,6 +152,8 @@ class ContactActivityAPIView(APIView):
 
 
 class ContactArchiveAPIView(APIView):
+    serializer_class = ContactSerializer
+
     def post(self, request, organization_id, contact_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
         contact = get_object_or_404(Contact, id=contact_id, organization=organization)
@@ -155,6 +166,8 @@ class ContactArchiveAPIView(APIView):
 
 
 class ContactRestoreAPIView(APIView):
+    serializer_class = ContactSerializer
+
     def post(self, request, organization_id, contact_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
         contact = get_object_or_404(Contact, id=contact_id, organization=organization)

@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
 
@@ -27,6 +28,9 @@ def get_company_by_public_reference(*, organization, reference):
 
 
 class CompanyListCreateAPIView(APIView):
+    serializer_class = CompanySerializer
+
+    @extend_schema(operation_id="list_companies")
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -95,6 +99,8 @@ class CompanyListCreateAPIView(APIView):
 
 
 class CompanyAssigneeListAPIView(APIView):
+    serializer_class = CompanyAssigneeSerializer
+
     def get(self, request, organization_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -108,6 +114,9 @@ class CompanyAssigneeListAPIView(APIView):
 
 
 class CompanyDetailAPIView(APIView):
+    serializer_class = CompanySerializer
+
+    @extend_schema(operation_id="retrieve_company")
     def get(self, request, organization_id, company_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -176,6 +185,8 @@ class CompanyDetailAPIView(APIView):
 
 
 class CompanyActivityAPIView(APIView):
+    serializer_class = CompanyActivitySerializer
+
     def get(self, request, organization_id, company_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -189,6 +200,8 @@ class CompanyActivityAPIView(APIView):
 
 
 class CompanyArchiveAPIView(APIView):
+    serializer_class = CompanySerializer
+
     def post(self, request, organization_id, company_id):
         organization = get_organization_for_user(
             user=request.user,
@@ -210,6 +223,8 @@ class CompanyArchiveAPIView(APIView):
 
 
 class CompanyRestoreAPIView(APIView):
+    serializer_class = CompanySerializer
+
     def post(self, request, organization_id, company_id):
         organization = get_organization_for_user(
             user=request.user,
