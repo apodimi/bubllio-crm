@@ -117,6 +117,10 @@ Prettier is the source of truth for frontend formatting. Before opening a PR,
 run `npm run format`; CI and reviewers use `npm run format:check` to verify that
 the working tree is already formatted.
 
+- Write TypeScript control flow with explicit, braced `if` / `else` blocks.
+  Do not use single-line `if` statements or inline ternaries for assignments,
+  normalization, validation, or other application logic. A short ternary is
+  acceptable only for simple two-branch JSX rendering; never nest ternaries.
 - Keep one logical JSX element or statement per readable line; do not compress
   pages, forms, hooks, or route definitions into one-line expressions.
 - Use two spaces, single quotes, no semicolons, trailing commas, and a 100
