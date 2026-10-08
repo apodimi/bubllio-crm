@@ -1,19 +1,22 @@
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 export function Loading() {
+  const { t } = useTranslation()
   return (
     <Box role="status" sx={{ p: 6, textAlign: 'center' }}>
-      <CircularProgress size={26} aria-label="Loading" />
+      <CircularProgress size={26} aria-label={t('common.loading')} />
     </Box>
   )
 }
 export function Failure({ error, retry }: { error: Error; retry?: () => void }) {
+  const { t } = useTranslation()
   return (
     <Alert
       severity="error"
       action={
         retry && (
           <Button color="inherit" onClick={retry}>
-            Retry
+            {t('common.retry')}
           </Button>
         )
       }
@@ -39,6 +42,7 @@ export function PageHeading({
   description: string
   action?: React.ReactNode
 }) {
+  const { t } = useTranslation()
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}
@@ -50,10 +54,17 @@ export function PageHeading({
       }}
     >
       <Box sx={{ maxWidth: 720 }}>
-        <Typography variant="overline" color="primary.main" sx={{ letterSpacing: '.14em', fontSize: 10.5 }}>
-          Workspace
+        <Typography
+          variant="overline"
+          color="primary.main"
+          sx={{ letterSpacing: '.14em', fontSize: 10.5 }}
+        >
+          {t('common.workspace')}
         </Typography>
-        <Typography variant="h3" sx={{ mt: 0.35, mb: 1, fontSize: { xs: 30, md: 38 }, letterSpacing: '-.035em' }}>
+        <Typography
+          variant="h3"
+          sx={{ mt: 0.35, mb: 1, fontSize: { xs: 30, md: 38 }, letterSpacing: '-.035em' }}
+        >
           {title}
         </Typography>
         <Typography color="text.secondary">{description}</Typography>

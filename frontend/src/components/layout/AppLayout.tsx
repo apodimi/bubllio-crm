@@ -87,7 +87,8 @@ function Shell() {
           '& .MuiDrawer-paper': {
             width: 264,
             bgcolor: '#eef4ff',
-            backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,.86), rgba(234,242,255,.92))',
+            backgroundImage:
+              'linear-gradient(180deg, rgba(255,255,255,.86), rgba(234,242,255,.92))',
             boxShadow: '8px 0 32px rgba(15,31,56,.045)',
           },
         }}
@@ -111,7 +112,13 @@ function Shell() {
         />
         <Box
           component="main"
-          sx={{ px: { xs: 2, sm: 3.5, lg: 6 }, pt: { xs: 3, md: 5 }, pb: { xs: 6, md: 8 }, maxWidth: 1500, mx: 'auto' }}
+          sx={{
+            px: { xs: 2, sm: 3.5, lg: 6 },
+            pt: { xs: 3, md: 5 },
+            pb: { xs: 6, md: 8 },
+            maxWidth: 1500,
+            mx: 'auto',
+          }}
         >
           <UpdateBanner isInstallationAdmin={isSuperuser} />
           <Outlet />

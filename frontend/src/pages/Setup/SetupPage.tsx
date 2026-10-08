@@ -29,15 +29,8 @@ import { useCompleteSetup, useTestSmtpConnection } from '../../features/setup/ho
 import { setupDefaults, setupSchema, testRecipientSchema } from '../../features/setup/setupSchema'
 import type { SetupFormValues } from '../../features/setup/setupSchema'
 import type { SetupValues, SmtpSettings } from '../../features/setup/services/setupService'
-
-const steps = ['Admin', 'Workspace', 'Email', 'Review']
-const titles = ['Create your admin', 'Name your workspace', 'Email settings', 'Ready to begin?']
-const descriptions = [
-  'Secure your installation with its first administrator.',
-  'Give your team a place to work together.',
-  'Connect email now, or leave it for later.',
-  'Check everything before creating your workspace.',
-]
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
 
 const adminFields = ['setup_token', 'username', 'email', 'password'] as const
 const workspaceFields = ['organization_name', 'organization_slug'] as const
@@ -65,6 +58,25 @@ function smtpPayload(values: SetupFormValues): SmtpSettings {
 }
 
 export function SetupPage({ onComplete }: { onComplete: () => void }) {
+  const { t } = useTranslation()
+  const steps = [
+    t('setup.steps.admin'),
+    t('setup.steps.workspace'),
+    t('setup.steps.email'),
+    t('setup.steps.review'),
+  ]
+  const titles = [
+    t('setup.titles.admin'),
+    t('setup.titles.workspace'),
+    t('setup.titles.email'),
+    t('setup.titles.review'),
+  ]
+  const descriptions = [
+    t('setup.descriptions.admin'),
+    t('setup.descriptions.workspace'),
+    t('setup.descriptions.email'),
+    t('setup.descriptions.review'),
+  ]
   const form = useForm<SetupFormValues>({
     resolver: zodResolver(setupSchema),
     defaultValues: setupDefaults,
@@ -165,7 +177,7 @@ export function SetupPage({ onComplete }: { onComplete: () => void }) {
             <BrandLogo inverse product="CRM" />
             <Box>
               <Chip
-                label="FIRST-RUN SETUP"
+                label={t('setup.badge')}
                 sx={(theme) => ({
                   mb: 3,
                   bgcolor: alpha(theme.palette.primary.contrastText, 0.14),
@@ -174,24 +186,30 @@ export function SetupPage({ onComplete }: { onComplete: () => void }) {
                 })}
               />
               <Typography variant="h3" sx={{ mb: 2 }}>
-                Your workspace starts here.
+                {t('setup.hero')}
               </Typography>
               <Typography sx={{ opacity: 0.8, maxWidth: 340 }}>
-                A few focused steps to make Bubllio yours. Nothing is created until you confirm the
-                final review.
+                {t('setup.heroDescription')}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ opacity: 0.7 }}>
-              Private setup · Your data stays in your installation
+              {t('setup.privacy')}
             </Typography>
           </Stack>
 
           <Stack sx={{ p: { xs: 3, sm: 5, md: 6 }, minWidth: 0 }}>
-            <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 4 }}>
-              <BrandLogo product="CRM" />
+            <Box
+              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}
+            >
+              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                <BrandLogo product="CRM" />
+              </Box>
+              <Box sx={{ ml: 'auto' }}>
+                <LanguageSwitcher />
+              </Box>
             </Box>
             <Typography variant="overline" color="primary.main">
-              Step {step + 1} of {steps.length}
+              {t('setup.progress', { current: step + 1, total: steps.length })}
             </Typography>
             <Typography variant="h4" sx={{ mt: 0.5 }}>
               {titles[step]}
@@ -243,12 +261,12 @@ export function SetupPage({ onComplete }: { onComplete: () => void }) {
                   disabled={step === 0 || setup.isPending}
                   onClick={() => setStep((current) => current - 1)}
                 >
-                  Back
+                  {t('setup.back')}
                 </Button>
                 <Stack direction="row" spacing={1}>
                   {step === 2 && !smtpEnabled && (
                     <Button type="button" onClick={() => setStep(3)}>
-                      Skip for now
+                      {t('setup.skip')}
                     </Button>
                   )}
                   <Button
@@ -257,7 +275,11 @@ export function SetupPage({ onComplete }: { onComplete: () => void }) {
                     endIcon={step === 3 ? <CheckCircleRounded /> : <ArrowForwardRounded />}
                     disabled={setup.isPending}
                   >
-                    {step === 3 ? (setup.isPending ? 'Creating…' : 'Complete setup') : 'Continue'}
+                    {step === 3
+                      ? setup.isPending
+                        ? t('setup.creating')
+                        : t('setup.complete')
+                      : t('setup.continue')}
                   </Button>
                 </Stack>
               </Stack>

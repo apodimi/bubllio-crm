@@ -12,62 +12,60 @@ import SendRounded from '@mui/icons-material/SendRounded'
 import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import type { SetupFormValues } from '../setupSchema'
 import { SetupField } from './SetupField'
+import { useTranslation } from 'react-i18next'
 
 export function AdminStep({ resetTest }: { resetTest: () => void }) {
+  const { t } = useTranslation()
   return (
     <>
-      <Alert severity="info">
-        Copy the one-time token from the server's BUBLLIO_SETUP_TOKEN setting. It stays in memory
-        only while this page is open.
-      </Alert>
+      <Alert severity="info">{t('setup.tokenNotice')}</Alert>
       <SetupField
         name="setup_token"
-        label="Installation setup token"
+        label={t('setup.setupToken')}
         type="password"
         autoComplete="off"
-        helperText="The one-time token configured on your server; not your admin password."
+        helperText={t('setup.setupTokenHelp')}
         onValueChange={resetTest}
       />
       <SetupField
         name="username"
-        label="Admin username"
+        label={t('setup.adminUsername')}
         autoComplete="username"
-        helperText="Use this to sign in to Bubllio and Django admin."
+        helperText={t('setup.adminUsernameHelp')}
       />
       <SetupField
         name="email"
-        label="Admin email address"
+        label={t('setup.adminEmail')}
         type="email"
         autoComplete="email"
-        helperText="Email address for the first administrator account."
+        helperText={t('setup.adminEmailHelp')}
       />
       <SetupField
         name="password"
-        label="Admin password"
+        label={t('setup.adminPassword')}
         type="password"
         autoComplete="new-password"
-        helperText="Choose a strong password of at least 8 characters."
+        helperText={t('setup.adminPasswordHelp')}
       />
     </>
   )
 }
 
 export function WorkspaceStep() {
+  const { t } = useTranslation()
   return (
     <>
       <SetupField
         name="organization_name"
-        label="Workspace display name"
-        helperText="The name your team will see in the app, for example Nerds Lab."
+        label={t('setup.workspaceName')}
+        helperText={t('setup.workspaceNameHelp')}
       />
       <SetupField
         name="organization_slug"
-        label="Workspace URL slug"
-        helperText="A short lowercase identifier, for example nerds-lab."
+        label={t('setup.workspaceSlug')}
+        helperText={t('setup.workspaceSlugHelp')}
       />
-      <Alert severity="info">
-        The admin account from the previous step becomes this workspace's owner.
-      </Alert>
+      <Alert severity="info">{t('setup.ownerNotice')}</Alert>
     </>
   )
 }
@@ -84,6 +82,7 @@ type EmailStepProps = {
 }
 
 export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) {
+  const { t } = useTranslation()
   const { control, setValue } = useFormContext<SetupFormValues>()
   const smtpEnabled = useWatch({ control, name: 'smtp_enabled' })
 
@@ -103,50 +102,42 @@ export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) 
                 }}
               />
             }
-            label="Configure an SMTP account now"
+            label={t('setup.configureSmtp')}
           />
         )}
       />
-      {!smtpEnabled && (
-        <Alert severity="info">
-          This step is optional. You can add an email account later from Django admin or the
-          organization API.
-        </Alert>
-      )}
+      {!smtpEnabled && <Alert severity="info">{t('setup.smtpOptional')}</Alert>}
       {smtpEnabled && (
         <>
-          <Alert severity="info">
-            Set BUBLLIO_EMAIL_ENCRYPTION_KEY on the server before finishing setup. The test below
-            sends a real email; automation emails still use the console backend.
-          </Alert>
+          <Alert severity="info">{t('setup.encryptionNotice')}</Alert>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ minWidth: 0 }}>
             <SetupField
               name="smtp_name"
-              label="Email account label"
-              helperText="A name for this SMTP account, for example Primary."
+              label={t('setup.accountLabel')}
+              helperText={t('setup.accountLabelHelp')}
               onValueChange={resetTest}
             />
             <SetupField
               name="smtp_from_email"
-              label="Sender email address (From)"
+              label={t('setup.senderEmail')}
               type="email"
-              helperText="The address recipients will see as the sender."
+              helperText={t('setup.senderEmailHelp')}
               onValueChange={resetTest}
             />
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ minWidth: 0 }}>
             <SetupField
               name="smtp_host"
-              label="SMTP server hostname"
-              helperText="Provided by your email service, for example smtp.example.com."
+              label={t('setup.smtpHost')}
+              helperText={t('setup.smtpHostHelp')}
               onValueChange={resetTest}
             />
             <Box sx={{ width: { xs: '100%', sm: 160 }, flexShrink: 0 }}>
               <SetupField
                 name="smtp_port"
-                label="SMTP server port"
+                label={t('setup.smtpPort')}
                 type="number"
-                helperText="Usually 587 or 465."
+                helperText={t('setup.smtpPortHelp')}
                 onValueChange={resetTest}
               />
             </Box>
@@ -154,16 +145,16 @@ export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ minWidth: 0 }}>
             <SetupField
               name="smtp_username"
-              label="SMTP login username"
-              helperText="The username supplied by your email provider."
+              label={t('setup.smtpUsername')}
+              helperText={t('setup.smtpUsernameHelp')}
               onValueChange={resetTest}
             />
             <SetupField
               name="smtp_password"
-              label="SMTP login password"
+              label={t('setup.smtpPassword')}
               type="password"
               autoComplete="new-password"
-              helperText="Often an app password, not your personal email password."
+              helperText={t('setup.smtpPasswordHelp')}
               onValueChange={resetTest}
             />
           </Stack>
@@ -183,7 +174,7 @@ export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) 
                     }}
                   />
                 }
-                label="Use SSL on port 465 (unchecked: STARTTLS on port 587)"
+                label={t('setup.ssl')}
               />
             )}
           />
@@ -192,16 +183,15 @@ export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) 
             sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.default', minWidth: 0 }}
           >
             <Stack spacing={1.5} sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2">Send a test email</Typography>
+              <Typography variant="subtitle2">{t('setup.testTitle')}</Typography>
               <Typography variant="body2" color="text.secondary">
-                We'll send one message using the SMTP details above. Nothing is saved until you
-                finish setup.
+                {t('setup.testDescription')}
               </Typography>
               <SetupField
                 name="smtp_recipient"
-                label="Test recipient email address"
+                label={t('setup.testRecipient')}
                 type="email"
-                helperText="Use an inbox you can check now to confirm delivery."
+                helperText={t('setup.testRecipientHelp')}
                 onValueChange={resetTest}
               />
               <Button
@@ -217,17 +207,12 @@ export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) 
                   whiteSpace: 'normal',
                 }}
               >
-                {testResult.isPending ? 'Sending test email…' : 'Send test email'}
+                {testResult.isPending ? t('setup.sendingTest') : t('setup.sendTest')}
               </Button>
               {testResult.isSuccess && testResult.data && (
                 <Alert severity="success">{testResult.data.detail}</Alert>
               )}
-              {testResult.isError && (
-                <Alert severity="error">
-                  Could not send the test email. Check the SMTP settings and recipient, then try
-                  again.
-                </Alert>
-              )}
+              {testResult.isError && <Alert severity="error">{t('setup.testFailed')}</Alert>}
             </Stack>
           </Paper>
         </>
@@ -237,34 +222,36 @@ export function EmailStep({ testEmail, resetTest, testResult }: EmailStepProps) 
 }
 
 export function ReviewStep({ values, testSent }: { values: SetupFormValues; testSent: boolean }) {
+  const { t } = useTranslation()
   return (
     <>
       <Paper variant="outlined" sx={{ p: 2.5, bgcolor: 'background.default' }}>
         <Stack spacing={2}>
-          <ReviewItem label="Administrator" value={`${values.username} · ${values.email}`} />
           <ReviewItem
-            label="Workspace"
+            label={t('setup.administrator')}
+            value={`${values.username} · ${values.email}`}
+          />
+          <ReviewItem
+            label={t('common.workspace')}
             value={`${values.organization_name} · ${values.organization_slug}`}
           />
           <ReviewItem
-            label="Email"
+            label={t('setup.email')}
             value={
               values.smtp_enabled
                 ? `${values.smtp_name} · ${values.smtp_host}:${values.smtp_port}`
-                : 'Not configured yet'
+                : t('setup.notConfigured')
             }
           />
         </Stack>
       </Paper>
       {values.smtp_enabled && (
         <Alert severity={testSent ? 'success' : 'warning'}>
-          {testSent
-            ? 'The SMTP server accepted a test email. Check the recipient inbox to confirm delivery.'
-            : 'No successful test email yet. You can go back to test it or finish setup and troubleshoot later.'}
+          {testSent ? t('setup.testAccepted') : t('setup.testMissing')}
         </Alert>
       )}
       <Typography variant="body2" color="text.secondary">
-        Completing setup creates the admin account and workspace. You will sign in afterward.
+        {t('setup.completionNotice')}
       </Typography>
     </>
   )

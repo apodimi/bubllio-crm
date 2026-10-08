@@ -1,0 +1,41 @@
+import i18n from 'i18next'
+import LanguageDetector from 'i18next-browser-languagedetector'
+import { initReactI18next } from 'react-i18next'
+import el from './locales/el.json'
+import en from './locales/en.json'
+
+export const supportedLanguages = ['en', 'el'] as const
+export type SupportedLanguage = (typeof supportedLanguages)[number]
+
+void i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: en },
+      el: { translation: el },
+    },
+    fallbackLng: 'en',
+    supportedLngs: supportedLanguages,
+    load: 'languageOnly',
+    interpolation: { escapeValue: false },
+    detection: {
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage'],
+      lookupLocalStorage: 'bubllio-language',
+    },
+    react: { useSuspense: false },
+  })
+
+function syncDocumentLanguage(language: string) {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = supportedLanguages.includes(language as SupportedLanguage)
+    ? language
+    : 'en'
+  document.documentElement.dir = 'ltr'
+}
+
+syncDocumentLanguage(i18n.resolvedLanguage ?? i18n.language)
+i18n.on('languageChanged', syncDocumentLanguage)
+
+export { i18n }

@@ -9,16 +9,22 @@ import {
 import { Button, Stack, Typography } from '@mui/material'
 import { RootLayout, WorkspaceLayout } from '../components/layout/AppLayout'
 import { useAuthStore } from '../features/auth'
-const root = createRootRoute({
-  component: RootLayout,
-  notFoundComponent: () => (
+import { useTranslation } from 'react-i18next'
+
+function NotFoundPage() {
+  const { t } = useTranslation()
+  return (
     <Stack spacing={2}>
-      <Typography variant="h4">Page not found</Typography>
+      <Typography variant="h4">{t('errors.pageNotFound')}</Typography>
       <Button component={Link} to="/">
-        Back to workspaces
+        {t('errors.backToWorkspaces')}
       </Button>
     </Stack>
-  ),
+  )
+}
+const root = createRootRoute({
+  component: RootLayout,
+  notFoundComponent: NotFoundPage,
 })
 const home = createRoute({
   getParentRoute: () => root,

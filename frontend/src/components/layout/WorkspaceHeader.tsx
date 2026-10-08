@@ -14,6 +14,8 @@ import {
 import MenuRounded from '@mui/icons-material/MenuRounded'
 import ManageAccountsRounded from '@mui/icons-material/ManageAccountsRounded'
 import LogoutRounded from '@mui/icons-material/LogoutRounded'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '../common/LanguageSwitcher'
 
 type WorkspaceHeaderProps = {
   workspaceName?: string
@@ -30,6 +32,7 @@ export function WorkspaceHeader({
   isSuperuser,
   onLogout,
 }: WorkspaceHeaderProps) {
+  const { t } = useTranslation()
   const [accountAnchor, setAccountAnchor] = useState<null | HTMLElement>(null)
   const initials = username?.slice(0, 1).toUpperCase() ?? '?'
 
@@ -51,15 +54,15 @@ export function WorkspaceHeader({
     >
       <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
         <IconButton
-          aria-label="Open navigation"
+          aria-label={t('navigation.openNavigation')}
           onClick={onOpenNavigation}
           sx={{ display: { md: 'none' } }}
         >
           <MenuRounded />
         </IconButton>
         <Typography variant="body2" color="text.secondary">
-          Workspace <span style={{ margin: '0 10px', opacity: 0.35 }}>/</span>{' '}
-          {workspaceName ?? 'All workspaces'}
+          {t('common.workspace')} <span style={{ margin: '0 10px', opacity: 0.35 }}>/</span>{' '}
+          {workspaceName ?? t('common.allWorkspaces')}
         </Typography>
       </Stack>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5 }}>
@@ -70,9 +73,10 @@ export function WorkspaceHeader({
         >
           BUBLLIO CRM
         </Typography>
-        <Tooltip title="Account menu">
+        <LanguageSwitcher compact />
+        <Tooltip title={t('navigation.accountMenu')}>
           <IconButton
-            aria-label="Open account menu"
+            aria-label={t('navigation.openAccountMenu')}
             onClick={(event) => setAccountAnchor(event.currentTarget)}
             sx={{ p: 0.25 }}
           >
@@ -104,7 +108,9 @@ export function WorkspaceHeader({
               {username}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {isSuperuser ? 'Installation administrator' : 'Workspace member'}
+              {isSuperuser
+                ? t('navigation.installationAdministrator')
+                : t('navigation.workspaceMember')}
             </Typography>
           </MenuItem>
           {isSuperuser && (
@@ -116,7 +122,7 @@ export function WorkspaceHeader({
               <ListItemIcon>
                 <ManageAccountsRounded fontSize="small" />
               </ListItemIcon>
-              Account settings
+              {t('navigation.accountSettings')}
             </MenuItem>
           )}
           <Divider />
@@ -129,7 +135,7 @@ export function WorkspaceHeader({
             <ListItemIcon>
               <LogoutRounded fontSize="small" />
             </ListItemIcon>
-            Sign out
+            {t('navigation.signOut')}
           </MenuItem>
         </Menu>
       </Stack>

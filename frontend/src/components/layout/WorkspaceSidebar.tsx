@@ -25,6 +25,7 @@ import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
 import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
 import CheckRounded from '@mui/icons-material/CheckRounded'
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
+import { useTranslation } from 'react-i18next'
 import { BrandLogo } from '../common/BrandLogo'
 
 type SidebarProps = {
@@ -64,6 +65,7 @@ export function WorkspaceSidebar({
   onOrganizationChange,
   onClose,
 }: SidebarProps) {
+  const { t } = useTranslation()
   const canManageWorkspace = isSuperuser || currentRole === 'owner' || currentRole === 'admin'
   const basePath = organizationId ? `/organizations/${organizationId}` : ''
   const selectedOrganization = organizations.find(
@@ -78,43 +80,43 @@ export function WorkspaceSidebar({
       .toUpperCase()
   const navigationItems: NavigationItem[] = [
     {
-      text: 'Overview',
+      text: t('navigation.overview'),
       to: '/organizations/$organizationId',
       path: basePath,
       icon: <DashboardRounded />,
     },
     {
-      text: 'Companies',
+      text: t('navigation.companies'),
       to: '/organizations/$organizationId/companies',
       path: `${basePath}/companies`,
       icon: <BusinessRounded />,
     },
     {
-      text: 'Contacts',
+      text: t('navigation.contacts'),
       to: '/organizations/$organizationId/contacts',
       path: `${basePath}/contacts`,
       icon: <PeopleAltRounded />,
     },
     {
-      text: 'Deals',
+      text: t('navigation.deals'),
       to: '/organizations/$organizationId/deals',
       path: `${basePath}/deals`,
       icon: <TrendingUpRounded />,
     },
     {
-      text: 'Tasks',
+      text: t('navigation.tasks'),
       to: '/organizations/$organizationId/tasks',
       path: `${basePath}/tasks`,
       icon: <TaskAltRounded />,
     },
     {
-      text: 'Services',
+      text: t('navigation.services'),
       to: '/organizations/$organizationId/services',
       path: `${basePath}/services`,
       icon: <SubscriptionsRounded />,
     },
     {
-      text: 'Automations',
+      text: t('navigation.automations'),
       to: '/organizations/$organizationId/automations',
       path: `${basePath}/automations`,
       icon: <BoltRounded />,
@@ -122,13 +124,13 @@ export function WorkspaceSidebar({
     ...(canManageWorkspace
       ? [
           {
-            text: 'People',
+            text: t('navigation.people'),
             to: '/organizations/$organizationId/members' as const,
             path: `${basePath}/members`,
             icon: <GroupAddRounded />,
           },
           {
-            text: 'Settings',
+            text: t('navigation.settings'),
             to: '/organizations/$organizationId/settings' as const,
             path: `${basePath}/settings`,
             icon: <SettingsRounded />,
@@ -152,7 +154,7 @@ export function WorkspaceSidebar({
         color="text.secondary"
         sx={{ px: 1, mb: 1, letterSpacing: '.13em', fontSize: 10 }}
       >
-        WORKSPACE
+        {t('common.workspace').toUpperCase()}
       </Typography>
       <Select
         size="small"
@@ -162,7 +164,7 @@ export function WorkspaceSidebar({
             ? organizationId
             : ''
         }
-        inputProps={{ 'aria-label': 'Select workspace' }}
+        inputProps={{ 'aria-label': t('common.selectWorkspace') }}
         onChange={(event) => onOrganizationChange(event.target.value)}
         IconComponent={KeyboardArrowDownRounded}
         renderValue={() =>
@@ -185,7 +187,7 @@ export function WorkspaceSidebar({
               </Typography>
             </Stack>
           ) : (
-            <Typography color="text.secondary">Select workspace</Typography>
+            <Typography color="text.secondary">{t('common.selectWorkspace')}</Typography>
           )
         }
         MenuProps={{
@@ -202,7 +204,7 @@ export function WorkspaceSidebar({
         }}
       >
         <MenuItem value="" disabled>
-          Select workspace
+          {t('common.selectWorkspace')}
         </MenuItem>
         {organizations.map((organization) => (
           <MenuItem
@@ -269,12 +271,12 @@ export function WorkspaceSidebar({
         onClick={onClose}
         sx={{ justifyContent: 'flex-start', px: 2 }}
       >
-        All workspaces
+        {t('common.allWorkspaces')}
       </Button>
       <Box sx={{ flexGrow: 1 }} />
       <Divider sx={{ my: 2 }} />
       <Typography variant="caption" color="text.secondary" noWrap sx={{ px: 1 }}>
-        Signed in as {username}
+        {t('common.signedInAs', { username: username ?? '' })}
       </Typography>
       <Typography
         variant="caption"

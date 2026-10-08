@@ -4,9 +4,12 @@ import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@
 import { alpha } from '@mui/material/styles'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { BrandLogo } from '../../components/common/BrandLogo'
+import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
 import { useAuth } from '../../features/auth'
+import { useTranslation } from 'react-i18next'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState('')
@@ -22,7 +25,7 @@ export function LoginPage() {
       form.reset()
       await navigate({ to: '/', replace: true })
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not sign in.')
+      setError(reason instanceof Error ? reason.message : t('auth.signInFailed'))
     } finally {
       setPending(false)
     }
@@ -43,10 +46,13 @@ export function LoginPage() {
           p: { xs: 4, md: 8 },
         }}
       >
-        <BrandLogo inverse product="CRM" />
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <BrandLogo inverse product="CRM" />
+          <LanguageSwitcher />
+        </Stack>
         <Box sx={{ py: 6 }}>
           <Chip
-            label="A little less busywork."
+            label={t('auth.badge')}
             sx={(theme) => ({
               bgcolor: alpha(theme.palette.primary.contrastText, 0.08),
               color: 'primary.light',
@@ -54,16 +60,16 @@ export function LoginPage() {
             })}
           />
           <Typography variant="h3" sx={{ maxWidth: 480, mb: 3 }}>
-            Good relationships.
+            {t('auth.heroLineOne')}
             <br />
-            Room to grow.
+            {t('auth.heroLineTwo')}
           </Typography>
           <Typography sx={{ color: 'primary.light', maxWidth: 380, opacity: 0.82 }}>
-            Your companies, your people, and your next opportunity. Together in one workspace.
+            {t('auth.heroDescription')}
           </Typography>
         </Box>
         <Typography variant="body2" sx={{ opacity: 0.6 }}>
-          Bubllio CRM · Built to be yours
+          {t('auth.tagline')}
         </Typography>
       </Stack>
       <Stack sx={{ justifyContent: 'center', p: { xs: 3, md: 8 } }}>
@@ -72,15 +78,15 @@ export function LoginPage() {
           sx={{ p: { xs: 3, sm: 5 }, maxWidth: 480, width: '100%', mx: 'auto' }}
         >
           <Typography variant="h4" sx={{ mb: 1 }}>
-            Welcome back.
+            {t('auth.welcomeBack')}
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 4 }}>
-            Sign in to your workspace.
+            {t('auth.signInDescription')}
           </Typography>
           <Stack component="form" onSubmit={submit} spacing={3}>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
-              label="Username"
+              label={t('auth.username')}
               name="username"
               autoComplete="username"
               required
@@ -88,7 +94,7 @@ export function LoginPage() {
               fullWidth
             />
             <TextField
-              label="Password"
+              label={t('auth.password')}
               name="password"
               type="password"
               autoComplete="current-password"
@@ -96,7 +102,7 @@ export function LoginPage() {
               fullWidth
             />
             <Button variant="contained" type="submit" size="large" disabled={pending}>
-              {pending ? 'Signing in…' : 'Sign in'}
+              {pending ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
             <Typography
               component={Link}
@@ -105,11 +111,11 @@ export function LoginPage() {
               color="primary"
               sx={{ alignSelf: 'center', textDecoration: 'none' }}
             >
-              Forgot password?
+              {t('auth.forgotPassword')}
             </Typography>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-            Use your existing Bubllio account. Need access? Contact your workspace owner.
+            {t('auth.accessHelp')}
           </Typography>
         </Paper>
       </Stack>

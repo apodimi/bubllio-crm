@@ -258,7 +258,8 @@ test('login, tenant switch, permissions and logout isolate data', async ({ page 
   await page.getByRole('button', { name: 'Open account menu' }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
-  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0])
+  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['bubllio-language'])
+  expect(await page.evaluate(() => sessionStorage.length)).toBe(0)
 })
 test('delegated creator nominates a business owner and sees the pending handoff', async ({
   page,
@@ -539,6 +540,19 @@ test('invalid login remains on the sign-in screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
 })
 
+test('language selection switches to Greek and persists after reload', async ({ page }) => {
+  await mockApi(page)
+  await page.goto('/')
+
+  await page.getByRole('combobox', { name: 'Language' }).click()
+  await page.getByRole('option', { name: 'Greek' }).click()
+  await expect(page.getByRole('heading', { name: 'Καλώς ήρθες ξανά.' })).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Καλώς ήρθες ξανά.' })).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'el')
+})
+
 test('a signed-in user keeps the session when opening /login from the address bar', async ({
   page,
 }) => {
@@ -547,7 +561,7 @@ test('a signed-in user keeps the session when opening /login from the address ba
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toHaveCount(0)
-  expect(await page.evaluate(() => localStorage.length)).toBe(0)
+  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['bubllio-language'])
   expect(await page.evaluate(() => sessionStorage.length)).toBe(1)
 })
 

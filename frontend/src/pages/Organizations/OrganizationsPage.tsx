@@ -27,8 +27,10 @@ import {
 } from '../../features/organizations/hooks/useWorkspaceProvisioning'
 import { Loading, Failure, Empty, PageHeading } from '../../components/common/Feedback'
 import { CreateDialog } from '../../components/common/CreateDialog'
+import { useTranslation } from 'react-i18next'
 
 export function OrganizationsPage() {
+  const { t } = useTranslation()
   const query = useOrganizations()
   const canCreate = useAuthStore(
     (state) => state.user?.can_create_workspaces ?? state.user?.is_superuser ?? false,
@@ -48,8 +50,8 @@ export function OrganizationsPage() {
   return (
     <>
       <PageHeading
-        title="Your workspaces"
-        description="A home for every team and every relationship."
+        title={t('organizations.title')}
+        description={t('organizations.description')}
         action={
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
             {canCreate && (
@@ -58,7 +60,7 @@ export function OrganizationsPage() {
                 startIcon={<AddRounded />}
                 onClick={() => setCreate(true)}
               >
-                New shared workspace
+                {t('organizations.newShared')}
               </Button>
             )}
           </Stack>
@@ -70,8 +72,8 @@ export function OrganizationsPage() {
         <Failure error={query.error} retry={() => void query.refetch()} />
       ) : query.data.length === 0 ? (
         <Empty
-          title="Start with a workspace"
-          description="You will see a workspace here after an administrator invites you."
+          title={t('organizations.emptyTitle')}
+          description={t('organizations.emptyDescription')}
         />
       ) : (
         <Box
@@ -113,7 +115,11 @@ export function OrganizationsPage() {
                       </Box>
                       <Chip
                         size="small"
-                        label={org.is_personal ? 'Personal' : (org.current_user_role ?? 'Shared')}
+                        label={
+                          org.is_personal
+                            ? t('organizations.personal')
+                            : (org.current_user_role ?? t('organizations.shared'))
+                        }
                         color={org.is_personal ? 'default' : 'primary'}
                         variant="outlined"
                       />
@@ -127,7 +133,7 @@ export function OrganizationsPage() {
                       sx={{ gap: 1, alignItems: 'center', color: 'primary.main' }}
                     >
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        Open workspace
+                        {t('organizations.open')}
                       </Typography>
                       <ArrowForwardRounded fontSize="small" />
                     </Stack>
@@ -140,21 +146,21 @@ export function OrganizationsPage() {
       )}
       {pending.list.isError && (
         <Alert severity="error" sx={{ mt: 3 }}>
-          Could not load pending workspaces: {pending.list.error.message}
+          {t('organizations.pendingLoadError', { message: pending.list.error.message })}
         </Alert>
       )}
       {pending.list.data && pending.list.data.length > 0 && (
         <Stack spacing={2} sx={{ mt: 4 }}>
-          <Typography variant="h6">Awaiting workspace owners</Typography>
-          <Typography color="text.secondary">
-            These workspaces are not accessible until the nominated owner accepts the invitation.
-          </Typography>
+          <Typography variant="h6">{t('organizations.awaitingOwners')}</Typography>
+          <Typography color="text.secondary">{t('organizations.awaitingDescription')}</Typography>
           {(pending.resend.isError || pending.cancel.isError) && (
             <Alert severity="error">
               {(pending.resend.error ?? pending.cancel.error)?.message}
             </Alert>
           )}
-          {pending.resend.isSuccess && <Alert severity="success">Invitation sent again.</Alert>}
+          {pending.resend.isSuccess && (
+            <Alert severity="success">{t('organizations.invitationSentAgain')}</Alert>
+          )}
           {pending.list.data.map((item) => (
             <Card key={item.organization_id} variant="outlined" sx={{ p: 2.5 }}>
               <Stack
@@ -164,7 +170,7 @@ export function OrganizationsPage() {
                 <Box>
                   <Typography sx={{ fontWeight: 700 }}>{item.name}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Owner invitation: {item.owner_email}
+                    {t('organizations.ownerInvitation', { email: item.owner_email })}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
@@ -173,14 +179,14 @@ export function OrganizationsPage() {
                     disabled={pending.resend.isPending}
                     onClick={() => pending.resend.mutate(item.organization_id)}
                   >
-                    Resend
+                    {t('organizations.resend')}
                   </Button>
                   <Button
                     color="error"
                     disabled={pending.cancel.isPending}
                     onClick={() => setCancelPendingId(item.organization_id)}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                 </Stack>
               </Stack>
@@ -190,7 +196,7 @@ export function OrganizationsPage() {
       )}
       {create && (
         <CreateDialog
-          title="Create workspace"
+          title={t('organizations.createTitle')}
           path="/organizations/"
           invalidate={organizationKeys.all}
           onClose={() => {
@@ -198,16 +204,16 @@ export function OrganizationsPage() {
             setCreate(false)
           }}
           fields={[
-            { name: 'name', label: 'Workspace name', required: true, maxLength: 255 },
+            { name: 'name', label: t('organizations.name'), required: true, maxLength: 255 },
             {
               name: 'slug',
-              label: 'Slug (letters, numbers, hyphens or underscores)',
+              label: t('organizations.slug'),
               required: true,
               maxLength: 50,
             },
             {
               name: 'owner_email',
-              label: 'Business owner email (use your own email to own it yourself)',
+              label: t('organizations.ownerEmail'),
               required: true,
               type: 'email',
             },
@@ -220,15 +226,12 @@ export function OrganizationsPage() {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Cancel pending workspace?</DialogTitle>
+        <DialogTitle>{t('organizations.cancelTitle')}</DialogTitle>
         <DialogContent>
-          <Typography color="text.secondary">
-            This deletes the pending workspace and invalidates its owner invitation. You cannot undo
-            this action.
-          </Typography>
+          <Typography color="text.secondary">{t('organizations.cancelDescription')}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCancelPendingId(null)}>Keep workspace</Button>
+          <Button onClick={() => setCancelPendingId(null)}>{t('organizations.keep')}</Button>
           <Button
             color="error"
             variant="contained"
@@ -240,7 +243,7 @@ export function OrganizationsPage() {
               })
             }}
           >
-            Cancel workspace
+            {t('organizations.cancelWorkspace')}
           </Button>
         </DialogActions>
       </Dialog>
