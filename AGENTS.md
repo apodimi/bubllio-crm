@@ -54,6 +54,21 @@ machine, editor, agent, or local workflow.
   is not required to build, test, operate, or document the shared project, leave it
   untracked.
 
+## Documentation Style
+
+- Treat `docs/README.md` as the documentation entry point and keep the root
+  `README.md` focused on product orientation and the shortest working setup.
+- Give each page one main question to answer. Put the quick path or outcome first,
+  then only the context needed to use it safely.
+- Prefer short sections, task-based headings, tables for comparisons, and commands
+  that can be copied as written. Avoid long narrative histories.
+- Keep one authoritative explanation for each topic and link to it instead of
+  duplicating endpoint lists, role definitions, or setup instructions.
+- Separate implemented behavior from roadmap material. Put future plans under
+  `docs/roadmap/` or label them clearly as not implemented.
+- Update or remove stale documentation in the same change as the code; do not add
+  a second explanation that contradicts an older page.
+
 ## Repository Skills
 
 Load the matching skill before performing one of these workflows:
