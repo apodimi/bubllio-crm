@@ -34,6 +34,26 @@ Read the relevant architecture document before changing a domain:
 - Do not commit local databases, virtual environments, secrets, IDE settings, or
   generated caches.
 
+## Local Development Hygiene
+
+Keep the repository free from files that exist only because of one contributor's
+machine, editor, agent, or local workflow.
+
+- Never commit local tool state, caches, generated critiques or reports, browser
+  artifacts, debug output, local databases, uploaded media, build output, IDE
+  metadata, environment files, credentials, tokens, or temporary scripts.
+- Never commit absolute filesystem paths, machine names, personal email addresses,
+  or other contributor-specific identifiers. Use neutral placeholders in examples.
+- When introducing a tool that creates local files, add its output directory to
+  the repository `.gitignore` before running or committing it. Do not rely only on
+  `.git/info/exclude`, because that protection is not shared with contributors.
+- Commit an example configuration only when it is intentionally documented,
+  contains placeholders, and is safe for public distribution. Keep the real local
+  configuration ignored.
+- Before every commit, inspect `git status --short` and the staged diff. If a file
+  is not required to build, test, operate, or document the shared project, leave it
+  untracked.
+
 ## Repository Skills
 
 Load the matching skill before performing one of these workflows:

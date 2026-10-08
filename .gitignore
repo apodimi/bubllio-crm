@@ -1,6 +1,14 @@
 # macOS
 .DS_Store
 
+# Local contributor and machine state
+.cache/
+.local/
+.vscode/
+*.local
+*.log
+*.tmp
+
 # Python
 __pycache__/
 *.py[cod]
@@ -23,6 +31,11 @@ staticfiles/
 
 # Tooling
 node_modules/
+coverage/
+dist/
+playwright-report/
+test-results/
+.eslintcache
 .coverage
 htmlcov/
 .logs/
