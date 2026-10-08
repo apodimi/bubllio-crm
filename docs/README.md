@@ -7,13 +7,15 @@ what you are trying to do.
 
 1. [Getting started](getting-started.md) — local installation and first setup.
 2. [Database setup](development/databases.md) — SQLite or PostgreSQL.
-3. [Production deployment](development/production-deployment.md) — minimum
+3. [Onboarding sandbox](development/onboarding-sandbox.md) — repeat first-run
+   setup without touching your normal development database.
+4. [Production deployment](development/production-deployment.md) — minimum
    production requirements.
-4. [Dokploy deployment](development/dokploy-deployment.md) — complete Dokploy
+5. [Dokploy deployment](development/dokploy-deployment.md) — complete Dokploy
    walkthrough.
-5. [Production readiness](development/pilot-production-readiness.md) — evidence
+6. [Production readiness](development/pilot-production-readiness.md) — evidence
    required before real customer data.
-6. [Updates](development/updating.md) — releases, backups, upgrades, and rollback.
+7. [Updates](development/updating.md) — releases, backups, upgrades, and rollback.
 
 ## Using Bubllio
 

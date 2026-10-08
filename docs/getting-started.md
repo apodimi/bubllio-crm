@@ -55,6 +55,10 @@ src/db.sqlite3
 
 ## First-run setup
 
+> Testing this flow repeatedly? Use the isolated
+> [onboarding sandbox](development/onboarding-sandbox.md) instead of deleting or
+> flushing your normal development database.
+
 For a new installation, generate a one-time setup token and put it in the
 server's ignored `.env` file as `BUBLLIO_SETUP_TOKEN`. It must be at least 32
 characters long. Use a random value:
