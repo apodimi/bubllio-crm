@@ -32,7 +32,7 @@ htmlcov/
 .mypy_cache/
 .playwright-cli/
 output/playwright/
-.impeccable/bin/
+.impeccable/
 
 # IDEs
 .idea/

@@ -3,9 +3,7 @@ name = "bubllio-crm"
 version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Apostolis Dimitriou", email = "aposdimit@gmail.com" }
-]
+authors = [{ name = "Bubllio Contributors" }]
 requires-python = ">=3.13"
 dependencies = [
     "cryptography>=46.0.1",
