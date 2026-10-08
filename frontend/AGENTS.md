@@ -128,8 +128,10 @@ the working tree is already formatted.
 - Let Prettier wrap JSX props and arrays. Do not manually defeat wrapping with
   long inline `sx` objects or nested ternaries; extract a named component or
   constant when a block remains difficult to scan.
-- Keep imports grouped by external package, feature/domain, then relative local
-  modules. ESLint handles correctness; Prettier handles whitespace and layout.
+- Order imports in three groups separated by one blank line: third-party
+  packages first, project-owned shared or feature modules second, and local
+  relative modules last. Keep imports alphabetized within each group and use a
+  domain entry point when it prevents a long list of imports from one folder.
 - Generated output and test artifacts are ignored by `.prettierignore` and must
   never be formatted or committed.
 
