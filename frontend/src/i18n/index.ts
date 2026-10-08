@@ -25,10 +25,16 @@ void i18n
   })
 
 function syncDocumentLanguage(language: string) {
-  if (typeof document === 'undefined') return
-  document.documentElement.lang = supportedLanguages.includes(language as SupportedLanguage)
-    ? language
-    : 'en'
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  if (supportedLanguages.includes(language as SupportedLanguage)) {
+    document.documentElement.lang = language
+  } else {
+    document.documentElement.lang = 'en'
+  }
+
   document.documentElement.dir = 'ltr'
 }
 
