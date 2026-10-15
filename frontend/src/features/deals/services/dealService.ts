@@ -5,6 +5,7 @@ const path = (org: string, id?: string) =>
   `${organizationPath(org)}deals/${id ? `${encodeURIComponent(id)}/` : ''}`
 export const dealService = {
   list: (org: string, signal?: AbortSignal) => request<Deal[]>(path(org), { signal }),
+  get: (org: string, id: string, signal?: AbortSignal) => request<Deal>(path(org, id), { signal }),
   create: (org: string, body: DealInput) => request<Deal>(path(org), { method: 'POST', body }),
   update: (org: string, id: string, body: Partial<Deal>) =>
     request<Deal>(path(org, id), { method: 'PATCH', body }),

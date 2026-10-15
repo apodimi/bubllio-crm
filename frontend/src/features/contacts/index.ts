@@ -1,5 +1,6 @@
 export {
   contactKeys,
+  useContact,
   useContacts,
   useContactPage,
   useCreateContact,

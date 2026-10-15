@@ -652,11 +652,47 @@ test('subscription cancellation remains active through the paid period and can r
   await expect(
     servicesTree.getByRole('treeitem', { name: 'Customer services', exact: true }),
   ).toHaveAttribute('aria-selected', 'true')
+  const servicesParent = servicesTree.getByRole('treeitem', { name: /^Services/ }).first()
+  await expect(servicesParent).toHaveAttribute('aria-expanded', 'true')
+  await servicesTree.getByText('Services', { exact: true }).click()
+  await expect(servicesParent).toHaveAttribute('aria-expanded', 'false')
+  await expect(servicesTree.getByText('Customer services', { exact: true })).toBeHidden()
+  await expect(servicesParent.locator('[data-active-submenu-indicator="true"]')).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('services-secondary-navigation-collapsed.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
+  await servicesTree.getByText('Services', { exact: true }).click()
+  await expect(servicesParent).toHaveAttribute('aria-expanded', 'true')
+  await expect(servicesTree.getByText('Customer services', { exact: true })).toBeVisible()
+  await expect(servicesParent.locator('[data-active-submenu-indicator="true"]')).toHaveCount(0)
+  const servicesContent = servicesParent.locator('.MuiTreeItem-content').first()
+  await servicesContent.hover()
+  await expect(servicesContent).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  const servicesContentBox = await servicesContent.boundingBox()
+  const servicesArrowBox = await servicesContent.locator('.MuiTreeItem-iconContainer').boundingBox()
+  expect(servicesContentBox).not.toBeNull()
+  expect(servicesArrowBox).not.toBeNull()
+  expect(
+    Math.abs(
+      (servicesContentBox?.x ?? 0) +
+        (servicesContentBox?.width ?? 0) -
+        ((servicesArrowBox?.x ?? 0) + (servicesArrowBox?.width ?? 0)),
+    ),
+  ).toBeLessThan(14)
   await page.screenshot({
     path: test.info().outputPath('services-secondary-navigation.png'),
     fullPage: true,
     animations: 'disabled',
   })
+  const billingItem = servicesTree.getByRole('treeitem', { name: 'Billing', exact: true })
+  const billingContent = billingItem.locator('.MuiTreeItem-content')
+  const billingLabel = billingItem.getByText('Billing', { exact: true })
+  const restingColor = await billingLabel.evaluate((element) => getComputedStyle(element).color)
+  await billingContent.hover()
+  await expect(billingContent).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(billingLabel).toHaveCSS('color', restingColor)
   await page.getByRole('button', { name: 'Edit Managed service' }).click()
   await page.getByRole('button', { name: 'End customer service…' }).click()
   const cancellationRequest = page.waitForRequest((request) =>
@@ -823,6 +859,172 @@ test('desktop navigation collapses to a usable icon rail', async ({ page }) => {
     }),
   ).toBeVisible()
 })
+test('global search scopes results and supports keyboard navigation', async ({ page }) => {
+  const scopes: Array<string | null> = []
+  await page.route('**/api/v1/organizations/alpha/contacts/contact-a/', (route) =>
+    route.fulfill({
+      json: {
+        id: 'contact-a',
+        organization: 'alpha',
+        company: 'co-a',
+        company_name: 'Acme Ltd',
+        assigned_to: 1,
+        assigned_to_name: 'Demo User',
+        first_name: 'Ada',
+        last_name: 'Lovelace',
+        email: 'ada@example.com',
+        phone_number: '',
+        department: 'Leadership',
+        job_title: 'Director',
+        status: 'active',
+        is_primary: true,
+        archived_at: null,
+        created_at: '2030-01-01T00:00:00Z',
+        updated_at: '2030-01-01T00:00:00Z',
+      },
+    }),
+  )
+  await page.route('**/api/v1/organizations/alpha/deals/deal-a/', (route) =>
+    route.fulfill({
+      json: {
+        id: 'deal-a',
+        organization: 'alpha',
+        company: 'co-a',
+        company_name: 'Acme Ltd',
+        contact: 'contact-a',
+        contact_name: 'Ada Lovelace',
+        assigned_to: 1,
+        assigned_to_name: 'Demo User',
+        title: 'Renewal opportunity',
+        value: '1000.00',
+        currency: 'EUR',
+        tax_rate: '24.00',
+        amount_includes_tax: false,
+        net_value: '1000.00',
+        tax_value: '240.00',
+        gross_value: '1240.00',
+        probability: 50,
+        stage: 'proposal',
+        sort_order: 0,
+        expected_close_date: null,
+        lost_reason: '',
+        notes: '',
+        archived_at: null,
+        created_at: '2030-01-01T00:00:00Z',
+        updated_at: '2030-01-01T00:00:00Z',
+      },
+    }),
+  )
+  await page.route('**/api/v1/search/**', (route) => {
+    const params = new URL(route.request().url()).searchParams
+    scopes.push(params.get('organization'))
+    return route.fulfill({
+      json: {
+        query: params.get('q'),
+        count: 3,
+        page: 1,
+        page_size: 20,
+        results: [
+          {
+            type: 'contact',
+            id: 'contact-a',
+            display_name: 'Ada Lovelace',
+            organization: { id: 'alpha', name: 'Alpha Studio' },
+            company: { id: 'co-a', name: 'Acme Ltd' },
+            job_title: 'Director',
+          },
+          {
+            type: 'deal',
+            id: 'deal-a',
+            display_name: 'Renewal opportunity',
+            organization: { id: 'alpha', name: 'Alpha Studio' },
+            company: { id: 'co-a', name: 'Acme Ltd' },
+            stage: 'proposal',
+            value: '1000.00',
+            currency: 'EUR',
+          },
+          {
+            type: 'company',
+            id: 'co-a',
+            display_name: 'Acme Ltd',
+            organization: { id: 'alpha', name: 'Alpha Studio' },
+            customer_code: 'CUS-00001',
+            lifecycle_stage: 'lead',
+          },
+        ],
+      },
+    })
+  })
+
+  await login(page)
+  await page.keyboard.press('Control+k')
+  const input = page.getByRole('combobox', { name: /Search All workspaces/ })
+  await input.fill('acme')
+  await expect(page.getByRole('option', { name: /^Acme Ltd/ })).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('global-search-all-workspaces.png'),
+    animations: 'disabled',
+  })
+  await input.press('ArrowDown')
+  await input.press('Enter')
+  await expect(page).toHaveURL('/organizations/alpha/contacts?contact=contact-a')
+  await expect(page.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible()
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ada Lovelace' })).toHaveCount(0)
+
+  await page.keyboard.press('Control+k')
+  const dealSearch = page.getByRole('combobox', { name: /Search All workspaces/ })
+  await dealSearch.fill('renewal')
+  await expect(page.getByRole('option', { name: /^Renewal opportunity/ })).toBeVisible()
+  await dealSearch.press('ArrowDown')
+  await dealSearch.press('ArrowDown')
+  await dealSearch.press('Enter')
+  await expect(page).toHaveURL('/organizations/alpha/deals?deal=deal-a')
+  await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Deal title' })).toHaveValue('Renewal opportunity')
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Edit deal' })).toHaveCount(0)
+
+  await page.setViewportSize({ width: 360, height: 740 })
+  await openAlpha(page)
+  await page.keyboard.press('Control+k')
+  const scopeGroup = page.getByRole('group', { name: 'Search scope' })
+  const scopeButtons = scopeGroup.getByRole('button')
+  const scopeBox = await scopeGroup.boundingBox()
+  const currentScopeBox = await scopeButtons.nth(0).boundingBox()
+  const allScopeBox = await scopeButtons.nth(1).boundingBox()
+  expect(scopeBox).not.toBeNull()
+  expect(currentScopeBox).not.toBeNull()
+  expect(allScopeBox).not.toBeNull()
+  expect(Math.abs((currentScopeBox?.width ?? 0) - (allScopeBox?.width ?? 0))).toBeLessThanOrEqual(1)
+  expect((allScopeBox?.x ?? 0) + (allScopeBox?.width ?? 0)).toBeLessThanOrEqual(
+    (scopeBox?.x ?? 0) + (scopeBox?.width ?? 0),
+  )
+  await expect(page.getByRole('button', { name: /Current · Alpha Studio/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.getByRole('combobox', { name: /Search Alpha Studio/ }).fill('ada')
+  await expect.poll(() => scopes.at(-1)).toBe('alpha')
+  await page.getByRole('button', { name: 'All workspaces' }).click()
+  await expect.poll(() => scopes.at(-1)).toBe(null)
+})
+
+test('stale workspace links recover before global search uses an invalid scope', async ({
+  page,
+}) => {
+  await login(page)
+
+  await page.goto('/organizations/00000000-0000-0000-0000-000000000000')
+
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
+  await page.keyboard.press('Control+k')
+  await expect(page.getByRole('combobox', { name: /Search All workspaces/ })).toBeVisible()
+})
+
 test('invalid login remains on the sign-in screen', async ({ page }) => {
   await page.route('**/api/v1/auth/token/', (route) =>
     route.fulfill({ status: 401, json: { detail: 'Invalid credentials' } }),
@@ -846,6 +1048,20 @@ test('language selection switches to Greek and persists after reload', async ({ 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Καλώς ήρθες ξανά.' })).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'el')
+})
+
+test('authenticated language preference lives in the account menu', async ({ page }) => {
+  await login(page)
+
+  await expect(page.getByRole('combobox', { name: 'Language' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Open account menu' }).click()
+  await page.getByRole('menuitem', { name: /Language.*English/ }).click()
+  await page.getByRole('menuitemradio', { name: 'Greek' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'el')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'el')
+  await expect(page.getByRole('button', { name: 'Άνοιγμα μενού λογαριασμού' })).toBeVisible()
 })
 
 test('a signed-in user keeps the session when opening /login from the address bar', async ({

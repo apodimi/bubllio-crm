@@ -3,6 +3,29 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.4 — 2026-10-15
+
+### Added
+
+- tenant-safe global CRM search across accessible workspaces, companies,
+  contacts, and deals, with keyboard navigation and `Ctrl/Command + K` access;
+- direct opening of contacts and deals selected from global search.
+
+### Changed
+
+- refined the workspace navigation with collapsible submenus, clearer active
+  indicators, and a quieter interaction treatment;
+- moved authenticated language selection into a scalable account-menu
+  drill-down that remains usable as more languages are added;
+- invalid workspace URLs now recover safely to the workspace picker.
+
+### Upgrade notes
+
+- this release has no database migrations and is eligible for an online update
+  from version 0.2.3;
+- after deployment, verify sign-in, workspace switching, global search, result
+  navigation, submenu expansion, and language persistence.
+
 ## 0.2.3 — 2026-10-15
 
 ### Added

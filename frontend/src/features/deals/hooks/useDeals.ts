@@ -1,9 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Deal, DealInput } from '../../../types/deal.types'
 import { dealService } from '../services/dealService'
-export const dealKeys = { list: (org: string) => ['organizations', org, 'deals'] as const }
+export const dealKeys = {
+  list: (org: string) => ['organizations', org, 'deals'] as const,
+  detail: (org: string, id: string) => [...dealKeys.list(org), id] as const,
+}
 export const useDeals = (org: string) =>
   useQuery({ queryKey: dealKeys.list(org), queryFn: ({ signal }) => dealService.list(org, signal) })
+export const useDeal = (org: string, id: string) =>
+  useQuery({
+    queryKey: dealKeys.detail(org, id),
+    queryFn: ({ signal }) => dealService.get(org, id, signal),
+    enabled: Boolean(id),
+  })
 export const useUpdateDeal = (org: string) => {
   const client = useQueryClient()
   return useMutation({

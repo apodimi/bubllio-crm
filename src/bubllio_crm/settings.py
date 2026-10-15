@@ -140,6 +140,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    "global_search": "120/min",
     "installation_setup": "5/min",
     "organization_invitation": "20/day",
     "workspace_provisioning": "20/day",

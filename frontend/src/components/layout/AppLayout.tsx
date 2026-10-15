@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import BusinessRounded from '@mui/icons-material/BusinessRounded'
 import HomeRounded from '@mui/icons-material/HomeRounded'
 import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
@@ -73,6 +73,12 @@ function Shell() {
   const currentOrganization = organizations.data?.find(
     (organization) => organization.id === organizationId,
   )
+
+  useEffect(() => {
+    if (organizationId && organizations.isSuccess && !currentOrganization) {
+      void navigate({ to: '/', replace: true })
+    }
+  }, [currentOrganization, navigate, organizationId, organizations.isSuccess])
 
   function closeMobileNavigation() {
     setMobileOpen(false)
@@ -254,7 +260,7 @@ function Shell() {
         }}
       >
         <WorkspaceHeader
-          organizationId={organizationId}
+          organizationId={currentOrganization?.id}
           workspaceName={currentOrganization?.name}
           organizations={organizations.data ?? []}
           onOrganizationChange={selectOrganization}

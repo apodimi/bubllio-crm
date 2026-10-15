@@ -11,10 +11,11 @@ import {
 } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { Alert, Box, Button, Chip, Stack } from '@mui/material'
+import { Alert, Box, Button, Chip, Drawer, Stack } from '@mui/material'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
 import { useCompanies } from '../../features/companies'
-import { useDeals, useMoveDeal } from '../../features/deals'
+import { useDeal, useDeals, useMoveDeal } from '../../features/deals'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
 import { useTasks } from '../../features/tasks'
 import type { Deal, DealStage } from '../../types/deal.types'
@@ -35,6 +36,9 @@ const money = (value: string, currency: string) =>
 
 export function DealsPage() {
   const org = useWorkspace()
+  const navigate = useNavigate({ from: '/organizations/$organizationId/deals' })
+  const routeSearch = useSearch({ from: '/organizations/$organizationId/deals' })
+  const routeDeal = useDeal(org.id, routeSearch.deal ?? '')
   const deals = useDeals(org.id)
   const companies = useCompanies(org.id, { archived: 'active' })
   const tasks = useTasks(org.id, { bucket: 'open' })
@@ -196,6 +200,28 @@ export function DealsPage() {
           initialStage={drawer.initialStage}
           onClose={() => setDrawer(null)}
         />
+      ) : null}
+      {routeSearch.deal && routeDeal.data && companies.data ? (
+        <DealDrawer
+          organizationId={org.id}
+          companies={companies.data}
+          deal={routeDeal.data}
+          onClose={() => void navigate({ search: { deal: undefined } })}
+        />
+      ) : null}
+      {routeSearch.deal && (routeDeal.isPending || routeDeal.isError) ? (
+        <Drawer
+          anchor="right"
+          open
+          onClose={() => void navigate({ search: { deal: undefined } })}
+          sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 600 }, maxWidth: '100vw' } }}
+        >
+          {routeDeal.isPending ? (
+            <Loading />
+          ) : (
+            <Failure error={routeDeal.error} retry={() => void routeDeal.refetch()} />
+          )}
+        </Drawer>
       ) : null}
     </>
   )

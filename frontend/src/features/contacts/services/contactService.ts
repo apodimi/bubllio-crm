@@ -30,6 +30,8 @@ export const contactService = {
     const query = params.toString()
     return request<Contact[]>(contactPath(organizationId) + (query ? `?${query}` : ''), { signal })
   },
+  get: (organizationId: string, contactId: string, signal?: AbortSignal) =>
+    request<Contact>(contactPath(organizationId, contactId), { signal }),
   create: (organizationId: string, body: ContactInput) =>
     request<Contact>(contactPath(organizationId), { body }),
   update: (organizationId: string, contactId: string, body: Partial<ContactInput>) =>

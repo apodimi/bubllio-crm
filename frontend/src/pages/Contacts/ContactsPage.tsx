@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { useListPage } from '../../hooks/useListPage'
 import { ListPagination } from '../../components/common/ListPagination'
@@ -16,6 +17,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Drawer,
   IconButton,
   Link,
   MenuItem,
@@ -34,7 +36,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
 import { useCompanies } from '../../features/companies'
-import { useContactPage, useDeleteContact } from '../../features/contacts'
+import { useContact, useContactPage, useDeleteContact } from '../../features/contacts'
 import { ContactDrawer } from '../../features/contacts/components/ContactDrawer'
 import { ContactProfileDrawer } from '../../features/contacts/components/ContactProfileDrawer'
 import { CompanyPreviewDrawer } from '../../features/companies/components/CompanyPreviewDrawer'
@@ -55,6 +57,9 @@ type ActivePanel =
 export function ContactsPage() {
   const { t } = useTranslation()
   const org = useWorkspace()
+  const navigate = useNavigate({ from: '/organizations/$organizationId/contacts' })
+  const routeSearch = useSearch({ from: '/organizations/$organizationId/contacts' })
+  const routeContact = useContact(org.id, routeSearch.contact ?? '')
   const companies = useCompanies(org.id)
   const [search, setSearch] = useState('')
   const [company, setCompany] = useState('')
@@ -351,6 +356,30 @@ export function ContactsPage() {
             setActivePanel({ type: 'view-company', companyId })
           }}
         />
+      ) : null}
+      {routeSearch.contact && routeContact.data ? (
+        <ContactProfileDrawer
+          contact={routeContact.data}
+          onClose={() => void navigate({ search: { contact: undefined } })}
+          onCompany={(companyId) => {
+            void navigate({ search: { contact: undefined } })
+            setActivePanel({ type: 'view-company', companyId })
+          }}
+        />
+      ) : null}
+      {routeSearch.contact && (routeContact.isPending || routeContact.isError) ? (
+        <Drawer
+          anchor="right"
+          open
+          onClose={() => void navigate({ search: { contact: undefined } })}
+          sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 560 }, maxWidth: '100vw' } }}
+        >
+          {routeContact.isPending ? (
+            <Loading />
+          ) : (
+            <Failure error={routeContact.error} retry={() => void routeContact.refetch()} />
+          )}
+        </Drawer>
       ) : null}
       {activePanel?.type === 'view-company' ? (
         <CompanyPreviewDrawer

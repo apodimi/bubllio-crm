@@ -13,3 +13,11 @@ it('scopes paginated contact search to its tenant and company', async () => {
     { signal },
   )
 })
+
+it('loads one contact from its tenant-scoped detail endpoint', async () => {
+  const signal = new AbortController().signal
+
+  await contactService.get('org-a', 'contact/a', signal)
+
+  expect(request).toHaveBeenCalledWith('/organizations/org-a/contacts/contact%2Fa/', { signal })
+})

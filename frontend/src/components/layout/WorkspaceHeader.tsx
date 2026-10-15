@@ -18,9 +18,13 @@ import MenuRounded from '@mui/icons-material/MenuRounded'
 import ManageAccountsRounded from '@mui/icons-material/ManageAccountsRounded'
 import LogoutRounded from '@mui/icons-material/LogoutRounded'
 import CheckRounded from '@mui/icons-material/CheckRounded'
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded'
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
+import KeyboardArrowRightRounded from '@mui/icons-material/KeyboardArrowRightRounded'
+import TranslateRounded from '@mui/icons-material/TranslateRounded'
 import { useTranslation } from 'react-i18next'
-import { LanguageSwitcher } from '../common/LanguageSwitcher'
+
+import { GlobalSearch } from '../../features/global-search'
 
 type WorkspaceHeaderProps = {
   organizationId?: string
@@ -43,9 +47,11 @@ export function WorkspaceHeader({
   isSuperuser,
   onLogout,
 }: WorkspaceHeaderProps) {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
   const [accountAnchor, setAccountAnchor] = useState<null | HTMLElement>(null)
+  const [accountView, setAccountView] = useState<'main' | 'language'>('main')
   const [workspaceAnchor, setWorkspaceAnchor] = useState<null | HTMLElement>(null)
+  const language = i18n.resolvedLanguage === 'el' ? 'el' : 'en'
   const initials = username?.slice(0, 1).toUpperCase() ?? '?'
   const organizationInitials = (name: string) =>
     name
@@ -54,6 +60,11 @@ export function WorkspaceHeader({
       .join('')
       .slice(0, 2)
       .toUpperCase()
+
+  function closeAccountMenu() {
+    setAccountAnchor(null)
+    setAccountView('main')
+  }
   return (
     <Box
       sx={{
@@ -178,7 +189,10 @@ export function WorkspaceHeader({
           direction="row"
           sx={{ alignItems: 'center', flexShrink: 0, gap: { xs: 0.25, sm: 1.25 } }}
         >
-          <LanguageSwitcher compact />
+          <GlobalSearch
+            currentOrganizationId={organizationId}
+            currentWorkspaceName={workspaceName}
+          />
           <Tooltip title={t('navigation.accountMenu')}>
             <Button
               aria-label={t('navigation.openAccountMenu')}
@@ -235,45 +249,99 @@ export function WorkspaceHeader({
           <Menu
             anchorEl={accountAnchor}
             open={Boolean(accountAnchor)}
-            onClose={() => setAccountAnchor(null)}
+            onClose={closeAccountMenu}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            slotProps={{ paper: { sx: { minWidth: 220, mt: 1 } } }}
+            slotProps={{
+              paper: {
+                sx: {
+                  minWidth: 240,
+                  maxHeight: 'min(420px, calc(100dvh - 24px))',
+                  mt: 1,
+                },
+              },
+            }}
           >
-            <MenuItem disabled sx={{ opacity: 1, display: 'block', py: 1.25 }}>
-              <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                {username}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {isSuperuser
-                  ? t('navigation.installationAdministrator')
-                  : t('navigation.workspaceMember')}
-              </Typography>
-            </MenuItem>
-            {isSuperuser ? (
-              <MenuItem
-                component={Link}
-                to="/account/settings"
-                onClick={() => setAccountAnchor(null)}
-              >
-                <ListItemIcon>
-                  <ManageAccountsRounded fontSize="small" />
-                </ListItemIcon>
-                {t('navigation.accountSettings')}
-              </MenuItem>
-            ) : null}
-            <Divider />
-            <MenuItem
-              onClick={() => {
-                setAccountAnchor(null)
-                void onLogout()
-              }}
-            >
-              <ListItemIcon>
-                <LogoutRounded fontSize="small" />
-              </ListItemIcon>
-              {t('navigation.signOut')}
-            </MenuItem>
+            {accountView === 'main' ? (
+              <>
+                <MenuItem disabled sx={{ opacity: 1, display: 'block', py: 1.25 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {username}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {isSuperuser
+                      ? t('navigation.installationAdministrator')
+                      : t('navigation.workspaceMember')}
+                  </Typography>
+                </MenuItem>
+                {isSuperuser ? (
+                  <MenuItem component={Link} to="/account/settings" onClick={closeAccountMenu}>
+                    <ListItemIcon>
+                      <ManageAccountsRounded fontSize="small" />
+                    </ListItemIcon>
+                    {t('navigation.accountSettings')}
+                  </MenuItem>
+                ) : null}
+                <Divider />
+                <MenuItem
+                  aria-haspopup="menu"
+                  aria-expanded={false}
+                  onClick={() => setAccountView('language')}
+                >
+                  <ListItemIcon>
+                    <TranslateRounded fontSize="small" />
+                  </ListItemIcon>
+                  <Typography variant="body2" sx={{ flex: 1 }}>
+                    {t('common.language')}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+                    {language === 'en' ? t('common.english') : t('common.greek')}
+                  </Typography>
+                  <KeyboardArrowRightRounded fontSize="small" color="action" />
+                </MenuItem>
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    closeAccountMenu()
+                    void onLogout()
+                  }}
+                >
+                  <ListItemIcon>
+                    <LogoutRounded fontSize="small" />
+                  </ListItemIcon>
+                  {t('navigation.signOut')}
+                </MenuItem>
+              </>
+            ) : (
+              <>
+                <MenuItem autoFocus onClick={() => setAccountView('main')}>
+                  <ListItemIcon>
+                    <ArrowBackRounded fontSize="small" />
+                  </ListItemIcon>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {t('common.language')}
+                  </Typography>
+                </MenuItem>
+                <Divider />
+                {(['en', 'el'] as const).map((option) => (
+                  <MenuItem
+                    key={option}
+                    role="menuitemradio"
+                    aria-checked={language === option}
+                    selected={language === option}
+                    onClick={() => {
+                      void i18n.changeLanguage(option)
+                      closeAccountMenu()
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ flex: 1 }}>
+                      {option === 'en' ? t('common.english') : t('common.greek')}
+                    </Typography>
+                    {language === option ? <CheckRounded color="primary" fontSize="small" /> : null}
+                  </MenuItem>
+                ))}
+              </>
+            )}
           </Menu>
         </Stack>
       </Stack>

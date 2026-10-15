@@ -114,11 +114,17 @@ const companyDetail = createRoute({
 const contacts = createRoute({
   getParentRoute: () => workspace,
   path: '/contacts',
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...(typeof search.contact === 'string' ? { contact: search.contact } : {}),
+  }),
   component: lazyRouteComponent(() => import('../pages/Contacts/ContactsPage'), 'ContactsPage'),
 })
 const deals = createRoute({
   getParentRoute: () => workspace,
   path: '/deals',
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...(typeof search.deal === 'string' ? { deal: search.deal } : {}),
+  }),
   component: lazyRouteComponent(() => import('../pages/Deals/DealsPage'), 'DealsPage'),
 })
 const tasks = createRoute({

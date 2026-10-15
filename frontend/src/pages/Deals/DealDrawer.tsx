@@ -82,6 +82,10 @@ export function DealDrawer({
   const companyContacts = (contacts.data ?? []).filter(
     (contact) => contact.company === values.company,
   )
+  const selectedContactAvailable =
+    !values.contact || companyContacts.some((contact) => contact.id === values.contact)
+  const selectedAssigneeAvailable =
+    !values.assigned_to || (assignees.data ?? []).some((person) => person.id === values.assigned_to)
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -175,6 +179,11 @@ export function DealDrawer({
               sx={{ flex: 1 }}
             >
               <MenuItem value="">No contact</MenuItem>
+              {!selectedContactAvailable && values.contact ? (
+                <MenuItem value={values.contact}>
+                  {deal?.contact_name || 'Selected contact'}
+                </MenuItem>
+              ) : null}
               {companyContacts.map((contact) => (
                 <MenuItem key={contact.id} value={contact.id}>
                   {contact.first_name} {contact.last_name}
@@ -192,6 +201,11 @@ export function DealDrawer({
               sx={{ flex: 1 }}
             >
               <MenuItem value="">Unassigned</MenuItem>
+              {!selectedAssigneeAvailable && values.assigned_to ? (
+                <MenuItem value={values.assigned_to}>
+                  {deal?.assigned_to_name || 'Selected owner'}
+                </MenuItem>
+              ) : null}
               {(assignees.data ?? []).map((person) => (
                 <MenuItem key={person.id} value={person.id}>
                   {person.name}

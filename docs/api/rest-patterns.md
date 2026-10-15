@@ -256,6 +256,53 @@ Important details:
 - Use `Q(...) | Q(...)` for OR search.
 - Multiple keyword arguments in `.filter(...)` behave like AND.
 
+## Global CRM Search
+
+Use global search for command palettes and cross-workspace discovery:
+
+```text
+GET /api/v1/search/?q=acme&types=company,contact,deal&page=1&page_size=20
+```
+
+The trimmed query must contain 2 to 100 characters. `types` is an optional
+comma-separated subset of `company`, `contact`, and `deal`. `page` defaults to
+1; `page_size` defaults to 20 and has a maximum of 50. An optional
+`organization=<uuid>` narrows results to one accessible workspace. An unknown,
+pending, or inaccessible workspace returns 404.
+
+The response combines active records from every non-provisioning workspace in
+which the authenticated user has `view_crm`. Django staff or superuser status
+does not bypass membership. Notes are neither searched nor returned. Exact
+customer-code, email, and phone matches rank first, followed by exact, prefix,
+and substring display-name matches, then other searchable fields. Ties use a
+deterministic resource/name/workspace/UUID order:
+
+```json
+{
+  "query": "acme",
+  "count": 2,
+  "page": 1,
+  "page_size": 20,
+  "results": [
+    {
+      "type": "company",
+      "id": "00000000-0000-0000-0000-000000000000",
+      "display_name": "Acme Group",
+      "organization": {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "name": "Main workspace"
+      },
+      "customer_code": "CUS-00001",
+      "lifecycle_stage": "customer"
+    }
+  ]
+}
+```
+
+Contact and deal results include their company `id` and `name`. Contact results
+also include `job_title`; deal results include `stage`, `value`, and `currency`.
+The endpoint is rate-limited to 120 requests per authenticated user per minute.
+
 ## Naming Convention
 
 Recommended API class names:

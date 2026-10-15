@@ -1,6 +1,7 @@
 export {
   dealKeys,
   useCreateDeal,
+  useDeal,
   useDeals,
   useMoveDeal,
   useUpdateDeal,

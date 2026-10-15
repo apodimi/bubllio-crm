@@ -8,6 +8,8 @@ export const contactKeys = {
     ['organizations', organizationId, 'contacts'] as const,
   list: (organizationId: string, filters: ContactFilters) =>
     [...contactKeys.byOrganization(organizationId), filters] as const,
+  detail: (organizationId: string, contactId: string) =>
+    [...contactKeys.byOrganization(organizationId), contactId] as const,
 }
 
 const contactsQuery = (organizationId: string, filters: ContactFilters) =>
@@ -18,6 +20,13 @@ const contactsQuery = (organizationId: string, filters: ContactFilters) =>
 
 export const useContacts = (organizationId: string, filters: ContactFilters = {}) =>
   useQuery(contactsQuery(organizationId, filters))
+
+export const useContact = (organizationId: string, contactId: string) =>
+  useQuery({
+    queryKey: contactKeys.detail(organizationId, contactId),
+    queryFn: ({ signal }) => contactService.get(organizationId, contactId, signal),
+    enabled: Boolean(contactId),
+  })
 
 export function useContactPage(organizationId: string, filters: ContactFilters, page: number) {
   const query = useQuery({

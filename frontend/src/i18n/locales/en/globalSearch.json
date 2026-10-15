@@ -1,0 +1,25 @@
+{
+  "open": "Open global search",
+  "trigger": "Search workspace",
+  "title": "Search your workspace",
+  "scopeLabel": "Search scope",
+  "currentWorkspace": "Current · {{name}}",
+  "allWorkspaces": "All workspaces",
+  "placeholder": "Company, contact or deal…",
+  "inputLabel": "Search {{scope}}",
+  "loading": "Searching",
+  "clear": "Clear search",
+  "hint": "Type at least two characters to search this workspace.",
+  "error": "Search could not be completed. Try again.",
+  "noResults": "No matching records",
+  "noResultsHint": "Check the spelling or try a broader term.",
+  "openResult": "Open ↵",
+  "navigate": "Navigate",
+  "select": "Select",
+  "close": "Close",
+  "groups": {
+    "company": "Companies",
+    "contact": "Contacts",
+    "deal": "Deals"
+  }
+}

@@ -96,7 +96,7 @@ export function WorkspaceSidebar({
 }: SidebarProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [servicesExpanded, setServicesExpanded] = useState(false)
+  const [navigationExpansion, setNavigationExpansion] = useState<Record<string, boolean>>({})
   const canManageWorkspace = isSuperuser || currentRole === 'owner' || currentRole === 'admin'
   const basePath = organizationId ? `/organizations/${organizationId}` : ''
   const selectedOrganization = organizations.find(
@@ -286,6 +286,7 @@ export function WorkspaceSidebar({
       (child) => currentPath === child.path || currentPath === `${child.path}/`,
     )
     const selectedItemId = selectedChild?.path ?? (selected ? item.path : null)
+    const treeExpanded = navigationExpansion[item.path] ?? selected
 
     const navigateToItem = (itemId: string) => {
       const child = item.children?.find((candidate) => candidate.path === itemId)
@@ -306,10 +307,11 @@ export function WorkspaceSidebar({
     return (
       <SimpleTreeView
         aria-label={item.text}
-        expandedItems={selected || servicesExpanded ? [item.path] : []}
-        onExpandedItemsChange={(_event, itemIds) =>
-          setServicesExpanded(itemIds.includes(item.path))
-        }
+        expandedItems={treeExpanded ? [item.path] : []}
+        onExpandedItemsChange={(_event, itemIds) => {
+          const isExpanded = itemIds.includes(item.path)
+          setNavigationExpansion((current) => ({ ...current, [item.path]: isExpanded }))
+        }}
         selectedItems={selectedItemId}
         onSelectedItemsChange={(_event, itemId) => {
           if (itemId) {
@@ -348,28 +350,47 @@ export function WorkspaceSidebar({
           },
           [`& .${treeItemClasses.groupTransition}`]: {
             ml: 2.25,
-            pl: 1.5,
-            borderLeft: 1,
-            borderColor: 'divider',
+            pl: 0,
           },
           [`& .${treeItemClasses.groupTransition} .${treeItemClasses.content}`]: {
-            minHeight: 36,
+            minHeight: 38,
             py: 0.25,
-            pl: 1.25,
+            pr: 1,
+            pl: 4,
+            borderRadius: 0,
             fontSize: 13,
-          },
-          [`&& .${treeItemClasses.groupTransition} .${treeItemClasses.content}.Mui-selected`]: {
-            bgcolor: 'transparent',
-            color: 'primary.main',
-          },
-          [`&& .${treeItemClasses.groupTransition} .${treeItemClasses.content}.Mui-selected:hover`]:
-            {
+            transition: 'none',
+            '&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-focused': {
               bgcolor: 'transparent',
             },
+          },
+          [`& .${treeItemClasses.groupTransition} .${treeItemClasses.iconContainer}`]: {
+            display: 'none',
+          },
         }}
       >
         <TreeItem
           itemId={item.path}
+          sx={{
+            [`& > .${treeItemClasses.content}`]: {
+              bgcolor: 'transparent',
+              '&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-focused': {
+                bgcolor: 'transparent',
+              },
+              [`& > .${treeItemClasses.label}`]: {
+                width: 'auto',
+                minWidth: 0,
+                flexGrow: 1,
+              },
+              [`& > .${treeItemClasses.iconContainer}`]: {
+                order: 1,
+                width: 18,
+                ml: 1.25,
+                mr: 0,
+                flexShrink: 0,
+              },
+            },
+          }}
           label={
             <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
               <Box sx={{ display: 'grid', placeItems: 'center', '& svg': { fontSize: 19 } }}>
@@ -378,20 +399,62 @@ export function WorkspaceSidebar({
               <Typography variant="body2" sx={{ fontWeight: 650 }}>
                 {item.text}
               </Typography>
+              {selectedChild && !treeExpanded ? (
+                <Box
+                  component="span"
+                  data-active-submenu-indicator="true"
+                  sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'primary.main' }}
+                />
+              ) : null}
             </Stack>
           }
         >
-          {item.children?.map((child) => (
-            <TreeItem
-              key={child.path}
-              itemId={child.path}
-              label={
-                <Typography variant="body2" sx={{ fontSize: 13, fontWeight: 550 }}>
-                  {child.text}
-                </Typography>
-              }
-            />
-          ))}
+          {item.children?.map((child) => {
+            const childSelected = selectedChild?.path === child.path
+
+            return (
+              <TreeItem
+                key={child.path}
+                itemId={child.path}
+                sx={{
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: '50%',
+                    left: 0,
+                    width: 3,
+                    height: 18,
+                    borderRadius: 1.5,
+                    bgcolor: childSelected ? 'primary.main' : 'transparent',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                  },
+                  [`&& > .${treeItemClasses.content}`]: {
+                    bgcolor: 'transparent',
+                    '&:hover, &.Mui-selected, &.Mui-selected:hover': {
+                      bgcolor: 'transparent',
+                    },
+                    '&.Mui-selected': {
+                      color: 'primary.main',
+                    },
+                  },
+                }}
+                label={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: childSelected ? 'primary.main' : 'text.secondary',
+                      fontSize: 13,
+                      fontWeight: childSelected ? 700 : 550,
+                    }}
+                  >
+                    {child.text}
+                  </Typography>
+                }
+              />
+            )
+          })}
         </TreeItem>
       </SimpleTreeView>
     )

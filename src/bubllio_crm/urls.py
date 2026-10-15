@@ -44,10 +44,12 @@ from onboarding.api.installation_audit_log import InstallationAuditLogAPIView
 from onboarding.api.backup_status import InstallationBackupStatusAPIView
 from onboarding.api.data_export import InstallationDataExportAPIView
 from access.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
+from organizations.api.global_search import GlobalSearchAPIView
 from onboarding.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
 
 urlpatterns = [
     path("health/", health_check, name="health-check"),
+    path("api/v1/search/", GlobalSearchAPIView.as_view(), name="global-search"),
     path("api/v1/setup/", InstallationSetupAPIView.as_view(), name="installation-setup"),
     path("api/v1/setup/smtp-test/", InstallationSmtpTestAPIView.as_view(), name="installation-smtp-test"),
     path(
