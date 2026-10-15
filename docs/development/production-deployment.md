@@ -46,7 +46,7 @@ subdomain have been verified.
 
 ## Updates
 
-Version 0.2.0 is the manual bootstrap for the optional independent Update Agent.
+Version 0.2.1 is the manual bootstrap for the optional independent Update Agent.
 After it is configured, installation administrators can install signed releases
 classified as `online_safe` from Account settings. Maintenance and irreversible
 releases remain manual. See [Updating a self-hosted installation](updating.md)

@@ -3,7 +3,7 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
-## 0.2.0 — 2026-10-15
+## 0.2.1 — 2026-10-15
 
 ### Added
 
@@ -26,6 +26,11 @@ Versioning and correspond to published GitHub Releases.
 - the release requires a maintenance window while timeline, identity, and index
   migrations run. Duplicate email or tax identities abort safely and must be
   resolved before retrying.
+
+### Fixed
+
+- release verification now runs portably on Linux, including updater temporary
+  directories, packaged license metadata, and isolated encryption-key tests.
 
 ### Removed
 
