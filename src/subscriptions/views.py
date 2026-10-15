@@ -5,9 +5,16 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
+from companies.models import CompanyTimelineEvent
+from companies.services import record_company_timeline_event
 
 from .models import Charge, CustomerSubscription, ServiceCatalogItem
-from .services import cancel_subscription, resume_subscription, subscription_overview
+from .services import (
+    cancel_subscription,
+    pause_subscription,
+    resume_subscription,
+    subscription_overview,
+)
 from .serializers import (
     ChargeSerializer,
     CustomerSubscriptionSerializer,
@@ -84,7 +91,16 @@ class SubscriptionListCreateAPIView(APIView):
         )
         serializer = CustomerSubscriptionSerializer(data=request.data, context={"organization": organization})
         serializer.is_valid(raise_exception=True)
-        serializer.save(organization=organization)
+        subscription = serializer.save(organization=organization)
+        record_company_timeline_event(
+            company=subscription.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.SERVICE,
+            event_type=CompanyTimelineEvent.EventType.SERVICE_CREATED,
+            source_type="subscription",
+            source_id=subscription.id,
+            details={"subscription_name": subscription.name},
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -114,7 +130,20 @@ class SubscriptionDetailAPIView(APIView):
             subscription, data=request.data, partial=True, context={"organization": organization}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        changed_fields = list(serializer.validated_data)
+        subscription = serializer.save()
+        record_company_timeline_event(
+            company=subscription.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.SERVICE,
+            event_type=CompanyTimelineEvent.EventType.SERVICE_UPDATED,
+            source_type="subscription",
+            source_id=subscription.id,
+            details={
+                "subscription_name": subscription.name,
+                "fields": changed_fields,
+            },
+        )
         return Response(serializer.data)
 
 
@@ -147,6 +176,51 @@ class SubscriptionCancelAPIView(APIView):
         subscription = cancel_subscription(
             subscription=subscription, immediate=mode == "immediate"
         )
+        record_company_timeline_event(
+            company=subscription.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.SERVICE,
+            event_type=CompanyTimelineEvent.EventType.SERVICE_STATUS_CHANGED,
+            source_type="subscription",
+            source_id=subscription.id,
+            details={
+                "subscription_name": subscription.name,
+                "to_status": subscription.status,
+            },
+        )
+        return Response(CustomerSubscriptionSerializer(subscription).data)
+
+
+class SubscriptionPauseAPIView(APIView):
+    serializer_class = CustomerSubscriptionSerializer
+
+    def post(self, request, organization_id, subscription_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        subscription = get_object_or_404(
+            CustomerSubscription, organization=organization, id=subscription_id
+        )
+        if subscription.effective_status != CustomerSubscription.Status.ACTIVE:
+            return Response(
+                {"status": ["Only an active customer service can be paused."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        subscription = pause_subscription(subscription=subscription)
+        record_company_timeline_event(
+            company=subscription.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.SERVICE,
+            event_type=CompanyTimelineEvent.EventType.SERVICE_STATUS_CHANGED,
+            source_type="subscription",
+            source_id=subscription.id,
+            details={
+                "subscription_name": subscription.name,
+                "to_status": subscription.status,
+            },
+        )
         return Response(CustomerSubscriptionSerializer(subscription).data)
 
 
@@ -166,6 +240,18 @@ class SubscriptionResumeAPIView(APIView):
             subscription = resume_subscription(subscription=subscription)
         except ValueError as error:
             return Response({"status": [str(error)]}, status=status.HTTP_400_BAD_REQUEST)
+        record_company_timeline_event(
+            company=subscription.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.SERVICE,
+            event_type=CompanyTimelineEvent.EventType.SERVICE_STATUS_CHANGED,
+            source_type="subscription",
+            source_id=subscription.id,
+            details={
+                "subscription_name": subscription.name,
+                "to_status": subscription.status,
+            },
+        )
         return Response(CustomerSubscriptionSerializer(subscription).data)
 
 

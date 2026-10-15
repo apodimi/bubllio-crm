@@ -116,9 +116,8 @@ export function BackupStatusPanel() {
             <Box sx={{ pt: 1 }}>
               <Typography variant="subtitle2">Keep a local copy of your business data</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
-                Download workspaces, members, companies, contacts, automations, and non-secret
-                settings as a JSON file. Passwords, sign-in tokens, and saved email passwords are
-                excluded.
+                Download workspaces, members, companies, contacts, and non-secret settings as a JSON
+                file. Passwords, sign-in tokens, and saved email passwords are excluded.
               </Typography>
               <Button
                 variant="outlined"
@@ -133,7 +132,9 @@ export function BackupStatusPanel() {
               </Typography>
             </Box>
             {dataExport.isSuccess && (
-              <Alert severity="success">The data export was downloaded and recorded in the access history.</Alert>
+              <Alert severity="success">
+                The data export was downloaded and recorded in the access history.
+              </Alert>
             )}
             {dataExport.isError && (
               <Alert severity="error">We could not prepare the data export. Try again.</Alert>

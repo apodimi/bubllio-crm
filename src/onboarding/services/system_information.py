@@ -1,17 +1,13 @@
 import platform
-from importlib.metadata import PackageNotFoundError, version
 from urllib.parse import urlsplit
 
 import django
 from django.conf import settings
 
+from bubllio_crm.release import current_version
+
 
 def get_system_information():
-    try:
-        application_version = version("bubllio-crm")
-    except PackageNotFoundError:
-        application_version = "development"
-
     engine = settings.DATABASES["default"]["ENGINE"]
     database_name = {
         "django.db.backends.sqlite3": "SQLite",
@@ -26,7 +22,7 @@ def get_system_information():
     public_origin = f"{public_url.scheme}://{public_url.netloc}" if public_url.netloc else ""
 
     return {
-        "application_version": application_version,
+        "application_version": current_version(),
         "python_version": platform.python_version(),
         "django_version": django.get_version(),
         "database": database_name,

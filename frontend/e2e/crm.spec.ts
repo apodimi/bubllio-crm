@@ -6,6 +6,20 @@ const orgs = [
 ]
 async function mockApi(page: Page) {
   const tasks: Array<Record<string, unknown>> = []
+  let lastCompletedTask: Record<string, unknown> | null = null
+  const timelineEvents = [
+    {
+      id: 'timeline-company-created',
+      category: 'company',
+      event_type: 'company.created',
+      source_type: 'company',
+      source_id: 'co-a',
+      actor_name: 'Demo User',
+      body: '',
+      details: {},
+      occurred_at: '2030-01-01T09:00:00Z',
+    },
+  ]
   const subscriptions = [
     {
       id: 'sub-a',
@@ -61,6 +75,19 @@ async function mockApi(page: Page) {
       updated_at: '2030-01-01T00:00:00Z',
     },
   ]
+  const invitations = [
+    {
+      id: 'invite-overview',
+      email: 'new.member@example.com',
+      role: 'member',
+      status: 'pending',
+      invited_by: 'Demo User',
+      created_at: '2030-01-01T00:00:00Z',
+      expires_at: '2030-01-08T00:00:00Z',
+      accepted_at: null,
+      revoked_at: null,
+    },
+  ]
   await page.route('**/api/v1/**', async (route) => {
     const path = new URL(route.request().url()).pathname
     if (path === '/api/v1/setup/' && route.request().method() === 'GET') {
@@ -95,6 +122,16 @@ async function mockApi(page: Page) {
           return route.fulfill({ status: 400, json: { name: ['Please choose another name.'] } })
         companies.push({ ...body, id: 'co-new', organization: 'alpha' })
         return route.fulfill({ status: 201, json: companies[companies.length - 1] })
+      }
+      const params = new URL(route.request().url()).searchParams
+      if (params.has('page')) {
+        const offset = (Number(params.get('page')) - 1) * 50
+        const rows = companies.filter((item) =>
+          item.name.toLowerCase().includes((params.get('search') ?? '').toLowerCase()),
+        )
+        return route.fulfill({
+          json: { count: rows.length, results: rows.slice(offset, offset + 50) },
+        })
       }
       return route.fulfill({ json: companies })
     }
@@ -144,8 +181,21 @@ async function mockApi(page: Page) {
         completed_at: '2030-01-01T10:00:00Z',
         completed_by_name: 'Demo User',
       }
+      lastCompletedTask = completedTask
       tasks.splice(0, 1)
       return route.fulfill({ json: completedTask })
+    }
+    if (path === '/api/v1/organizations/alpha/tasks/task-a/reopen/' && lastCompletedTask) {
+      const reopenedTask = {
+        ...lastCompletedTask,
+        workflow_status: 'todo',
+        effective_status: 'open',
+        completed_at: null,
+        completed_by_name: '',
+      }
+      tasks.push(reopenedTask)
+      lastCompletedTask = null
+      return route.fulfill({ json: reopenedTask })
     }
     if (path === '/api/v1/organizations/alpha/services/overview/') {
       return route.fulfill({
@@ -184,7 +234,10 @@ async function mockApi(page: Page) {
     if (path === '/api/v1/organizations/alpha/services/charges/') {
       return route.fulfill({ json: [] })
     }
-    if (path === '/api/v1/organizations/alpha/services/subscriptions/sub-a/cancel/') {
+    if (path === '/api/v1/organizations/alpha/invitations/') {
+      return route.fulfill({ json: invitations })
+    }
+    if (path === '/api/v1/organizations/alpha/services/subscriptions/sub-a/end/') {
       subscriptions[0] = {
         ...subscriptions[0],
         status: 'cancelling',
@@ -204,6 +257,36 @@ async function mockApi(page: Page) {
       }
       return route.fulfill({ json: subscriptions[0] })
     }
+    if (path.endsWith('/companies/summary/')) {
+      return route.fulfill({
+        json: {
+          companies: path.includes('/alpha/') ? companies.length : 1,
+          contacts: 0,
+        },
+      })
+    }
+    if (path === '/api/v1/organizations/alpha/companies/co-a/timeline/') {
+      if (route.request().method() === 'POST') {
+        const event = {
+          id: `timeline-note-${timelineEvents.length}`,
+          category: 'note',
+          event_type: 'note.added',
+          source_type: 'company',
+          source_id: 'co-a',
+          actor_name: 'Demo User',
+          body: route.request().postDataJSON().body,
+          details: {},
+          occurred_at: '2030-01-02T10:00:00Z',
+        }
+        timelineEvents.unshift(event)
+        return route.fulfill({ status: 201, json: event })
+      }
+      const category = new URL(route.request().url()).searchParams.get('category')
+      const rows = category
+        ? timelineEvents.filter((event) => event.category === category)
+        : timelineEvents
+      return route.fulfill({ json: { count: rows.length, results: rows } })
+    }
     if (path.startsWith('/api/v1/organizations/alpha/companies/')) {
       const companyId = path.split('/').at(-2)
       const index = companies.findIndex((company) => company.id === companyId)
@@ -218,15 +301,22 @@ async function mockApi(page: Page) {
       }
       return route.fulfill({ json: companies[index] })
     }
-    if (path === '/api/v1/organizations/beta/companies/')
+    if (path === '/api/v1/organizations/beta/companies/') {
+      const rows = [{ ...companies[0], id: 'co-b', organization: 'beta', name: 'Beta Only' }]
       return route.fulfill({
-        json: [{ ...companies[0], id: 'co-b', organization: 'beta', name: 'Beta Only' }],
+        json: new URL(route.request().url()).searchParams.has('page')
+          ? { count: 1, results: rows }
+          : rows,
       })
+    }
     if (path === '/api/v1/organizations/alpha/contacts/' && route.request().method() === 'POST')
       return route.fulfill({
         status: 201,
         json: { id: 'contact-a', ...route.request().postDataJSON() },
       })
+    if (path.endsWith('/contacts/') && new URL(route.request().url()).searchParams.has('page')) {
+      return route.fulfill({ json: { count: 0, results: [] } })
+    }
     return route.fulfill({ json: [] })
   })
 }
@@ -239,7 +329,7 @@ async function login(page: Page) {
 }
 async function openAlpha(page: Page) {
   await page.getByRole('link', { name: /Alpha Studio.*Open workspace/ }).click()
-  await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Alpha Studio', exact: true })).toBeVisible()
 }
 test.beforeEach(async ({ page }) => mockApi(page))
 test('login, tenant switch, permissions and logout isolate data', async ({ page }) => {
@@ -249,8 +339,8 @@ test('login, tenant switch, permissions and logout isolate data', async ({ page 
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
   await expect(page.getByRole('row', { name: /Open Acme Ltd/ })).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('companies-desktop.png'), fullPage: true })
-  await page.getByRole('combobox', { name: 'Select workspace' }).click()
-  await page.getByRole('option', { name: 'Beta Studio' }).click()
+  await page.getByRole('button', { name: 'Select workspace' }).click()
+  await page.getByRole('menuitem', { name: 'Beta Studio' }).click()
   await page.getByRole('link', { name: 'Companies', exact: true }).click()
   await expect(page.getByRole('row', { name: /Open Beta Only/ })).toBeVisible()
   await expect(page.getByRole('row', { name: /Open Acme Ltd/ })).toHaveCount(0)
@@ -356,6 +446,130 @@ test('closing the stage menu never flashes owner options', async ({ page }) => {
   expect(await page.locator('body').getAttribute('data-owner-option-flashed')).toBe('false')
 })
 
+test('company pages reset on debounced search and render bounded rows', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  const searches: string[] = []
+  await page.route('**/organizations/alpha/companies/?**', async (route) => {
+    const params = new URL(route.request().url()).searchParams
+    const search = params.get('search') ?? ''
+    if (search) searches.push(search)
+    const offset = (Number(params.get('page')) - 1) * 50
+    const all = Array.from({ length: 51 }, (_, index) => ({
+      id: `co-${index}`,
+      customer_code: `CUS-${index}`,
+      name: `Customer ${index}`,
+      lifecycle_stage: 'lead',
+      assigned_to: null,
+    }))
+    const rows = all.filter((row) => row.name.toLowerCase().includes(search.toLowerCase()))
+    await route.fulfill({ json: { count: rows.length, results: rows.slice(offset, offset + 50) } })
+  })
+  await page.getByRole('link', { name: 'Companies', exact: true }).click()
+  await expect(page.getByText('1–50 of 51')).toBeVisible()
+  await page.getByRole('button', { name: 'Next page' }).click()
+  await expect(page.getByText('51–51 of 51')).toBeVisible()
+  const search = page.getByRole('textbox', { name: /Search/ })
+  await search.pressSequentially('Customer 1', { delay: 20 })
+  await expect(page.getByText('1–11 of 11')).toBeVisible()
+  expect(searches).toEqual(['Customer 1'])
+})
+
+test('dashboard avoids list downloads and catalog avoids billing requests', async ({ page }) => {
+  await login(page)
+  const requests: string[] = []
+  page.on('request', (request) => requests.push(new URL(request.url()).pathname))
+  await openAlpha(page)
+  await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+  expect(requests.filter((path) => /\/(companies|contacts)\/$/.test(path))).toEqual([])
+  await page.goto('/organizations/alpha/services/catalog')
+  await expect(page.getByRole('heading', { name: 'Service catalog', exact: true })).toBeVisible()
+  expect(requests.filter((path) => /\/services\/(charges|subscriptions)\/$/.test(path))).toEqual([])
+})
+
+test('dashboard puts daily work first and supports completion with undo', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  const openTasks = page.getByRole('link', { name: 'Open tasks', exact: true })
+  const addCompany = page.getByRole('link', { name: 'Add company', exact: true })
+  await expect(openTasks).toHaveAttribute('href', '/organizations/alpha/tasks?create=true')
+  await expect(addCompany).toHaveAttribute('href', '/organizations/alpha/companies?create=true')
+  await openTasks.click()
+  await expect(page.getByRole('heading', { name: 'Add next action' })).toBeVisible()
+  await page.getByLabel('What needs to happen?').fill('Call about renewal')
+  await page.getByRole('combobox', { name: 'Company' }).click()
+  await page.getByRole('option', { name: 'Acme Ltd' }).click()
+  await page.getByRole('combobox', { name: 'Owner' }).click()
+  await page.getByRole('option', { name: 'Demo User' }).click()
+  await page.getByRole('button', { name: 'Add task', exact: true }).click()
+  await page.getByRole('link', { name: 'Overview', exact: true }).click()
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    /Welcome back\.\s*Move one thing forward\./,
+  )
+  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText('Next best action')
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+    'Next best action',
+    'Needs attention',
+    'My day',
+    'Business pulse',
+    'Workspace at a glance',
+    'Pending invitations',
+  ])
+  await expect(page.getByText('1 people are still waiting to join.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Manage invitations' })).toHaveAttribute(
+    'href',
+    '/organizations/alpha/members',
+  )
+  const desktopNextBox = await page
+    .getByRole('heading', { name: 'Next best action', level: 2 })
+    .boundingBox()
+  const desktopDayBox = await page.getByRole('heading', { name: 'My day', level: 2 }).boundingBox()
+  const desktopPulseBox = await page
+    .getByRole('heading', { name: 'Business pulse', level: 2 })
+    .boundingBox()
+  expect(desktopNextBox?.y).toBeLessThan(desktopDayBox?.y ?? 0)
+  expect(desktopDayBox?.y).toBeLessThan(desktopPulseBox?.y ?? 0)
+  await page.screenshot({
+    path: test.info().outputPath('operations-board-desktop.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
+  await page.getByRole('checkbox', { name: 'Complete Call about renewal' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Complete Call about renewal' })).toHaveCount(0)
+  await expect(page.getByText('Call about renewal completed.')).toBeVisible()
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Complete Call about renewal' })).toBeVisible()
+
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.reload()
+  const nextBox = await page
+    .getByRole('heading', { name: 'Next best action', level: 2 })
+    .boundingBox()
+  const attentionBox = await page
+    .getByRole('heading', { name: 'Needs attention', level: 2 })
+    .boundingBox()
+  const dayBox = await page.getByRole('heading', { name: 'My day', level: 2 }).boundingBox()
+  const pulseBox = await page
+    .getByRole('heading', { name: 'Business pulse', level: 2 })
+    .boundingBox()
+  const overviewBox = await page
+    .getByRole('region', { name: 'Workspace at a glance' })
+    .boundingBox()
+  expect(nextBox?.y).toBeLessThan(attentionBox?.y ?? 0)
+  expect(attentionBox?.y).toBeLessThan(dayBox?.y ?? 0)
+  expect(dayBox?.y).toBeLessThan(pulseBox?.y ?? 0)
+  expect(pulseBox?.y).toBeLessThan(overviewBox?.y ?? 0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  await page.screenshot({
+    path: test.info().outputPath('operations-board-mobile.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
+})
+
 test('edits a company', async ({ page }) => {
   await login(page)
   await openAlpha(page)
@@ -370,6 +584,41 @@ test('edits a company', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Change stage for Acme Partner' })).toHaveText(
     'customer',
   )
+})
+
+test('adds customer context to the company timeline', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  await page.goto('/organizations/alpha/companies/co-a')
+
+  await expect(page.getByRole('heading', { name: 'Customer timeline' })).toBeVisible()
+  await page.getByLabel('Add a note').fill('Customer approved the proposal review for Friday.')
+  const noteRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/timeline/'),
+  )
+  await page.getByRole('button', { name: 'Add note', exact: true }).click()
+
+  expect((await noteRequest).postDataJSON()).toEqual({
+    body: 'Customer approved the proposal review for Friday.',
+  })
+  await expect(page.getByText('Customer approved the proposal review for Friday.')).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('customer-timeline-desktop.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Customer timeline' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
+  await page.screenshot({
+    path: test.info().outputPath('customer-timeline-mobile.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
 })
 test('contact creation uses a company from the selected workspace', async ({ page }) => {
   await login(page)
@@ -393,17 +642,29 @@ test('subscription cancellation remains active through the paid period and can r
 }) => {
   await login(page)
   await openAlpha(page)
-  await expect(page.getByText('Revenue & collections')).toBeVisible()
-  await expect(page.getByText('248.00 EUR')).toBeVisible()
-  await page.getByRole('link', { name: 'Services', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+  const servicesTree = page.getByRole('tree', { name: 'Services' })
+  await expect(servicesTree).toBeVisible()
+  await servicesTree.getByText('Services', { exact: true }).click()
+  await expect(servicesTree.getByText('Customer services', { exact: true })).toBeVisible()
+  await servicesTree.getByText('Customer services', { exact: true }).click()
+  await expect(page).toHaveURL('/organizations/alpha/services/customer-services')
+  await expect(
+    servicesTree.getByRole('treeitem', { name: 'Customer services', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true')
+  await page.screenshot({
+    path: test.info().outputPath('services-secondary-navigation.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.getByRole('button', { name: 'Edit Managed service' }).click()
-  await page.getByRole('button', { name: 'Cancel subscription…' }).click()
+  await page.getByRole('button', { name: 'End customer service…' }).click()
   const cancellationRequest = page.waitForRequest((request) =>
-    request.url().endsWith('/subscriptions/sub-a/cancel/'),
+    request.url().endsWith('/subscriptions/sub-a/end/'),
   )
-  await page.getByRole('button', { name: 'Cancel at period end' }).click()
+  await page.getByRole('button', { name: 'End at period close' }).click()
   expect((await cancellationRequest).postDataJSON()).toEqual({ mode: 'end_of_period' })
-  await expect(page.getByText('Ending at period close')).toBeVisible()
+  await expect(page.getByText('Ending at period close', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Edit Managed service' }).click()
   await expect(page.getByText(/Service remains active through/)).toBeVisible()
   await page.getByRole('button', { name: 'Keep active' }).click()
@@ -520,13 +781,47 @@ test('mobile navigation works without horizontal overflow', async ({ page }) => 
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page)
   await openAlpha(page)
+  const mobileDock = page.getByRole('navigation', { name: 'Primary navigation' })
+  await mobileDock.getByRole('button', { name: 'Services', exact: true }).click()
+  await expect(page).toHaveURL('/organizations/alpha/services/customer-services')
+  await expect(page.getByRole('heading', { name: 'Customer services', exact: true })).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('navigation-mobile-dock.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.getByRole('button', { name: 'Open navigation' }).click()
+  await page.screenshot({
+    path: test.info().outputPath('navigation-mobile.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.getByRole('link', { name: 'Contacts', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
   await page.screenshot({ path: test.info().outputPath('contacts-mobile.png'), fullPage: true })
+})
+test('desktop navigation collapses to a usable icon rail', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  await expect(page.getByRole('button', { name: 'Collapse navigation' })).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('dashboard-expanded-navigation.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
+  await page.getByRole('link', { name: 'Companies', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Companies', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Collapse navigation' }).click()
+  await expect(page.getByRole('button', { name: 'Expand navigation' })).toBeVisible()
+  await page.getByRole('button', { name: 'Expand navigation' }).click()
+  await expect(
+    page.getByRole('navigation', { name: 'Primary navigation' }).getByText('Companies', {
+      exact: true,
+    }),
+  ).toBeVisible()
 })
 test('invalid login remains on the sign-in screen', async ({ page }) => {
   await page.route('**/api/v1/auth/token/', (route) =>
@@ -739,8 +1034,11 @@ test('workspace owner sees pending invitations on the dashboard', async ({ page 
   await login(page)
   await openAlpha(page)
   await expect(page.getByRole('heading', { name: 'Pending invitations' })).toBeVisible()
-  await expect(page.getByText('waiting@example.com')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Manage invitations' })).toBeVisible()
+  await expect(page.getByText('1 people are still waiting to join.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Manage invitations' })).toHaveAttribute(
+    'href',
+    '/organizations/alpha/members',
+  )
 })
 
 test('workspace owner can filter, resend, and revoke invitations', async ({ page }) => {
@@ -872,10 +1170,180 @@ test('installation admin sees a new release banner', async ({ page }) => {
 
   const banner = page.getByRole('alert').filter({ hasText: 'Bubllio CRM 0.2.0 is available' })
   await expect(banner).toContainText('You are running 0.1.0')
-  await expect(banner.getByRole('link', { name: 'View release' })).toHaveAttribute(
+  await expect(banner.getByRole('link', { name: 'Open update center' })).toHaveAttribute(
+    'href',
+    '/account/settings#update-center',
+  )
+})
+
+test('installation admin preflights and confirms a maintenance update', async ({
+  page,
+}, testInfo) => {
+  await page.route('**/api/v1/auth/me/', (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: 'first-admin',
+        email: 'admin@example.com',
+        is_superuser: true,
+        organizations: orgs,
+      },
+    }),
+  )
+  await page.route('**/api/v1/auth/me/settings/', (route) =>
+    route.fulfill({
+      json: {
+        username: 'first-admin',
+        email: 'admin@example.com',
+        display_name: 'First Admin',
+        first_name: 'First',
+        last_name: 'Admin',
+        marketing_consent: false,
+      },
+    }),
+  )
+  await page.route('**/api/v1/organizations/installation-settings/', (route) =>
+    route.fulfill({
+      json: { smtp: null, configured: false, allow_personal_workspaces: false },
+    }),
+  )
+  await page.route('**/api/v1/organizations/installation-admin-invitations/', (route) =>
+    route.fulfill({ json: { administrators: [], invitations: [] } }),
+  )
+  await page.route('**/api/v1/organizations/workspace-creators/', (route) =>
+    route.fulfill({ json: [] }),
+  )
+  await page.route('**/api/v1/installation/production-readiness/', (route) =>
+    route.fulfill({ json: { ready: true, passed: 0, total: 0, checks: [] } }),
+  )
+  await page.route('**/api/v1/installation/system-information/', (route) =>
+    route.fulfill({
+      json: {
+        application_version: '0.1.0',
+        python_version: '3.13.0',
+        django_version: '6.0.7',
+        database: 'PostgreSQL',
+        email_delivery: 'Configured backend',
+        debug_enabled: false,
+        update_check_enabled: true,
+        public_url: 'https://crm.example.com',
+        runtime: 'Linux',
+      },
+    }),
+  )
+  await page.route('**/api/v1/installation/audit-log/', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v1/installation/backup-status/', (route) =>
+    route.fulfill({
+      json: {
+        backup: { status: 'current', completed_at: '2030-01-01T09:00:00Z' },
+        restore_test: { status: 'current', completed_at: '2030-01-01T09:00:00Z' },
+        backup_max_age_hours: 24,
+        restore_test_max_age_days: 90,
+      },
+    }),
+  )
+  await page.route('**/api/v1/installation/updates/status/', (route) =>
+    route.fulfill({
+      json: {
+        enabled: true,
+        connected: true,
+        current_version: '0.1.0',
+        latest_version: '0.2.0',
+        update_available: true,
+        release_name: 'Bubllio CRM 0.2.0',
+        release_url: 'https://github.com/apodimi/bubllio-crm/releases/tag/v0.2.0',
+        published_at: '2030-01-01T08:00:00Z',
+        active_run: null,
+        latest_run: {
+          id: 'completed-run',
+          target_version: '0.1.0',
+          status: 'succeeded',
+          progress: 100,
+          phase_label: 'Update verified',
+          migration_policy: 'online_safe',
+          failure_code: null,
+          failure_message: null,
+          requested_at: '2029-12-01T10:00:00Z',
+          started_at: '2029-12-01T10:00:01Z',
+          finished_at: '2029-12-01T10:02:00Z',
+          updated_at: '2029-12-01T10:02:00Z',
+          events: [
+            {
+              id: 1,
+              action: 'requested',
+              actor: 'first-admin',
+              details: { target_version: '0.1.0', secret: 'never-render-this' },
+              created_at: '2029-12-01T10:00:00Z',
+            },
+            {
+              id: 2,
+              action: 'provider_specific_event',
+              actor: null,
+              details: { token: 'also-never-render-this' },
+              created_at: '2029-12-01T10:01:00Z',
+            },
+          ],
+        },
+        preflight: null,
+      },
+    }),
+  )
+  await page.route('**/api/v1/installation/updates/preflight/', (route) =>
+    route.fulfill({
+      json: {
+        target_version: '0.2.0',
+        eligible: true,
+        migration_policy: 'maintenance',
+        manifest: {
+          version: '0.2.0',
+        },
+        checks: [
+          {
+            key: 'backup',
+            status: 'pass',
+            label: 'Recent backup verified',
+            guidance: 'Backup evidence was reported by the update runner.',
+          },
+          {
+            key: 'restore',
+            status: 'warning',
+            label: 'Recovery rehearsal reviewed',
+            guidance: 'Schedule another recovery rehearsal after this release.',
+          },
+        ],
+      },
+    }),
+  )
+
+  await login(page)
+  await page.getByRole('button', { name: 'Open account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Account settings' }).click()
+
+  const center = page.locator('#update-center')
+  await expect(center.getByRole('heading', { name: 'Update center' })).toBeVisible()
+  await expect(center.getByText('0.1.0')).toBeVisible()
+  await expect(center.getByText('0.2.0')).toBeVisible()
+  await expect(center.getByText('Update requested')).toBeVisible()
+  await expect(center.getByText('Update activity recorded')).toBeVisible()
+  await expect(center).not.toContainText('never-render-this')
+  await expect(center).not.toContainText('also-never-render-this')
+  await center.getByRole('button', { name: 'Run safety checks' }).click()
+  await expect(center.getByText('Recent backup verified')).toBeVisible()
+  await expect(center.getByText('Maintenance window')).toBeVisible()
+  await center.screenshot({ path: testInfo.outputPath('update-center-desktop.png') })
+  await center.getByRole('button', { name: 'Review and continue' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Confirm update to 0.2.0' })
+  const guideLink = dialog.getByRole('link', { name: 'Open maintenance guide' })
+  await expect(guideLink).toHaveAttribute('aria-disabled', 'true')
+  await dialog.getByLabel('Type 0.2.0 to confirm').fill('0.2.0')
+  await expect(guideLink).toHaveAttribute(
     'href',
     'https://github.com/apodimi/bubllio-crm/releases/tag/v0.2.0',
   )
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await center.screenshot({ path: testInfo.outputPath('update-center-mobile.png') })
 })
 
 test('installation admin can review production readiness checks', async ({ page }) => {
@@ -1016,7 +1484,7 @@ test('invite-only registration creates an account and opens the invited workspac
   await page.getByLabel('Password').fill('a-strong-unique-password-4938')
   await page.getByRole('button', { name: 'Create account and join' }).click()
   await expect(page).toHaveURL('/organizations/alpha')
-  await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Move one thing forward/ })).toBeVisible()
 })
 
 test('existing account signs in and accepts a workspace invitation', async ({ page }) => {
@@ -1044,5 +1512,5 @@ test('existing account signs in and accepts a workspace invitation', async ({ pa
   await page.getByLabel('Password').fill('password')
   await page.getByRole('button', { name: 'Sign in and join' }).click()
   await expect(page).toHaveURL('/organizations/alpha')
-  await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Move one thing forward/ })).toBeVisible()
 })

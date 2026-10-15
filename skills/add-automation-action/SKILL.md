@@ -5,7 +5,8 @@ description: Add a Bubllio CRM automation action with configuration validation, 
 
 # Add an Automation Action
 
-Read `docs/architecture/automations.md`. For email actions, also read
+This workflow is roadmap-only. Read `docs/architecture/automation-roadmap.md` and
+re-establish an approved architecture first. For email actions, also read
 `docs/architecture/email-adapters.md` and preserve its provider boundary.
 
 ## Contract and execution

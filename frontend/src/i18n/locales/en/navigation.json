@@ -5,14 +5,28 @@
   "deals": "Deals",
   "tasks": "Tasks",
   "services": "Services",
-  "automations": "Automations",
+  "servicesNavigation": "Services navigation",
   "people": "People",
   "settings": "Settings",
   "accountSettings": "Account settings",
   "accountMenu": "Account menu",
   "openAccountMenu": "Open account menu",
   "openNavigation": "Open navigation",
+  "primaryNavigation": "Primary navigation",
+  "workspaceAreas": "Workspace areas",
+  "collapseNavigation": "Collapse navigation",
+  "expandNavigation": "Expand navigation",
   "signOut": "Sign out",
   "installationAdministrator": "Installation administrator",
-  "workspaceMember": "Workspace member"
+  "workspaceMember": "Workspace member",
+  "customerServices": "Customer services",
+  "billing": "Billing",
+  "catalog": "Catalog",
+  "groups": {
+    "home": "Home",
+    "relationships": "Relationships",
+    "work": "Work",
+    "operations": "Operations",
+    "workspace": "Workspace"
+  }
 }

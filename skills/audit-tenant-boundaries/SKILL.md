@@ -23,8 +23,8 @@ Trace each organization-owned operation from its public entry point to storage:
    UUID alone is not authorization.
 4. Derive ownership server-side. Reject or ignore client-supplied organization,
    membership, sender-account, parent-company, or similar ownership fields.
-5. Validate related objects against the same organization, including automation
-   actions, email accounts, contacts, companies, invitations, and runs.
+5. Validate related objects against the same organization, including email
+   accounts, contacts, companies, subscriptions, invitations, and tasks.
 6. Check services, signals, execution hooks, admin paths, and error branches;
    authorization in the view does not protect an independently callable service.
 7. In the frontend, include organization ID in tenant URLs and TanStack Query
@@ -35,7 +35,7 @@ Trace each organization-owned operation from its public entry point to storage:
 
 Look for direct-object-reference attacks, guessed UUIDs, foreign organization IDs
 in request bodies, role escalation, owner removal or transfer bypasses, replayed
-or cross-tenant invitations, and cross-tenant automation or SMTP references.
+or cross-tenant invitations, and cross-tenant task or SMTP references.
 
 Require regression tests that use at least two organizations and prove both the
 allowed path and the denied cross-tenant path. Prefer the public API seam over

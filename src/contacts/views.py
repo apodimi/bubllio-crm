@@ -1,11 +1,13 @@
 from uuid import UUID
 
 from django.db.models import Q
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from bubllio_crm.pagination import collection_response
 from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
@@ -14,8 +16,37 @@ from .models import Contact, ContactActivity
 from .serializers import ContactActivitySerializer, ContactSerializer
 
 
+@transaction.atomic
 def record_contact_activity(*, contact, actor, action, details=None):
-    return ContactActivity.objects.create(organization=contact.organization, contact=contact, actor=actor, action=action, details=details or {})
+    event_details = details or {}
+    activity = ContactActivity.objects.create(
+        organization=contact.organization,
+        contact=contact,
+        actor=actor,
+        action=action,
+        details=event_details,
+    )
+    if action != ContactActivity.Action.CREATED:
+        from companies.models import CompanyTimelineEvent
+        from companies.services import record_company_timeline_event
+
+        event_types = {
+            ContactActivity.Action.UPDATED: CompanyTimelineEvent.EventType.CONTACT_UPDATED,
+            ContactActivity.Action.ASSIGNED: CompanyTimelineEvent.EventType.CONTACT_ASSIGNED,
+            ContactActivity.Action.ARCHIVED: CompanyTimelineEvent.EventType.CONTACT_ARCHIVED,
+            ContactActivity.Action.RESTORED: CompanyTimelineEvent.EventType.CONTACT_RESTORED,
+        }
+        record_company_timeline_event(
+            company=contact.company,
+            actor=actor,
+            category=CompanyTimelineEvent.Category.CONTACT,
+            event_type=event_types[action],
+            source_type="contact",
+            source_id=contact.id,
+            details={"contact_name": str(contact), **event_details},
+            occurred_at=activity.created_at,
+        )
+    return activity
 
 
 class ContactListCreateAPIView(APIView):
@@ -59,8 +90,7 @@ class ContactListCreateAPIView(APIView):
                 )
             contacts = contacts.filter(company_id=company_id)
 
-        serializer = ContactSerializer(contacts, many=True)
-        return Response(serializer.data)
+        return collection_response(request, contacts.order_by("last_name", "first_name", "id"), ContactSerializer)
 
     def post(self, request, organization_id):
         organization = get_organization_for_user(

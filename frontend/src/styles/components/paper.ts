@@ -8,8 +8,11 @@ export const paper: Components<Theme>['MuiPaper'] = {
     outlined: ({ theme }) => ({
       borderColor: theme.palette.divider,
       boxShadow: 'none',
-      borderRadius: brand.shape.borderRadius * 1.25,
+      borderRadius: brand.shape.borderRadius,
       overflow: 'hidden',
+      transition: theme.transitions.create('border-color', {
+        duration: theme.transitions.duration.shorter,
+      }),
     }),
   },
 }

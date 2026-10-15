@@ -17,6 +17,8 @@ MAX_ATTEMPTS = 6
 def _claim(message_id):
     with transaction.atomic():
         message = OutboxMessage.objects.select_for_update().get(id=message_id)
+        if message.kind == OutboxMessage.Kind.AUTOMATION_RUN:
+            return None
         if message.status in {OutboxMessage.Status.SENT, OutboxMessage.Status.FAILED}:
             return None
         if (
@@ -37,8 +39,6 @@ def _claim(message_id):
 
 def _send(message):
     from access.services.invitations import invitation_email_account
-    from automations.services import execute_automation_run
-    from automations.models import AutomationRun
     from organizations.models import (
         EmailAccount,
         InstallationAdminInvitation,
@@ -104,10 +104,6 @@ def _send(message):
         account = EmailAccount.objects.filter(id=account_id, is_active=True).first()
         send_password_reset_email(account=account, recipient=user.email, reset_url=reset_url)
         return
-    if message.kind == OutboxMessage.Kind.AUTOMATION_RUN:
-        run = AutomationRun.objects.select_related("automation").get(id=payload["run_id"])
-        execute_automation_run(run)
-        return
     raise RuntimeError(f"Unsupported outbox message kind: {message.kind}")
 
 
@@ -146,9 +142,13 @@ def dispatch_pending_outbox():
         status=OutboxMessage.Status.PROCESSING,
         locked_at__lt=stale_before,
     ).update(status=OutboxMessage.Status.QUEUED, locked_at=None)
-    message_ids = list(OutboxMessage.objects.filter(
-        status=OutboxMessage.Status.QUEUED,
-        available_at__lte=timezone.now(),
-    ).values_list("id", flat=True)[:500])
+    message_ids = list(
+        OutboxMessage.objects.filter(
+            status=OutboxMessage.Status.QUEUED,
+            available_at__lte=timezone.now(),
+        )
+        .exclude(kind=OutboxMessage.Kind.AUTOMATION_RUN)
+        .values_list("id", flat=True)[:500]
+    )
     for message_id in message_ids:
         deliver_outbox_message.delay(str(message_id))

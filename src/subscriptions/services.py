@@ -3,8 +3,12 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce, Greatest
 from django.utils import timezone
+
+from companies.models import CompanyTimelineEvent
+from companies.services import record_company_timeline_event
 
 from .models import Charge, CustomerSubscription, Payment, ServiceCatalogItem
 
@@ -81,6 +85,19 @@ def record_payment(*, charge, amount, paid_date, payment_method, external_refere
             subscription.next_billing_date = next_date
             subscription.save(update_fields=("next_billing_date", "updated_at"))
             ensure_charge(subscription, next_date)
+    record_company_timeline_event(
+        company=subscription.company,
+        actor=recorded_by,
+        category=CompanyTimelineEvent.Category.PAYMENT,
+        event_type=CompanyTimelineEvent.EventType.PAYMENT_RECORDED,
+        source_type="payment",
+        source_id=payment.id,
+        details={
+            "subscription_name": subscription.name,
+            "amount": str(payment.amount),
+            "currency": charge.currency,
+        },
+    )
     return payment
 
 
@@ -199,30 +216,36 @@ def subscription_overview(organization):
         paid_date__lte=today,
     )
 
-    open_balances = {}
-    overdue_balances = {}
+    money = DecimalField(max_digits=20, decimal_places=2)
+    zero = Value(Decimal("0.00"), output_field=money)
+    paid = Payment.objects.filter(charge_id=OuterRef("pk")).order_by().values("charge_id").annotate(total=Sum("amount")).values("total")
+    balances = charges.order_by().annotate(
+        balance=Greatest(F("gross_amount") - Coalesce(Subquery(paid, output_field=money), zero), zero)
+    ).filter(balance__gt=0).values("currency").annotate(
+        total=Sum("balance"),
+        overdue=Sum("balance", filter=Q(due_date__lt=today)),
+        overdue_count=Count("pk", filter=Q(due_date__lt=today)),
+    )
+    open_balances, overdue_balances = {}, {}
     overdue_count = 0
-    for charge in charges.prefetch_related("payments"):
-        outstanding = charge.outstanding_amount
-        if outstanding <= 0:
-            continue
-        open_balances[charge.currency] = open_balances.get(charge.currency, 0) + outstanding
-        if charge.due_date < today:
-            overdue_count += 1
-            overdue_balances[charge.currency] = overdue_balances.get(charge.currency, 0) + outstanding
+    for row in balances:
+        open_balances[row["currency"]] = row["total"]
+        if row["overdue_count"]:
+            overdue_balances[row["currency"]] = row["overdue"]
+            overdue_count += row["overdue_count"]
 
     collected = {
         row["charge__currency"]: row["total"]
         for row in payments.values("charge__currency").annotate(total=Sum("amount"))
     }
     recurring_revenue = {}
-    for subscription in active.exclude(
+    for row in active.exclude(
         billing_interval=ServiceCatalogItem.BillingInterval.ONE_OFF
-    ):
-        months = INTERVAL_MONTHS[subscription.billing_interval]
-        monthly = subscription.net_price / months
-        recurring_revenue[subscription.currency] = (
-            recurring_revenue.get(subscription.currency, 0) + monthly
+    ).order_by().values("currency", "billing_interval").annotate(total=Sum("net_price")):
+        months = INTERVAL_MONTHS[row["billing_interval"]]
+        monthly = row["total"] / months
+        recurring_revenue[row["currency"]] = (
+            recurring_revenue.get(row["currency"], 0) + monthly
         )
     recurring_revenue = {
         currency: amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

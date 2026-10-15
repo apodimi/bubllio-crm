@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { emailAccountSchema, testRecipientSchema } from './emailAccountSchema'
+import {
+  createEmailAccountSchema,
+  emailAccountSchema,
+  testRecipientSchema,
+} from './emailAccountSchema'
 
 const valid = {
   name: 'Workspace SMTP',
@@ -15,6 +19,11 @@ const valid = {
 describe('emailAccountSchema', () => {
   it('accepts an account update without replacing the password', () => {
     expect(emailAccountSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it('requires a password for a new account', () => {
+    expect(createEmailAccountSchema.safeParse(valid).success).toBe(false)
+    expect(createEmailAccountSchema.safeParse({ ...valid, password: 'secret' }).success).toBe(true)
   })
 
   it('rejects invalid ports and sender addresses', () => {

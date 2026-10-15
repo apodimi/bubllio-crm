@@ -1,4 +1,7 @@
-import { useDeferredValue, useState } from 'react'
+import { useState } from 'react'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import { useListPage } from '../../hooks/useListPage'
+import { ListPagination } from '../../components/common/ListPagination'
 import type { MouseEvent } from 'react'
 import {
   Alert,
@@ -32,9 +35,10 @@ import RestoreRounded from '@mui/icons-material/RestoreRounded'
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   useArchiveCompany,
-  useCompanies,
+  useCompanyPage,
   useCompanyAssignees,
   useQuickUpdateCompany,
   useRestoreCompany,
@@ -47,6 +51,7 @@ import { CompanyPreviewDrawer } from '../../features/companies/components/Compan
 import type { Company } from '../../types/company.types'
 
 export function CompaniesPage() {
+  const { t } = useTranslation()
   const org = useWorkspace()
   const navigate = useNavigate({ from: '/organizations/$organizationId/companies' })
   const routeSearch = useSearch({ from: '/organizations/$organizationId/companies' })
@@ -55,14 +60,21 @@ export function CompaniesPage() {
   const [visibility, setVisibility] = useState<'active' | 'archived' | 'all'>('all')
   const [owner, setOwner] = useState<number | 'unassigned' | ''>('')
   const currentUserId = useAuthStore((state) => state.user?.id)
-  const deferredSearch = useDeferredValue(search)
-  const query = useCompanies(org.id, {
-    search: deferredSearch,
-    lifecycleStage: stage,
-    archived: visibility,
-    assignedTo: owner,
-  })
-  const [create, setCreate] = useState(false)
+  const deferredSearch = useDebouncedValue(search)
+  const { page, setPage } = useListPage(
+    JSON.stringify([org.id, deferredSearch, stage, visibility, owner]),
+  )
+  const query = useCompanyPage(
+    org.id,
+    {
+      search: deferredSearch,
+      lifecycleStage: stage,
+      archived: visibility,
+      assignedTo: owner,
+    },
+    page,
+  )
+  const [create, setCreate] = useState(routeSearch.create === true)
   const [editing, setEditing] = useState<Company | null>(null)
   const [archiving, setArchiving] = useState<Company | null>(null)
   const archive = useArchiveCompany(org.id)
@@ -104,63 +116,78 @@ export function CompaniesPage() {
   return (
     <>
       <PageHeading
-        title="Companies"
-        description="From first introductions to lasting partnerships."
+        title={t('crm.companies.title')}
+        description={t('crm.companies.description')}
         action={
           canCreateRecords(org) && (
             <Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreate(true)}>
-              Add company
+              {t('crm.companies.add')}
             </Button>
           )
         }
       />
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
+      <Paper
+        component="section"
+        aria-label={t('crm.companies.filters')}
+        variant="outlined"
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(2, minmax(0, 1fr))',
+            lg: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr))',
+          },
+          gap: 2,
+          p: { xs: 2, md: 2.5 },
+          mb: 3,
+        }}
+      >
         <TextField
-          label="Search companies"
-          placeholder="Name, tax ID, city, industry…"
+          label={t('crm.companies.search')}
+          placeholder={t('crm.companies.searchPlaceholder')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          sx={{ width: { xs: '100%', sm: 420 } }}
+          sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, minWidth: 0 }}
         />
         <TextField
           select
-          label="Lifecycle stage"
+          label={t('crm.companies.stage')}
+          slotProps={{ select: { displayEmpty: true } }}
           value={stage}
           onChange={(event) => setStage(event.target.value as Company['lifecycle_stage'] | '')}
-          sx={{ width: { xs: '100%', sm: 200 } }}
         >
-          <MenuItem value="">All stages</MenuItem>
-          <MenuItem value="lead">Lead</MenuItem>
-          <MenuItem value="prospect">Prospect</MenuItem>
-          <MenuItem value="customer">Customer</MenuItem>
-          <MenuItem value="inactive">Inactive</MenuItem>
+          <MenuItem value="">{t('crm.companies.allStages')}</MenuItem>
+          <MenuItem value="lead">{t('crm.companies.lead')}</MenuItem>
+          <MenuItem value="prospect">{t('crm.companies.prospect')}</MenuItem>
+          <MenuItem value="customer">{t('crm.companies.customerStage')}</MenuItem>
+          <MenuItem value="inactive">{t('crm.companies.inactive')}</MenuItem>
         </TextField>
         <TextField
           select
-          label="Ownership"
+          label={t('crm.companies.ownership')}
+          slotProps={{ select: { displayEmpty: true } }}
           value={owner}
           onChange={(event) => {
             const value = event.target.value
             setOwner(value === 'unassigned' ? value : value ? Number(value) : '')
           }}
-          sx={{ width: { xs: '100%', sm: 180 } }}
         >
-          <MenuItem value="">All owners</MenuItem>
-          {currentUserId ? <MenuItem value={currentUserId}>My companies</MenuItem> : null}
-          <MenuItem value="unassigned">Unassigned</MenuItem>
+          <MenuItem value="">{t('crm.companies.allOwners')}</MenuItem>
+          {currentUserId ? (
+            <MenuItem value={currentUserId}>{t('crm.companies.mine')}</MenuItem>
+          ) : null}
+          <MenuItem value="unassigned">{t('crm.companies.unassigned')}</MenuItem>
         </TextField>
         <TextField
           select
-          label="Records"
+          label={t('crm.companies.records')}
           value={visibility}
           onChange={(event) => setVisibility(event.target.value as 'active' | 'archived' | 'all')}
-          sx={{ width: { xs: '100%', sm: 160 } }}
         >
-          <MenuItem value="active">Active</MenuItem>
-          <MenuItem value="archived">Archived</MenuItem>
-          <MenuItem value="all">All records</MenuItem>
+          <MenuItem value="active">{t('crm.companies.active')}</MenuItem>
+          <MenuItem value="archived">{t('crm.companies.archived')}</MenuItem>
+          <MenuItem value="all">{t('crm.companies.allRecords')}</MenuItem>
         </TextField>
-      </Stack>
+      </Paper>
       {quickUpdate.isError ? (
         <Alert severity="error" sx={{ mb: 2 }}>
           {quickUpdate.error.message}
@@ -176,13 +203,13 @@ export function CompaniesPage() {
             <Empty
               title={
                 search || stage || owner || visibility !== 'active'
-                  ? 'No matches'
-                  : 'Your next partnership awaits'
+                  ? t('crm.companies.noMatches')
+                  : t('crm.companies.empty')
               }
               description={
                 search || stage || owner || visibility !== 'active'
-                  ? 'Try changing the search or filters.'
-                  : 'Add a company to start building your CRM.'
+                  ? t('crm.companies.noMatchesDescription')
+                  : t('crm.companies.emptyDescription')
               }
             />
           ) : (
@@ -275,13 +302,15 @@ export function CompaniesPage() {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ width: 112 }}>Code</TableCell>
-                      <TableCell>Company</TableCell>
-                      <TableCell>Business profile</TableCell>
-                      <TableCell>Location</TableCell>
-                      <TableCell>Owner</TableCell>
-                      <TableCell>Stage</TableCell>
-                      {canManage && <TableCell align="right">Actions</TableCell>}
+                      <TableCell sx={{ width: 112 }}>{t('crm.companies.code')}</TableCell>
+                      <TableCell>{t('crm.companies.company')}</TableCell>
+                      <TableCell>{t('crm.companies.profile')}</TableCell>
+                      <TableCell>{t('crm.companies.location')}</TableCell>
+                      <TableCell>{t('crm.companies.owner')}</TableCell>
+                      <TableCell>{t('crm.companies.stage')}</TableCell>
+                      {canManage && (
+                        <TableCell align="right">{t('crm.companies.actions')}</TableCell>
+                      )}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -338,14 +367,20 @@ export function CompaniesPage() {
                                 minWidth: 0,
                                 px: 0.75,
                                 py: 0.5,
-                                color: company.assigned_to_name
-                                  ? 'text.primary'
-                                  : 'text.secondary',
+                                color: company.assigned_to_name ? 'text.primary' : 'text.secondary',
                                 bgcolor: 'action.hover',
                               }}
                             >
                               <Avatar
-                                sx={{ width: 24, height: 24, mr: 0.75, fontSize: 11, bgcolor: company.assigned_to_name ? 'primary.main' : 'action.disabledBackground' }}
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  mr: 0.75,
+                                  fontSize: 11,
+                                  bgcolor: company.assigned_to_name
+                                    ? 'primary.main'
+                                    : 'action.disabledBackground',
+                                }}
                               >
                                 {company.assigned_to_name?.slice(0, 1).toUpperCase() || '–'}
                               </Avatar>
@@ -375,19 +410,19 @@ export function CompaniesPage() {
                               {company.lifecycle_stage}
                             </Button>
                           ) : (
-                          <Chip
-                            size="small"
-                            label={company.lifecycle_stage}
-                            color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
-                            variant="outlined"
-                            aria-label={`${company.name} stage: ${company.lifecycle_stage}`}
-                            sx={{ textTransform: 'capitalize' }}
-                          />
+                            <Chip
+                              size="small"
+                              label={company.lifecycle_stage}
+                              color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
+                              variant="outlined"
+                              aria-label={`${company.name} stage: ${company.lifecycle_stage}`}
+                              sx={{ textTransform: 'capitalize' }}
+                            />
                           )}
                         </TableCell>
                         {canManage && (
                           <TableCell align="right">
-                            <Tooltip title="Edit company">
+                            <Tooltip title={t('crm.companies.edit')}>
                               <IconButton
                                 aria-label={`Edit ${company.name}`}
                                 onClick={(event) => {
@@ -423,7 +458,17 @@ export function CompaniesPage() {
           )}
         </Paper>
       )}
-      {create && <CompanyDialog organizationId={org.id} onClose={() => setCreate(false)} />}
+      {create && (
+        <CompanyDialog
+          organizationId={org.id}
+          onClose={() => {
+            setCreate(false)
+            if (routeSearch.create) {
+              void navigate({ search: { company: routeSearch.company, create: undefined } })
+            }
+          }}
+        />
+      )}
       {editing && (
         <CompanyDialog organizationId={org.id} company={editing} onClose={() => setEditing(null)} />
       )}
@@ -443,39 +488,40 @@ export function CompaniesPage() {
         {inlineEdit
           ? inlineEdit.field === 'stage'
             ? (['lead', 'prospect', 'customer', 'inactive'] as const).map((item) => (
-              <MenuItem
-                key={item}
-                selected={inlineEdit.company.lifecycle_stage === item}
-                onClick={() => updateInline({ lifecycle_stage: item })}
-              >
-                <ListItemText sx={{ textTransform: 'capitalize' }}>{item}</ListItemText>
-              </MenuItem>
+                <MenuItem
+                  key={item}
+                  selected={inlineEdit.company.lifecycle_stage === item}
+                  onClick={() => updateInline({ lifecycle_stage: item })}
+                >
+                  <ListItemText sx={{ textTransform: 'capitalize' }}>{item}</ListItemText>
+                </MenuItem>
               ))
             : [
-              <MenuItem
-                key="unassigned"
-                selected={inlineEdit?.company.assigned_to === null}
-                onClick={() => updateInline({ assigned_to: null })}
-              >
-                <ListItemText>Unassigned</ListItemText>
-              </MenuItem>,
-              ...(assignees.data ?? []).map((member) => (
                 <MenuItem
-                  key={member.id}
-                  selected={inlineEdit?.company.assigned_to === member.id}
-                  onClick={() => updateInline({ assigned_to: member.id })}
+                  key="unassigned"
+                  selected={inlineEdit?.company.assigned_to === null}
+                  onClick={() => updateInline({ assigned_to: null })}
                 >
-                  <ListItemText primary={member.name} secondary={member.role} />
-                </MenuItem>
-              )),
+                  <ListItemText>{t('crm.companies.unassigned')}</ListItemText>
+                </MenuItem>,
+                ...(assignees.data ?? []).map((member) => (
+                  <MenuItem
+                    key={member.id}
+                    selected={inlineEdit?.company.assigned_to === member.id}
+                    onClick={() => updateInline({ assigned_to: member.id })}
+                  >
+                    <ListItemText primary={member.name} secondary={member.role} />
+                  </MenuItem>
+                )),
               ]
           : null}
       </Menu>
+      {query.data ? <ListPagination count={query.count} page={page} onChange={setPage} /> : null}
       <Dialog
         open={Boolean(archiving)}
         onClose={archive.isPending ? undefined : () => setArchiving(null)}
       >
-        <DialogTitle>Archive company?</DialogTitle>
+        <DialogTitle>{t('crm.companies.archiveTitle')}</DialogTitle>
         <DialogContent>
           {archive.isError && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -483,13 +529,12 @@ export function CompaniesPage() {
             </Alert>
           )}
           <Typography>
-            {archiving?.name} will leave the active list, but its profile, contacts, and history
-            stay intact. You can restore it at any time.
+            {t('crm.companies.archiveDescription', { name: archiving?.name })}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setArchiving(null)} disabled={archive.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -499,7 +544,7 @@ export function CompaniesPage() {
               archive.mutate(archiving.id, { onSuccess: () => setArchiving(null) })
             }}
           >
-            {archive.isPending ? 'Archiving…' : 'Archive company'}
+            {archive.isPending ? t('crm.companies.archiving') : t('crm.companies.archive')}
           </Button>
         </DialogActions>
       </Dialog>

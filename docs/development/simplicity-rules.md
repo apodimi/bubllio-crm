@@ -17,8 +17,8 @@ page → feature hook → feature service → api client
 
 Add a service only when a business operation is reused, transactional, talks to
 an external system, or is difficult to test inside a view. Examples are
-invitation acceptance, SMTP delivery, ownership transfer, and automation
-execution. Do not add a service that only calls one model method once.
+invitation acceptance, SMTP delivery, and ownership transfer. Do not add a service that only calls
+one model method once.
 
 Add a shared component only after the same UI behavior appears in at least two
 features. Keep feature-specific components inside their feature. Avoid generic
@@ -71,7 +71,7 @@ npm run test:e2e
 # repository root
 uv run python src/manage.py check
 uv run python src/manage.py makemigrations --check --dry-run
-uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts
 ```
 
 If a contributor cannot explain a module in one short paragraph, split the

@@ -1,432 +1,849 @@
+import { useMemo, useState, type ComponentProps, type ElementType, type ReactNode } from 'react'
+import arrowRight from '@iconify-icons/keyline-icons/arrow-right'
+import bell from '@iconify-icons/keyline-icons/bell'
+import briefcase from '@iconify-icons/keyline-icons/briefcase'
+import building from '@iconify-icons/keyline-icons/building'
+import calendar from '@iconify-icons/keyline-icons/calendar'
+import checkCircle from '@iconify-icons/keyline-icons/circle-check'
+import clock from '@iconify-icons/keyline-icons/clock'
+import creditCard from '@iconify-icons/keyline-icons/credit-card'
+import listCheck from '@iconify-icons/keyline-icons/list-check'
+import plus from '@iconify-icons/keyline-icons/plus'
+import users from '@iconify-icons/keyline-icons/users'
+import { Icon, type IconifyIcon } from '@iconify/react'
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  Skeleton,
+  Snackbar,
+  Stack,
+  Typography,
+} from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { Link } from '@tanstack/react-router'
-import { Box, Button, Chip, Divider, Paper, Stack, Typography } from '@mui/material'
-import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
-import { alpha, lighten } from '@mui/material/styles'
-import { useAutomations } from '../../features/automations'
-import { useCompanies } from '../../features/companies'
-import { useContacts } from '../../features/contacts'
+import { useTranslation } from 'react-i18next'
+
+import { Failure } from '../../components/common/Feedback'
+import { useCrmSummary } from '../../features/companies/hooks/useCompanies'
 import { useInvitations } from '../../features/invitations/hooks/useInvitations'
-import { useWorkspace } from '../../features/organizations'
+import { canCreateRecords, useWorkspace } from '../../features/organizations'
 import { useSubscriptionOverview } from '../../features/subscriptions'
-import { useTasks } from '../../features/tasks'
-import { Failure, Loading, PageHeading } from '../../components/common/Feedback'
+import { useCompleteTask, useReopenTask, useTasks } from '../../features/tasks'
 import { INVITATION_STATUS } from '../../types/invitation.types'
+import type { CrmTask } from '../../types/task.types'
+
+type DashboardRoute =
+  | '/organizations/$organizationId/companies'
+  | '/organizations/$organizationId/contacts'
+  | '/organizations/$organizationId/tasks'
+  | '/organizations/$organizationId/services/customer-services'
+  | '/organizations/$organizationId/services/billing'
+  | '/organizations/$organizationId/members'
+
+const KIcon = ({ icon, size = 20 }: { icon: IconifyIcon; size?: number }) => (
+  <Icon aria-hidden icon={icon} width={size} height={size} />
+)
+
+function Surface({ children, ...props }: ComponentProps<typeof Box> & { component?: ElementType }) {
+  return (
+    <Box
+      {...props}
+      sx={{
+        borderRadius: 3,
+        bgcolor: 'background.paper',
+        boxShadow: (theme) => theme.shadows[1],
+        ...(props.sx as object),
+      }}
+    >
+      {children}
+    </Box>
+  )
+}
+
+function TextLink({
+  to,
+  organizationId,
+  children,
+}: {
+  to: DashboardRoute
+  organizationId: string
+  children: ReactNode
+}) {
+  return (
+    <Link to={to} params={{ organizationId }} style={{ color: 'inherit', textDecoration: 'none' }}>
+      <Box
+        component="span"
+        sx={{
+          display: 'inline-flex',
+          minHeight: 44,
+          alignItems: 'center',
+          gap: 0.75,
+          color: 'primary.main',
+          fontWeight: 750,
+          'a:focus-visible &': {
+            outline: '3px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 3,
+            borderRadius: 1,
+          },
+        }}
+      >
+        {children}
+        <KIcon icon={arrowRight} size={18} />
+      </Box>
+    </Link>
+  )
+}
+
+function QuickLink({
+  to,
+  organizationId,
+  icon,
+  children,
+  primary = false,
+  search,
+}: {
+  to: DashboardRoute
+  organizationId: string
+  icon: IconifyIcon
+  children: ReactNode
+  primary?: boolean
+  search?: { create: true }
+}) {
+  return (
+    <Link to={to} params={{ organizationId }} search={search} style={{ textDecoration: 'none' }}>
+      <Box
+        component="span"
+        sx={{
+          display: 'inline-flex',
+          minHeight: 44,
+          alignItems: 'center',
+          gap: 1,
+          px: 1.75,
+          borderRadius: 1.5,
+          bgcolor: primary ? 'primary.main' : 'background.paper',
+          color: primary ? 'primary.contrastText' : 'text.primary',
+          boxShadow: (theme) => (primary ? 'none' : theme.shadows[1]),
+          fontWeight: 750,
+          transition: (theme) => theme.transitions.create(['background-color', 'transform']),
+          '@media (hover: hover) and (pointer: fine)': {
+            '&:hover': { bgcolor: primary ? 'primary.dark' : 'action.hover' },
+          },
+          '&:active': { transform: 'scale(.985)' },
+          'a:focus-visible &': {
+            outline: '3px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 3,
+          },
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+        }}
+      >
+        <KIcon icon={icon} size={19} />
+        {children}
+      </Box>
+    </Link>
+  )
+}
+
+function TaskRow({
+  task,
+  organizationId,
+  isOverdue,
+  canManage,
+  pending,
+  onComplete,
+}: {
+  task: CrmTask
+  organizationId: string
+  isOverdue: boolean
+  canManage: boolean
+  pending: boolean
+  onComplete: (task: CrmTask) => void
+}) {
+  const { t, i18n } = useTranslation()
+  const due = new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit' }).format(
+    new Date(task.due_at),
+  )
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: canManage ? '44px minmax(0, 1fr) auto' : '12px minmax(0, 1fr) auto',
+        minHeight: 72,
+        alignItems: 'center',
+        gap: 1.25,
+        px: { xs: 1.5, sm: 2.25 },
+        borderTop: 1,
+        borderColor: 'divider',
+        transition: (theme) => theme.transitions.create('background-color'),
+        '@media (hover: hover) and (pointer: fine)': { '&:hover': { bgcolor: 'action.hover' } },
+        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+      }}
+    >
+      {canManage ? (
+        <Checkbox
+          checked={false}
+          disabled={pending}
+          onChange={() => onComplete(task)}
+          slotProps={{
+            input: { 'aria-label': t('crm.dashboard.completeTask', { title: task.title }) },
+          }}
+          icon={pending ? <CircularProgress size={18} /> : undefined}
+          sx={{ width: 44, height: 44, p: 0 }}
+        />
+      ) : (
+        <Box aria-hidden />
+      )}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 750 }} noWrap>
+          {task.title}
+        </Typography>
+        <Stack direction="row" sx={{ mt: 0.25, alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+          <Link
+            to="/organizations/$organizationId/companies/$companyId"
+            params={{ organizationId, companyId: task.company }}
+            style={{ color: 'inherit', textUnderlineOffset: '0.2em' }}
+          >
+            <Typography component="span" variant="caption" color="text.secondary">
+              {task.company_name}
+            </Typography>
+          </Link>
+          <Typography
+            component="span"
+            variant="caption"
+            color={isOverdue ? 'error.main' : 'primary.main'}
+            sx={{ fontWeight: 750 }}
+          >
+            {isOverdue ? t('crm.dashboard.overdueLabel') : t('crm.dashboard.todayLabel')}
+          </Typography>
+        </Stack>
+      </Box>
+      <Typography
+        variant="body2"
+        color={isOverdue ? 'error.main' : 'text.secondary'}
+        sx={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        {due}
+      </Typography>
+    </Box>
+  )
+}
+
+function MoneyList({ values, locale }: { values: Record<string, string>; locale: string }) {
+  const entries = Object.entries(values)
+  if (!entries.length) return <Typography color="text.secondary">—</Typography>
+  return (
+    <Stack spacing={0.25}>
+      {entries.map(([currency, value]) => (
+        <Typography key={currency} sx={{ fontWeight: 750, fontVariantNumeric: 'tabular-nums' }}>
+          {new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+            maximumFractionDigits: 0,
+          }).format(Number(value))}
+        </Typography>
+      ))}
+    </Stack>
+  )
+}
 
 export function DashboardPage() {
-  const org = useWorkspace()
-  const companies = useCompanies(org.id)
-  const contacts = useContacts(org.id)
-  const automations = useAutomations(org.id)
-  const billing = useSubscriptionOverview(org.id)
-  const todayTasks = useTasks(org.id, { bucket: 'today', assignedTo: 'me' })
-  const overdueTasks = useTasks(org.id, { bucket: 'overdue', assignedTo: 'me' })
-  const canManagePeople = org.current_user_role === 'owner' || org.current_user_role === 'admin'
-  const invitations = useInvitations(org.id, canManagePeople)
-  const error =
-    companies.error ||
-    contacts.error ||
-    automations.error ||
-    billing.error ||
-    todayTasks.error ||
-    overdueTasks.error ||
-    (canManagePeople ? invitations.error : null)
-  if (error) return <Failure error={error} />
-  if (
-    !companies.data ||
-    !contacts.data ||
-    !automations.data ||
-    !billing.data ||
-    !todayTasks.data ||
-    !overdueTasks.data ||
-    (canManagePeople && !invitations.data)
+  const { t, i18n } = useTranslation()
+  const workspace = useWorkspace()
+  const summary = useCrmSummary(workspace.id)
+  const billing = useSubscriptionOverview(workspace.id)
+  const todayTasks = useTasks(workspace.id, { bucket: 'today', assignedTo: 'me' })
+  const overdueTasks = useTasks(workspace.id, { bucket: 'overdue', assignedTo: 'me' })
+  const complete = useCompleteTask(workspace.id)
+  const reopen = useReopenTask(workspace.id)
+  const canManage = canCreateRecords(workspace)
+  const canManagePeople =
+    workspace.current_user_role === 'owner' || workspace.current_user_role === 'admin'
+  const invitations = useInvitations(workspace.id, canManagePeople)
+  const [completedTask, setCompletedTask] = useState<CrmTask | null>(null)
+  const overdueIds = useMemo(
+    () => new Set((overdueTasks.data ?? []).map((task) => task.id)),
+    [overdueTasks.data],
   )
-    return <Loading />
+  const queue = useMemo(
+    () => [
+      ...(overdueTasks.data ?? []),
+      ...(todayTasks.data ?? []).filter((task) => !overdueIds.has(task.id)),
+    ],
+    [overdueIds, overdueTasks.data, todayTasks.data],
+  )
+  const visibleQueue = queue.slice(0, 6)
+  const nextTask = queue[0]
+  const tasksError = overdueTasks.error || todayTasks.error
   const pendingInvitations = (invitations.data ?? []).filter(
-    (invitation) => invitation.status === INVITATION_STATUS.PENDING,
+    (item) => item.status === INVITATION_STATUS.PENDING,
   )
-  const stats = [
-    { label: 'Companies', value: companies.data.length, note: 'Relationships in your pipeline' },
-    { label: 'Contacts', value: contacts.data.length, note: 'People you work with' },
+  const date = new Intl.DateTimeFormat(i18n.language, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date())
+
+  function completeTask(task: CrmTask) {
+    complete.mutate(task.id, { onSuccess: () => setCompletedTask(task) })
+  }
+  function undoCompletion() {
+    if (!completedTask) return
+    reopen.mutate(completedTask.id, { onSuccess: () => setCompletedTask(null) })
+  }
+
+  const metrics = [
     {
-      label: 'Active automations',
-      value: automations.data.filter((item) => item.is_active).length,
-      note: 'Enabled rules in this workspace',
+      label: t('crm.dashboard.companies'),
+      value: summary.data?.companies,
+      icon: building,
+      to: '/organizations/$organizationId/companies' as const,
+    },
+    {
+      label: t('crm.dashboard.contacts'),
+      value: summary.data?.contacts,
+      icon: users,
+      to: '/organizations/$organizationId/contacts' as const,
+    },
+    {
+      label: t('crm.dashboard.services'),
+      value: billing.data?.active_subscriptions,
+      icon: briefcase,
+      to: '/organizations/$organizationId/services/customer-services' as const,
     },
   ]
-  const moneyByCurrency = (values: Record<string, string>) => {
-    const entries = Object.entries(values)
-    if (!entries.length) return '—'
-    return entries
-      .map(
-        ([currency, value]) =>
-          `${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`,
-      )
-      .join(' · ')
-  }
+
   return (
-    <>
-      <PageHeading
-        title="A little more clarity."
-        description={'Here is where things stand at ' + org.name + '.'}
-      />
+    <Box
+      sx={{
+        minHeight: '100%',
+        bgcolor: 'background.default',
+        px: { xs: 1.5, sm: 3, lg: 4.5 },
+        pb: 5,
+      }}
+    >
+      <Box
+        component="header"
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { md: 'flex-end' },
+          justifyContent: 'space-between',
+          gap: 3,
+          pt: { xs: 3.5, md: 5 },
+        }}
+      >
+        <Box>
+          <Typography color="text.secondary" sx={{ textTransform: 'capitalize', fontWeight: 650 }}>
+            {date}
+          </Typography>
+          <Typography
+            component="h1"
+            sx={{
+              mt: 1,
+              maxWidth: 760,
+              fontFamily: (theme) => theme.typography.h1.fontFamily,
+              fontSize: { xs: '2.15rem', sm: '3rem', lg: '3.5rem' },
+              fontWeight: 780,
+              letterSpacing: '-.035em',
+              lineHeight: 1.05,
+            }}
+          >
+            {t('crm.dashboard.greeting')}
+            <Box component="span" sx={{ display: 'block', color: 'primary.main' }}>
+              {t('crm.dashboard.moveOneThing')}
+            </Box>
+          </Typography>
+        </Box>
+        <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+          <QuickLink
+            primary
+            to="/organizations/$organizationId/tasks"
+            organizationId={workspace.id}
+            icon={plus}
+            search={{ create: true }}
+          >
+            {t('crm.dashboard.openTasks')}
+          </QuickLink>
+          <QuickLink
+            to="/organizations/$organizationId/companies"
+            organizationId={workspace.id}
+            icon={building}
+            search={{ create: true }}
+          >
+            {t('crm.companies.add')}
+          </QuickLink>
+        </Stack>
+      </Box>
+
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: '1.15fr .9fr .9fr' },
-          gap: 3,
-          mb: 4,
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.6fr) minmax(300px, .7fr)' },
+          gap: 2,
+          mt: { xs: 4, md: 5 },
         }}
       >
-        {stats.map((stat) => (
-          <Paper
-            variant="outlined"
-            key={stat.label}
-            sx={{
-              p: 3.25,
-              position: 'relative',
-              overflow: 'hidden',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                right: -28,
-                top: -32,
-                bgcolor: 'action.selected',
-              },
-            }}
-          >
-            <Typography color="text.secondary" variant="body2">
-              {stat.label}
-            </Typography>
-            <Typography
-              variant="h3"
-              sx={{
-                my: 2,
-                fontSize: 44,
-                fontVariantNumeric: 'tabular-nums',
-                color: 'primary.dark',
-              }}
-            >
-              {stat.value}
-            </Typography>
-            <Typography color="text.secondary" variant="body2">
-              {stat.note}
-            </Typography>
-          </Paper>
-        ))}
-      </Box>
-      {canManagePeople && (
-        <Paper variant="outlined" sx={{ mb: 4, p: { xs: 3, md: 4 } }}>
+        <Box
+          component="section"
+          aria-labelledby="next-action-heading"
+          sx={{
+            minHeight: nextTask ? { xs: 330, md: 390 } : { xs: 250, md: 300 },
+            overflow: 'hidden',
+            borderRadius: 3,
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            p: { xs: 3, md: 4 },
+          }}
+        >
           <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            sx={{ justifyContent: 'space-between', alignItems: { sm: 'flex-start' }, gap: 2 }}
+            direction="row"
+            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}
           >
-            <Box>
-              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-                <Typography variant="h5">Pending invitations</Typography>
-                <Chip size="small" label={pendingInvitations.length} color="warning" />
-              </Stack>
-              <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-                People who have not joined this workspace yet.
+            <Typography id="next-action-heading" component="h2" sx={{ fontWeight: 750 }}>
+              {t('crm.dashboard.nextAction')}
+            </Typography>
+            <KIcon icon={listCheck} size={24} />
+          </Stack>
+          {todayTasks.isPending || overdueTasks.isPending ? (
+            <Stack spacing={2} sx={{ mt: 8 }}>
+              <Skeleton variant="text" width="75%" height={58} sx={{ bgcolor: 'action.hover' }} />
+              <Skeleton variant="text" width="45%" sx={{ bgcolor: 'action.hover' }} />
+            </Stack>
+          ) : tasksError ? (
+            <Box sx={{ mt: { xs: 5, md: 7 }, maxWidth: 620 }}>
+              <Alert
+                severity="error"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => {
+                      void overdueTasks.refetch()
+                      void todayTasks.refetch()
+                    }}
+                  >
+                    {t('crm.dashboard.retry')}
+                  </Button>
+                }
+              >
+                {t('crm.dashboard.tasksLoadError')}
+              </Alert>
+            </Box>
+          ) : nextTask ? (
+            <Box sx={{ mt: { xs: 7, md: 9 }, maxWidth: 720 }}>
+              <Typography
+                sx={{
+                  fontFamily: (theme) => theme.typography.h1.fontFamily,
+                  fontSize: { xs: '2rem', md: '2.75rem' },
+                  fontWeight: 730,
+                  letterSpacing: '-.03em',
+                  lineHeight: 1.08,
+                }}
+              >
+                {nextTask.title}
+              </Typography>
+              <Typography
+                sx={{ mt: 1.5, color: (theme) => alpha(theme.palette.primary.contrastText, 0.78) }}
+              >
+                {nextTask.company_name} ·{' '}
+                {overdueIds.has(nextTask.id)
+                  ? t('crm.dashboard.overdueLabel')
+                  : t('crm.dashboard.todayLabel')}
+              </Typography>
+              {canManage ? (
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  disabled={complete.isPending}
+                  onClick={() => completeTask(nextTask)}
+                  startIcon={
+                    complete.isPending ? (
+                      <CircularProgress size={18} />
+                    ) : (
+                      <KIcon icon={checkCircle} />
+                    )
+                  }
+                  sx={{ mt: 3, color: 'primary.main', bgcolor: 'primary.contrastText' }}
+                >
+                  {t('crm.dashboard.markDone')}
+                </Button>
+              ) : null}
+            </Box>
+          ) : (
+            <Box sx={{ mt: { xs: 7, md: 9 }, maxWidth: 620 }}>
+              <KIcon icon={checkCircle} size={42} />
+              <Typography variant="h3" sx={{ mt: 2, color: 'inherit' }}>
+                {t('crm.dashboard.nothingDue')}
+              </Typography>
+              <Typography
+                sx={{ mt: 1, color: (theme) => alpha(theme.palette.primary.contrastText, 0.78) }}
+              >
+                {t('crm.dashboard.nothingDueDescription')}
               </Typography>
             </Box>
-            <Link
-              to="/organizations/$organizationId/members"
-              params={{ organizationId: org.id }}
-              style={{ textDecoration: 'none' }}
-            >
-              <Button component="span" endIcon={<ArrowForwardRounded />}>
-                Manage invitations
-              </Button>
-            </Link>
+          )}
+        </Box>
+
+        <Surface
+          component="section"
+          aria-labelledby="attention-heading"
+          sx={{ p: { xs: 2.5, md: 3 } }}
+        >
+          <Stack
+            direction="row"
+            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}
+          >
+            <Typography id="attention-heading" component="h2" variant="h4">
+              {t('crm.dashboard.attention')}
+            </Typography>
+            <KIcon icon={bell} size={22} />
           </Stack>
-          {pendingInvitations.length ? (
-            <Stack divider={<Divider />} sx={{ mt: 2.5 }}>
-              {pendingInvitations.slice(0, 3).map((invitation) => (
+          {billing.isPending ? (
+            <Stack spacing={1.5} sx={{ mt: 3 }}>
+              {[0, 1, 2].map((item) => (
+                <Skeleton key={item} variant="rounded" height={58} />
+              ))}
+            </Stack>
+          ) : billing.error ? (
+            <Box sx={{ mt: 2 }}>
+              <Failure error={billing.error} retry={() => void billing.refetch()} />
+            </Box>
+          ) : (
+            <Stack sx={{ mt: 2 }}>
+              {[
+                [t('crm.dashboard.overdueCharges'), billing.data?.overdue_charges ?? 0, creditCard],
+                [t('crm.dashboard.renewals'), billing.data?.renewals_next_30_days ?? 0, calendar],
+                [
+                  t('crm.dashboard.scheduledCancellations'),
+                  billing.data?.scheduled_cancellations ?? 0,
+                  clock,
+                ],
+              ].map(([label, value, icon]) => (
                 <Stack
-                  key={invitation.id}
-                  direction={{ xs: 'column', sm: 'row' }}
-                  sx={{ justifyContent: 'space-between', gap: 1, py: 1.25 }}
+                  key={String(label)}
+                  direction="row"
+                  sx={{
+                    minHeight: 64,
+                    alignItems: 'center',
+                    gap: 1.5,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                  }}
                 >
-                  <Box>
-                    <Typography sx={{ fontWeight: 700 }}>{invitation.email}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Invited by {invitation.invited_by ?? 'Deleted user'} · {invitation.role}
-                    </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      width: 36,
+                      height: 36,
+                      placeItems: 'center',
+                      borderRadius: 1.25,
+                      bgcolor: 'action.hover',
+                      color: 'text.secondary',
+                    }}
+                  >
+                    <KIcon icon={icon as IconifyIcon} size={19} />
                   </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Expires{' '}
-                    {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
-                      new Date(invitation.expires_at),
-                    )}
+                  <Typography sx={{ flex: 1 }} color="text.secondary">
+                    {label as ReactNode}
+                  </Typography>
+                  <Typography sx={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                    {value as ReactNode}
                   </Typography>
                 </Stack>
               ))}
             </Stack>
-          ) : (
-            <Typography color="text.secondary" sx={{ mt: 2.5 }}>
-              No invitations are waiting for acceptance.
-            </Typography>
           )}
-        </Paper>
-      )}
-      <Paper variant="outlined" sx={{ mb: 4, overflow: 'hidden' }}>
+          <Box sx={{ mt: 1 }}>
+            <TextLink
+              to="/organizations/$organizationId/services/billing"
+              organizationId={workspace.id}
+            >
+              {t('crm.dashboard.billingLink')}
+            </TextLink>
+          </Box>
+        </Surface>
+      </Box>
+
+      <Surface component="section" aria-labelledby="day-heading" sx={{ mt: 2, overflow: 'hidden' }}>
         <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          divider={<Divider orientation="vertical" flexItem />}
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            p: { xs: 2, sm: 2.5 },
+          }}
         >
-          <Box sx={{ p: { xs: 3, md: 4 }, flex: 1 }}>
-            <Stack
-              direction="row"
-              sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, mb: 2.5 }}
-            >
-              <Box>
-                <Typography variant="h5">Your next actions</Typography>
-                <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-                  Work due today and follow-ups that need attention.
-                </Typography>
-              </Box>
-              <Link
-                to="/organizations/$organizationId/tasks"
-                params={{ organizationId: org.id }}
-                style={{ textDecoration: 'none' }}
-              >
-                <Button component="span" endIcon={<ArrowForwardRounded />}>
-                  Open tasks
-                </Button>
-              </Link>
-            </Stack>
-            {todayTasks.data.length ? (
-              <Stack divider={<Divider />}>
-                {todayTasks.data.slice(0, 4).map((task) => (
-                  <Stack
-                    key={task.id}
-                    direction="row"
-                    sx={{ justifyContent: 'space-between', gap: 2, py: 1.25 }}
-                  >
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 700 }} noWrap>
-                        {task.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap>
-                        {task.company_name}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
-                    >
-                      {new Intl.DateTimeFormat(undefined, {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      }).format(new Date(task.due_at))}
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
-            ) : (
-              <Typography color="text.secondary">Nothing else due today.</Typography>
-            )}
-          </Box>
-          <Box
-            sx={(theme) => ({
-              p: { xs: 3, md: 4 },
-              minWidth: { md: 280 },
-              bgcolor: overdueTasks.data.length
-                ? alpha(theme.palette.error.main, 0.055)
-                : theme.palette.action.hover,
-            })}
-          >
-            <Typography color="text.secondary" variant="body2">
-              Overdue follow-ups
+          <Box>
+            <Typography id="day-heading" component="h2" variant="h4">
+              {t('crm.dashboard.myDay')}
             </Typography>
-            <Typography
-              variant="h3"
-              color={overdueTasks.data.length ? 'error.main' : 'text.primary'}
-              sx={{ my: 1.5, fontVariantNumeric: 'tabular-nums' }}
-            >
-              {overdueTasks.data.length}
-            </Typography>
-            <Typography color="text.secondary" variant="body2">
-              {overdueTasks.data.length
-                ? 'Open the list and decide the next action.'
-                : 'You are caught up.'}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              {t('crm.dashboard.daySummary', {
+                overdue: overdueTasks.data?.length ?? 0,
+                today: todayTasks.data?.length ?? 0,
+              })}
             </Typography>
           </Box>
+          <TextLink to="/organizations/$organizationId/tasks" organizationId={workspace.id}>
+            {t('crm.dashboard.allTasks')}
+          </TextLink>
         </Stack>
-      </Paper>
-      <Paper variant="outlined" sx={{ mb: 4, overflow: 'hidden' }}>
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          divider={<Divider orientation="vertical" flexItem />}
+        {tasksError ? (
+          <Box sx={{ p: 2 }}>
+            <Failure
+              error={tasksError}
+              retry={() => {
+                void overdueTasks.refetch()
+                void todayTasks.refetch()
+              }}
+            />
+          </Box>
+        ) : null}
+        {todayTasks.isPending || overdueTasks.isPending ? (
+          <Stack spacing={0.5} sx={{ p: 2 }}>
+            {[0, 1, 2].map((item) => (
+              <Skeleton key={item} variant="rounded" height={70} />
+            ))}
+          </Stack>
+        ) : tasksError ? null : visibleQueue.length ? (
+          visibleQueue.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              organizationId={workspace.id}
+              isOverdue={overdueIds.has(task.id)}
+              canManage={canManage}
+              pending={complete.isPending && complete.variables === task.id}
+              onComplete={completeTask}
+            />
+          ))
+        ) : (
+          <Stack
+            direction="row"
+            sx={{
+              minHeight: 112,
+              alignItems: 'center',
+              gap: 2,
+              px: 2.5,
+              borderTop: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <KIcon icon={checkCircle} size={30} />
+            <Box>
+              <Typography sx={{ fontWeight: 750 }}>{t('crm.dashboard.nothingDue')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('crm.dashboard.nothingDueDescription')}
+              </Typography>
+            </Box>
+          </Stack>
+        )}
+        {queue.length > visibleQueue.length ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}
+          >
+            {t('crm.dashboard.moreTasks', { count: queue.length - visibleQueue.length })}
+          </Typography>
+        ) : null}
+      </Surface>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '1.15fr .85fr' },
+          gap: 2,
+          mt: 2,
+        }}
+      >
+        <Surface
+          component="section"
+          aria-labelledby="billing-heading"
+          sx={{ p: { xs: 2.5, md: 3 } }}
         >
-          <Box sx={{ p: { xs: 3, md: 4 }, flex: 1.25 }}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              sx={{ justifyContent: 'space-between', gap: 2, mb: 3 }}
-            >
-              <Box>
-                <Typography variant="h5">Revenue & collections</Typography>
-                <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-                  Net recurring value and actual payments, kept separate by currency.
-                </Typography>
-              </Box>
-              <Link
-                to="/organizations/$organizationId/services"
-                params={{ organizationId: org.id }}
-                style={{ textDecoration: 'none' }}
-              >
-                <Button component="span" endIcon={<ArrowForwardRounded />}>
-                  Open billing
-                </Button>
-              </Link>
-            </Stack>
+          <Stack
+            direction="row"
+            sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}
+          >
+            <Box>
+              <Typography id="billing-heading" component="h2" variant="h4">
+                {t('crm.dashboard.businessPulse')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                {t('crm.dashboard.businessPulseDescription')}
+              </Typography>
+            </Box>
+            <KIcon icon={creditCard} size={22} />
+          </Stack>
+          {billing.data ? (
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                gap: 3,
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                mt: 2.5,
               }}
             >
-              <Box>
-                <Typography color="text.secondary" variant="body2">
-                  Monthly recurring revenue
-                </Typography>
-                <Typography variant="h4" sx={{ mt: 1, fontVariantNumeric: 'tabular-nums' }}>
-                  {moneyByCurrency(billing.data.monthly_recurring_revenue)}
-                </Typography>
-                <Typography color="text.secondary" variant="caption">
-                  Net recurring value normalized per month
-                </Typography>
-              </Box>
-              <Box>
-                <Typography color="text.secondary" variant="body2">
-                  Collected this month
-                </Typography>
-                <Typography variant="h4" sx={{ mt: 1, fontVariantNumeric: 'tabular-nums' }}>
-                  {moneyByCurrency(billing.data.collected_this_month)}
-                </Typography>
-                <Typography color="text.secondary" variant="caption">
-                  Payments recorded since the first of the month
-                </Typography>
+              {[
+                [t('crm.billingChart.overdue'), billing.data.overdue_balances],
+                [t('crm.billingChart.open'), billing.data.open_balances],
+                [t('crm.billingChart.collected'), billing.data.collected_this_month],
+              ].map(([label, values], index) => (
+                <Box
+                  key={String(label)}
+                  sx={{
+                    minHeight: 96,
+                    px: { xs: 1, sm: 2 },
+                    py: 1.5,
+                    borderLeft: index ? 1 : 0,
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {label as ReactNode}
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <MoneyList values={values as Record<string, string>} locale={i18n.language} />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          ) : billing.isPending ? (
+            <Skeleton variant="rounded" height={110} sx={{ mt: 2.5 }} />
+          ) : billing.error ? (
+            <Box sx={{ mt: 2.5 }}>
+              <Failure error={billing.error} retry={() => void billing.refetch()} />
+            </Box>
+          ) : null}
+        </Surface>
+
+        <Surface
+          component="section"
+          aria-labelledby="workspace-heading"
+          sx={{ p: { xs: 2.5, md: 3 } }}
+        >
+          <Typography id="workspace-heading" component="h2" variant="h4">
+            {t('crm.dashboard.workspaceOverview')}
+          </Typography>
+          {summary.isPending ? (
+            <Skeleton variant="rounded" height={112} sx={{ mt: 2 }} />
+          ) : summary.error ? (
+            <Box sx={{ mt: 2 }}>
+              <Failure error={summary.error} retry={() => void summary.refetch()} />
+            </Box>
+          ) : summary.data?.companies === 0 ? (
+            <Box sx={{ mt: 2.5 }}>
+              <Typography sx={{ fontWeight: 750 }}>{t('crm.dashboard.startWorkspace')}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {t('crm.dashboard.startWorkspaceDescription')}
+              </Typography>
+              <Box sx={{ mt: 1.5 }}>
+                <TextLink
+                  to="/organizations/$organizationId/companies"
+                  organizationId={workspace.id}
+                >
+                  {t('crm.companies.add')}
+                </TextLink>
               </Box>
             </Box>
-          </Box>
-          <Box sx={{ p: { xs: 3, md: 4 }, flex: 0.75, bgcolor: 'action.hover' }}>
-            <Typography variant="h6" sx={{ mb: 2.5 }}>
-              Billing attention
-            </Typography>
-            <Stack divider={<Divider />}>
-              <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1.25 }}>
-                <Typography color="text.secondary">Open balance</Typography>
-                <Typography sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                  {moneyByCurrency(billing.data.open_balances)}
-                </Typography>
-              </Stack>
-              <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1.25 }}>
-                <Typography color="text.secondary">Overdue</Typography>
-                <Typography
-                  color={billing.data.overdue_charges ? 'error.main' : 'text.primary'}
-                  sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+          ) : (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', mt: 2 }}>
+              {metrics.map((metric, index) => (
+                <Link
+                  key={metric.label}
+                  to={metric.to}
+                  params={{ organizationId: workspace.id }}
+                  style={{ color: 'inherit', textDecoration: 'none' }}
                 >
-                  {billing.data.overdue_charges} · {moneyByCurrency(billing.data.overdue_balances)}
-                </Typography>
-              </Stack>
-              <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1.25 }}>
-                <Typography color="text.secondary">Active subscriptions</Typography>
-                <Typography sx={{ fontWeight: 700 }}>
-                  {billing.data.active_subscriptions}
-                </Typography>
-              </Stack>
-              <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1.25 }}>
-                <Typography color="text.secondary">Renewals in 30 days</Typography>
-                <Typography sx={{ fontWeight: 700 }}>
-                  {billing.data.renewals_next_30_days}
-                </Typography>
-              </Stack>
-              <Stack direction="row" sx={{ justifyContent: 'space-between', py: 1.25 }}>
-                <Typography color="text.secondary">Ending at period close</Typography>
-                <Typography sx={{ fontWeight: 700 }}>
-                  {billing.data.scheduled_cancellations}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Box>
-        </Stack>
-      </Paper>
-      <Paper
-        sx={{
-          p: { xs: 3, md: 5 },
-          background: 'linear-gradient(125deg, #0f1f38 0%, #005bef 62%, #1473ff 125%)',
-          color: 'primary.contrastText',
-          mb: 4,
-          overflow: 'hidden',
-          borderRadius: 3.5,
-          boxShadow: '0 24px 64px rgba(15,31,56,.18)',
-          position: 'relative',
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            width: 360,
-            height: 360,
-            borderRadius: '50%',
-            right: -110,
-            top: -230,
-            bgcolor: 'rgba(255,255,255,.07)',
-          },
-        }}
-      >
-        <Chip
-          label="MAKE ROOM FOR RELATIONSHIPS"
-          size="small"
-          sx={(theme) => ({
-            bgcolor: alpha(theme.palette.primary.contrastText, 0.08),
-            color: 'primary.light',
-            mb: 3,
-            letterSpacing: 1,
-            fontSize: 10,
-          })}
-        />
-        <Typography variant="h4" sx={{ mb: 2 }}>
-          Your next connection starts here.
-        </Typography>
-        <Typography sx={{ maxWidth: 520, color: 'primary.light', mb: 3, opacity: 0.82 }}>
-          Keep track of the companies you know and the people behind them. Build your workspace one
-          relationship at a time.
-        </Typography>
-        <Link
-          to="/organizations/$organizationId/companies"
-          params={{ organizationId: org.id }}
-          search={{ company: undefined }}
-          style={{ textDecoration: 'none' }}
+                  <Box
+                    sx={{
+                      minHeight: 112,
+                      px: 1.5,
+                      py: 1.5,
+                      borderLeft: index ? 1 : 0,
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <KIcon icon={metric.icon} size={20} />
+                    <Typography
+                      sx={{
+                        mt: 1,
+                        fontSize: '1.75rem',
+                        fontWeight: 800,
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {metric.value ?? '—'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {metric.label}
+                    </Typography>
+                  </Box>
+                </Link>
+              ))}
+            </Box>
+          )}
+        </Surface>
+      </Box>
+
+      {canManagePeople && pendingInvitations.length ? (
+        <Surface
+          component="section"
+          aria-labelledby="invitations-heading"
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { sm: 'center' },
+            justifyContent: 'space-between',
+            gap: 2,
+            mt: 2,
+            p: 2.5,
+          }}
         >
-          <Button
-            component="span"
-            variant="contained"
-            endIcon={<ArrowForwardRounded />}
-            sx={(theme) => ({
-              bgcolor: 'primary.light',
-              color: 'primary.dark',
-              '&:hover': { bgcolor: lighten(theme.palette.primary.light, 0.18) },
-            })}
-          >
-            Explore companies
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5 }}>
+            <KIcon icon={users} size={22} />
+            <Box>
+              <Typography id="invitations-heading" component="h2" sx={{ fontWeight: 750 }}>
+                {t('crm.dashboard.invitations')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('crm.dashboard.pendingInvitationCount', { count: pendingInvitations.length })}
+              </Typography>
+            </Box>
+          </Stack>
+          <TextLink to="/organizations/$organizationId/members" organizationId={workspace.id}>
+            {t('crm.dashboard.manageInvitations')}
+          </TextLink>
+        </Surface>
+      ) : null}
+      {complete.isError ? (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {t('crm.dashboard.completeError')}
+        </Alert>
+      ) : null}
+      <Snackbar
+        open={Boolean(completedTask)}
+        autoHideDuration={6000}
+        onClose={(_, reason) => {
+          if (reason !== 'clickaway') setCompletedTask(null)
+        }}
+        message={t('crm.dashboard.taskCompleted', { title: completedTask?.title ?? '' })}
+        action={
+          <Button color="inherit" size="small" disabled={reopen.isPending} onClick={undoCompletion}>
+            {t('crm.dashboard.undo')}
           </Button>
-        </Link>
-      </Paper>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        sx={{ gap: 2, justifyContent: 'space-between' }}
-      >
-        <Typography color="text.secondary" variant="body2">
-          All figures reflect current workspace data.
-        </Typography>
-        <Typography color="text.secondary" variant="body2">
-          Workspace / {org.name}
-        </Typography>
-      </Stack>
-    </>
+        }
+      />
+      {reopen.isError ? (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {t('crm.dashboard.undoError')}
+        </Alert>
+      ) : null}
+    </Box>
   )
 }

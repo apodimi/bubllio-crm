@@ -30,7 +30,6 @@ authorization or tenant rules are implemented.
 2. Read the architecture page for the domain you will change:
    - CRM data: [CRM Domain](architecture/crm-domain.md)
    - authentication and roles: [Authentication and Roles](architecture/authentication-and-roles.md)
-   - automations: [Automations](architecture/automations.md)
    - email: [Email Sending](architecture/email-adapters.md)
 3. Check whether a focused workflow exists in `skills/`.
 4. Search for the existing behavior before introducing a parallel abstraction.
@@ -118,7 +117,7 @@ Never edit an already-applied migration. Create a new migration instead.
 The frontend has three distinct kinds of state:
 
 1. **Server state** belongs in TanStack Query. Examples: organizations,
-   companies, contacts, automation rules, and run history.
+   companies and contacts.
 2. **Authentication state** belongs in the Zustand store. Access and refresh
    tokens are memory-only; a page reload intentionally requires login again.
 3. **Local UI state** belongs close to the component. Examples: dialog open
@@ -139,7 +138,7 @@ opening a pull request:
 # Backend
 uv run python src/manage.py check
 uv run python src/manage.py makemigrations --check --dry-run
-uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts automations
+uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts
 
 # Frontend
 cd frontend
@@ -192,7 +191,7 @@ That is expected for the current starter: tokens are intentionally memory-only.
 If persistence is needed, document the security decision first; do not quietly
 put tokens in localStorage.
 
-### “I changed the automation roadmap and the feature appeared to work”
+### “I changed a roadmap and the feature appeared to work”
 
 Roadmap diagrams are explanatory. A feature is supported only when there is an
 implemented backend path, tests, and current documentation describing it.

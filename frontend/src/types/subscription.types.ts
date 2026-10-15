@@ -91,10 +91,11 @@ export type SubscriptionInput = Pick<
   | 'renewal_date'
   | 'end_date'
   | 'auto_renew'
-  | 'status'
   | 'operational_reference'
   | 'notes'
 >
+export type CreateSubscriptionInput = Pick<SubscriptionInput, 'company' | 'start_date'> &
+  Partial<Omit<SubscriptionInput, 'company' | 'start_date'>>
 export type PaymentInput = Pick<
   Payment,
   'amount' | 'paid_date' | 'payment_method' | 'external_reference' | 'note'

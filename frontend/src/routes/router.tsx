@@ -98,7 +98,8 @@ const companies = createRoute({
   getParentRoute: () => workspace,
   path: '/companies',
   validateSearch: (search: Record<string, unknown>) => ({
-    company: typeof search.company === 'string' ? search.company : undefined,
+    ...(typeof search.company === 'string' ? { company: search.company } : {}),
+    ...(search.create === true || search.create === 'true' ? { create: true as const } : {}),
   }),
   component: lazyRouteComponent(() => import('../pages/Companies/CompaniesPage'), 'CompaniesPage'),
 })
@@ -123,19 +124,41 @@ const deals = createRoute({
 const tasks = createRoute({
   getParentRoute: () => workspace,
   path: '/tasks',
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...(search.create === true || search.create === 'true' ? { create: true as const } : {}),
+  }),
   component: lazyRouteComponent(() => import('../pages/Tasks/TasksPage'), 'TasksPage'),
 })
 const services = createRoute({
   getParentRoute: () => workspace,
   path: '/services',
-  component: lazyRouteComponent(() => import('../pages/Services/ServicesPage'), 'ServicesPage'),
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/organizations/$organizationId/services/customer-services',
+      params: { organizationId: params.organizationId },
+      replace: true,
+    })
+  },
 })
-const automations = createRoute({
+const customerServices = createRoute({
   getParentRoute: () => workspace,
-  path: '/automations',
+  path: '/services/customer-services',
   component: lazyRouteComponent(
-    () => import('../pages/Automations/AutomationsPage'),
-    'AutomationsPage',
+    () => import('../pages/Services/ServicesPage'),
+    'CustomerServicesPage',
+  ),
+})
+const billing = createRoute({
+  getParentRoute: () => workspace,
+  path: '/services/billing',
+  component: lazyRouteComponent(() => import('../pages/Services/ServicesPage'), 'BillingPage'),
+})
+const serviceCatalog = createRoute({
+  getParentRoute: () => workspace,
+  path: '/services/catalog',
+  component: lazyRouteComponent(
+    () => import('../pages/Services/ServicesPage'),
+    'ServiceCatalogPage',
   ),
 })
 const members = createRoute({
@@ -165,7 +188,9 @@ export const router = createRouter({
       deals,
       tasks,
       services,
-      automations,
+      customerServices,
+      billing,
+      serviceCatalog,
       members,
       settings,
     ]),

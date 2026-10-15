@@ -1,4 +1,7 @@
+import { Link } from '@tanstack/react-router'
 import { Alert, AlertTitle, Button } from '@mui/material'
+import { useTranslation } from 'react-i18next'
+
 import { useUpdateStatus } from '../hooks/useUpdateStatus'
 
 interface UpdateBannerProps {
@@ -6,6 +9,7 @@ interface UpdateBannerProps {
 }
 
 export function UpdateBanner({ isInstallationAdmin }: UpdateBannerProps) {
+  const { t } = useTranslation()
   const update = useUpdateStatus(isInstallationAdmin)
   const status = update.data
 
@@ -17,20 +21,18 @@ export function UpdateBanner({ isInstallationAdmin }: UpdateBannerProps) {
       sx={{ mb: 3 }}
       action={
         <Button
-          component="a"
-          href={status.release_url}
-          target="_blank"
-          rel="noreferrer"
+          component={Link}
+          to="/account/settings"
+          hash="update-center"
           color="inherit"
           size="small"
         >
-          View release
+          {t('updates.openUpdateCenter')}
         </Button>
       }
     >
-      <AlertTitle>Bubllio CRM {status.latest_version} is available</AlertTitle>
-      You are running {status.current_version}. Review the release notes and update guide before
-      upgrading.
+      <AlertTitle>{t('updates.updateAvailable', { version: status.latest_version })}</AlertTitle>
+      {t('updates.runningVersion', { version: status.current_version })}
     </Alert>
   )
 }

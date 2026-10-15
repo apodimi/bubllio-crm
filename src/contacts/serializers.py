@@ -1,12 +1,14 @@
 from rest_framework import serializers
 from django.db import transaction
+from bubllio_crm.identity_serializers import TenantIdentitySaveMixin
 
 from organizations.models import OrganizationMembership
 
 from .models import Contact, ContactActivity
 
 
-class ContactSerializer(serializers.ModelSerializer):
+class ContactSerializer(TenantIdentitySaveMixin, serializers.ModelSerializer):
+    identity_fields = ("email",)
     company_name = serializers.CharField(source="company.name", read_only=True)
     assigned_to_name = serializers.SerializerMethodField()
 

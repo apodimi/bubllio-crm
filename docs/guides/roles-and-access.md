@@ -25,15 +25,14 @@ Workspace B, and have **no** access to Workspace C.
 ## Workspace permission matrix
 
 These are permissions in the **current application**, not proposed features.
-“Read CRM” includes companies, contacts, automation rules, and run history.
+“Read CRM” includes companies and contacts.
 “Create CRM” means creating companies and contacts; edit/delete endpoints for
 those records do not exist yet.
 
 | Action inside this workspace | Owner | Admin | Member | Viewer |
 | --- | :---: | :---: | :---: | :---: |
-| Read CRM and automation history | ✓ | ✓ | ✓ | ✓ |
+| Read CRM | ✓ | ✓ | ✓ | ✓ |
 | Create companies and contacts | ✓ | ✓ | ✓ | — |
-| Create and manually test automations | ✓ | ✓ | — | — |
 | View workspace settings and SMTP account metadata | ✓ | ✓ | ✓ | ✓ |
 | Change workspace settings or SMTP; send SMTP test email | ✓ | ✓ | — | — |
 | See members and pending invitations | ✓ | ✓ | — | — |

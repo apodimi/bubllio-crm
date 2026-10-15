@@ -83,9 +83,8 @@ encrypted in the existing organization email-account model only when you finish.
 The Email step has a **Send test email** button: enter a recipient address and
 it sends a real message using the currently entered settings. A successful API
 response means the SMTP server accepted the message; check the inbox to verify
-delivery. The test does not save the account and can be skipped. Setup does not
-route automation emails through that account. You may skip SMTP
-and configure it later via the authenticated organization API or Django admin.
+delivery. The test does not save the account and can be skipped. You may skip SMTP and configure
+it later via the authenticated organization API or Django admin.
 
 The endpoint is rate-limited, checks the setup token, and closes automatically
 after success. You may remove `BUBLLIO_SETUP_TOKEN` during a later maintenance
@@ -157,7 +156,7 @@ http://127.0.0.1:8000/api/v1/organizations/
 
 ## Local Email
 
-Automation email uses console output by default.
+Local development email uses console output by default.
 
 The project uses:
 
@@ -167,18 +166,9 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 That means emails are printed in the terminal where `runserver` is running.
 
-Organization SMTP accounts have a separate test endpoint that attempts real
-delivery. Creating one does not change automation email behavior. See
-[Email Sending](architecture/email-adapters.md) for that distinction and the
-encryption key required when storing SMTP passwords.
-
-## Try an Automation
-
-Follow [Your First Automation](guides/first-automation.md) to create an active
-rule, create a new company, and inspect the email output and run history.
-Only `company.created` is automatically emitted today. No queue, worker, or
-workflow server is needed. The future visual builder is described separately in
-the [workflow roadmap](architecture/automation-roadmap.md).
+Organization SMTP accounts have a test endpoint that attempts real delivery. See
+[Email Sending](architecture/email-adapters.md) for the encryption key required when storing SMTP
+passwords.
 
 ## Environment Variables
 

@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
+from companies.models import CompanyTimelineEvent
+from companies.services import record_company_timeline_event
 
 from .models import Task
 from .serializers import TaskSerializer
@@ -104,7 +106,16 @@ class TaskListCreateAPIView(APIView):
             data=request.data, context={"organization": organization}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save(organization=organization, created_by=request.user)
+        task = serializer.save(organization=organization, created_by=request.user)
+        record_company_timeline_event(
+            company=task.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.TASK,
+            event_type=CompanyTimelineEvent.EventType.TASK_CREATED,
+            source_type="task",
+            source_id=task.id,
+            details={"task_title": task.title, "kind": task.kind},
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -139,7 +150,17 @@ class TaskDetailAPIView(APIView):
             context={"organization": organization},
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        changed_fields = list(serializer.validated_data)
+        task = serializer.save()
+        record_company_timeline_event(
+            company=task.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.TASK,
+            event_type=CompanyTimelineEvent.EventType.TASK_UPDATED,
+            source_type="task",
+            source_id=task.id,
+            details={"task_title": task.title, "fields": changed_fields},
+        )
         return Response(serializer.data)
 
     def delete(self, request, organization_id, task_id):

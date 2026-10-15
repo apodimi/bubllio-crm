@@ -2,12 +2,13 @@ import { Box, Stack, Typography } from '@mui/material'
 import bubllioMark from '../../assets/brand/bubllio-mark.png'
 
 type BrandLogoProps = {
+  compact?: boolean
   inverse?: boolean
   product?: string
 }
 
 export function BrandLogo(props: BrandLogoProps) {
-  const { inverse, product } = props;
+  const { compact = false, inverse, product } = props
 
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
@@ -28,30 +29,33 @@ export function BrandLogo(props: BrandLogoProps) {
           sx={{ display: 'block', width: 'auto', height: 30 }}
         />
       </Box>
-      <Typography
-        component="span"
-        variant="h6"
-        sx={{
-          color: inverse ? 'primary.contrastText' : 'text.primary',
-          fontWeight: 750,
-          letterSpacing: '-0.3px',
-        }}
-      >
-        bubllio
-        {product && (
-          <Box
-            component="span"
-            sx={{
-              ml: 0.75,
-              color: inverse ? 'primary.light' : 'text.secondary',
-              fontSize: '.72em',
-              fontWeight: 600,
-            }}
-          >
-            / {product.toLowerCase()}
-          </Box>
-        )}
-      </Typography>
+      {compact ? null : (
+        <Typography
+          component="span"
+          variant="h6"
+          sx={{
+            color: inverse ? 'primary.contrastText' : 'text.primary',
+            fontWeight: 750,
+            fontSize: '1.25rem',
+            letterSpacing: '-0.3px',
+          }}
+        >
+          bubllio
+          {product ? (
+            <Box
+              component="span"
+              sx={{
+                ml: 0.75,
+                color: inverse ? 'primary.light' : 'text.secondary',
+                fontSize: '.72em',
+                fontWeight: 600,
+              }}
+            >
+              / {product.toLowerCase()}
+            </Box>
+          ) : null}
+        </Typography>
+      )}
     </Stack>
   )
 }

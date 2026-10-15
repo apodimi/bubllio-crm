@@ -1,11 +1,9 @@
 # Email Sending: Current Behavior and Direction
 
-There are currently several sending paths. Configuring an organization SMTP
-account does not switch automation emails to that account.
+There are currently several sending paths.
 
 | Caller | Implementation | Transport |
 |---|---|---|
-| Automation action and manual automation test | Queued through the database outbox, then Django `send_mail` | Global backend, currently console |
 | Email account test endpoint | `organizations/services/email_service.py` opens an SMTP connection | Selected organization's SMTP account |
 | First-run setup test email | `organizations/services/email_service.py` sends one message | Unsaved SMTP settings supplied to the setup form |
 | Workspace invitation | Queued, then sent by a worker | Active default SMTP account of the inviting organization |
@@ -30,9 +28,8 @@ both the MJML source and compiled HTML. Production reads the compiled Django
 template, so Node and MJML are not production runtime dependencies. CI rebuilds
 the template and fails when the committed HTML is out of date.
 
-The automation path prints email in the terminal with checked-in settings. Saved
-or unsaved SMTP accounts attempt a real network send. Tests use mocked or test
-email boundaries.
+Saved or unsaved SMTP accounts attempt a real network send. Tests use mocked or test email
+boundaries.
 
 ## Organization SMTP Accounts Are Implemented
 
@@ -41,9 +38,8 @@ use Django admin. The first-run frontend can create one optional SMTP account;
 ongoing account management is not yet available there. Before completing setup,
 the frontend can send a real test email through
 `POST /api/v1/setup/smtp-test/` using unsaved settings and a recipient supplied
-by the operator. The test does not persist credentials or switch automation
-emails to SMTP. A successful response means the SMTP server accepted the
-message; delivery still needs to be checked in the inbox.
+by the operator. The test does not persist credentials. A successful response means the SMTP
+server accepted the message; delivery still needs to be checked in the inbox.
 
 ```text
 GET    /api/v1/organizations/<organization_id>/email-accounts/
@@ -71,7 +67,7 @@ which must be set to the public frontend origin in deployments.
 
 ## Background delivery and recovery
 
-Transactional emails and automation runs use Celery with RabbitMQ. PostgreSQL
+Transactional emails use Celery with RabbitMQ. PostgreSQL
 stores the authoritative outbox row; RabbitMQ carries only its UUID. Invitation
 tokens are encrypted in the outbox and removed after successful handling.
 Workers retry failures with increasing delays up to six attempts. Celery Beat
@@ -120,19 +116,6 @@ transaction. If any value cannot be decrypted, the whole operation rolls back.
 Losing every key that can decrypt an existing value is not recoverable. Never
 put passwords or encryption keys in version control.
 
-## Next Integration: Reuse Django SMTP Sending
-
-Planned, not implemented: let `send_email` select an authorized account belonging
-to the automation's organization and reuse an organization-aware sending service.
-Define account selection, inactive-account behavior, and behavior when no account
-is available. Marking an account `is_default` today does not connect it to
-automation sending.
-
-This can use Django's email backend support and the existing encrypted account
-model. No additional provider framework or service is required. Definitions
-should reference account IDs, never copy passwords into action JSON or payloads.
-
 Additional provider adapters are a possible later extension. There is currently
 no generic `email_sender` interface, provider SDK integration, or
-`BUBLLIO_EMAIL_PROVIDER` selection setting. Older phase-based proposals are
-superseded by this description and the [workflow roadmap](automation-roadmap.md).
+`BUBLLIO_EMAIL_PROVIDER` selection setting.

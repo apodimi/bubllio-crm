@@ -1,3 +1,11 @@
+"""Legacy persistence retained for a production-safe, reversible removal.
+
+These models have no public API, admin registration, signals, or execution
+service. Keep them through the Phase 1 release so existing installations retain
+their data and normal Django database dependency handling. Physical cleanup is a
+separate Phase 2 migration after a verified production soak.
+"""
+
 import uuid
 
 from django.db import models

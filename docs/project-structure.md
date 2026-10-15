@@ -9,6 +9,8 @@ workflow for the area you are changing.
 bubllio-crm/
 ├── frontend/        React application
 ├── src/             Django project and business apps
+├── updater/         independent, least-privilege update agent
+├── release/         signed-manifest policy for each release
 ├── docs/            operator, product, API, and architecture documentation
 ├── skills/          repeatable implementation and verification workflows
 ├── compose.yaml     local PostgreSQL service
@@ -36,7 +38,6 @@ under `src/bubllio_crm/`; business behavior is split into Django apps.
 | `deals` | Sales opportunities and pipeline stages. |
 | `activities` | Follow-ups, calls, meetings, and task state. |
 | `subscriptions` | Services, recurring billing, charges, and payments. |
-| `automations` | Automation rules, execution, and run history. |
 
 Inside an app, keep responsibilities predictable:
 
@@ -92,6 +93,8 @@ queries, mutations, routing, and verification.
 | `compose.yaml` | Optional local PostgreSQL. |
 | `compose.production.yaml` | Generic self-hosted production stack. |
 | `compose.dokploy.yaml` | Dokploy production stack. |
+| `release/policies/` | Per-version compatibility and migration policy. |
+| `updater/config.example.json` | Safe update-agent configuration shape. |
 
 Real `.env` files and credentials must never be committed.
 

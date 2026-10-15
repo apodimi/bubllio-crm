@@ -31,3 +31,13 @@ export const companySchema = z.object({
 })
 
 export type CompanyFormValues = z.infer<typeof companySchema>
+
+export const timelineNoteSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, 'Write a note before adding it.')
+    .max(5000, 'Use at most 5,000 characters.'),
+})
+
+export type TimelineNoteFormValues = z.infer<typeof timelineNoteSchema>

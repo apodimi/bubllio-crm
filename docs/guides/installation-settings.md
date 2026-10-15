@@ -68,7 +68,7 @@ Do not report success until the real backup or recovery test has completed.
 ### Downloading a local data copy
 
 Use **Download data export** to save a JSON copy of workspaces, members,
-companies, contacts, automations, and non-secret settings on your computer.
+companies, contacts, and non-secret settings on your computer.
 Passwords, sign-in tokens, and saved email passwords are excluded. Every
 download is added to the access history.
 

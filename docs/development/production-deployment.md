@@ -3,17 +3,17 @@
 For a guided Dokploy installation, use
 [Install Bubllio CRM with Dokploy](dokploy-deployment.md).
 
-This runbook deploys Bubllio CRM as three containers: PostgreSQL, the Django API
-behind Gunicorn, and the React application behind Nginx. Put a TLS-terminating
-reverse proxy or managed load balancer in front of port 8080. Do not expose the
-PostgreSQL or Django containers directly to the internet.
+This runbook deploys PostgreSQL, RabbitMQ, the Django API, Celery worker and
+scheduler, and the React application. Put a TLS-terminating reverse proxy or
+managed load balancer in front of port 8080. Do not expose PostgreSQL,
+RabbitMQ, or Django directly to the internet.
 
 ## First deployment
 
 1. Copy `.env.production.example` to `.env.production` on the server.
 2. Replace every `CHANGE_ME` value. Never commit the resulting file.
 3. Point the public DNS record at the TLS proxy or load balancer.
-4. Start the immutable application images:
+4. Build and start the application services:
 
    ```bash
    docker compose --env-file .env.production -f compose.production.yaml up -d --build
@@ -46,11 +46,11 @@ subdomain have been verified.
 
 ## Updates
 
-Before updating, complete and verify a database backup. Pull the selected GitHub
-release or immutable image, rebuild/start the services, then check `/health/`
-and the critical customer flow. Keep the previous release identifier available
-for rollback. A database migration may require a forward-fix rather than an
-application-only rollback.
+Version 0.2.0 is the manual bootstrap for the optional independent Update Agent.
+After it is configured, installation administrators can install signed releases
+classified as `online_safe` from Account settings. Maintenance and irreversible
+releases remain manual. See [Updating a self-hosted installation](updating.md)
+for the trust model, bootstrap, backup, and recovery procedure.
 
 ## Backups
 

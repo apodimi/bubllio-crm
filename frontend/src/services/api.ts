@@ -95,6 +95,7 @@ export async function request<T>(
   options: {
     signal?: AbortSignal
     body?: unknown
+    headers?: AxiosRequestConfig['headers']
     method?: AxiosRequestConfig['method']
   } = {},
 ): Promise<T> {
@@ -103,6 +104,7 @@ export async function request<T>(
     method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
     signal: options.signal,
     data: options.body,
+    headers: options.headers,
   }
   try {
     const response = await apiClient.request<T>(config)

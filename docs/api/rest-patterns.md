@@ -165,7 +165,6 @@ This creates:
 /api/v1/organizations/
 /api/v1/organizations/<organization_id>/companies/
 /api/v1/organizations/<organization_id>/contacts/
-/api/v1/organizations/<organization_id>/automations/
 ```
 
 ## Class Splitting Logic
@@ -200,19 +199,6 @@ class OrganizationDetailAPIView(APIView):
     ...
 ```
 
-Custom action endpoint:
-
-```text
-POST /api/v1/organizations/<organization_id>/automations/<id>/test/
-```
-
-Use another class:
-
-```python
-class AutomationTestAPIView(APIView):
-    ...
-```
-
 Rule of thumb:
 
 ```text
@@ -220,20 +206,20 @@ same path + same resource level -> same class, different methods
 different path or custom action -> different class
 ```
 
-## Automation Response Semantics
-
-Creating an automation saves a rule; it does not execute it. The manual test
-endpoint executes the action and returns HTTP 201 with a run, including when that
-run has `status: failed`. Clients must inspect the body's `status` and
-`run.error_message`. This test is not a dry run and bypasses the active-rule
-filter used by normal event dispatch.
-
-There is no automation PATCH/DELETE or multi-step definition endpoint yet.
-See [current automation behavior](../architecture/automations.md) and the
-[walkthrough](../guides/first-automation.md). Future workflow definitions in the
-[roadmap](../architecture/automation-roadmap.md) are not a current API contract.
-
 ## Collection Search
+
+Company and contact collections support opt-in server pagination with `page`
+(1-based) and `page_size` (default 50, maximum 100). Paginated responses have
+`{ "count": 123, "results": [...] }`; filters apply before counting and slicing.
+Without `page`, the existing array response remains available for compatibility.
+The main CRM lists use pagination; legacy selectors still use array responses.
+Company pages sort by name/UUID and contact pages by last name/first name/UUID
+for deterministic page boundaries. Invalid page parameters return HTTP 400;
+a page beyond the final result returns an empty `results` array.
+
+`GET /api/v1/organizations/<organization_id>/companies/summary/` returns
+`companies` and `contacts` counts for the authorized workspace. It excludes archived records,
+allowing the dashboard to show totals without downloading all records.
 
 For simple search, filter the queryset before creating the serializer.
 
@@ -281,9 +267,6 @@ CompanyListCreateAPIView
 CompanyDetailAPIView
 ContactListCreateAPIView
 ContactDetailAPIView
-AutomationListCreateAPIView
-AutomationRunListAPIView
-AutomationTestAPIView
 ```
 
 `Detail` is singular because the endpoint represents one resource.

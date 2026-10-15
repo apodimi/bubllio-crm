@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
 import {
   Alert,
   Button,
@@ -11,8 +9,12 @@ import {
   Stack,
   TextField,
 } from '@mui/material'
-import { useCreateResource } from '../../hooks/useCreateResource'
 import type { QueryKey } from '@tanstack/react-query'
+import { useState, type SubmitEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { useCreateResource } from '../../hooks/useCreateResource'
+
 export interface Field {
   name: string
   label: string
@@ -34,9 +36,10 @@ export function CreateDialog({
   invalidate: QueryKey
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [values, setValues] = useState<Record<string, string>>({})
   const mutation = useCreateResource(path, invalidate, onClose)
-  function submit(event: FormEvent) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const body = Object.fromEntries(
       fields
@@ -64,7 +67,9 @@ export function CreateDialog({
                 value={values[field.name] ?? ''}
                 disabled={mutation.isPending}
                 slotProps={{ htmlInput: { maxLength: field.maxLength } }}
-                onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [field.name]: event.target.value }))
+                }
               >
                 {field.options?.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
@@ -77,10 +82,10 @@ export function CreateDialog({
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={onClose} disabled={mutation.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : 'Create'}
+            {mutation.isPending ? `${t('common.save')}…` : t('common.create')}
           </Button>
         </DialogActions>
       </form>

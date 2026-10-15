@@ -19,7 +19,6 @@ The frontend does not own:
 - organization membership or role decisions;
 - tenant selection during writes;
 - CRM validation that must also protect non-browser clients;
-- automation execution;
 - persistence of access or refresh tokens.
 
 ## Request rule: hooks at the React boundary
@@ -68,7 +67,6 @@ frontend/src/
 │   ├── organizations/ domain hooks and services
 │   ├── companies/      domain hooks and services
 │   ├── contacts/       domain hooks and services
-│   ├── automations/    domain hooks and services
 │   ├── invitations/    invitation hooks and services
 │   └── organizations/  workspace, settings, and email account hooks/services
 ├── hooks/               globally reusable hooks
@@ -186,8 +184,7 @@ separation without requiring a running Django server.
 
 Routes are defined in `src/routes/router.tsx` with TanStack Router's code-based
 route tree. The root route owns the shell, the organization route owns the
-`$organizationId` parameter, and child routes own overview, companies,
-contacts, and automations screens.
+`$organizationId` parameter, and child routes own overview, companies, and contacts screens.
 
 Use route templates and params for dynamic navigation:
 

@@ -5,14 +5,28 @@
   "deals": "Συμφωνίες",
   "tasks": "Εργασίες",
   "services": "Υπηρεσίες",
-  "automations": "Αυτοματισμοί",
+  "servicesNavigation": "Πλοήγηση υπηρεσιών",
   "people": "Μέλη",
   "settings": "Ρυθμίσεις",
   "accountSettings": "Ρυθμίσεις λογαριασμού",
   "accountMenu": "Μενού λογαριασμού",
   "openAccountMenu": "Άνοιγμα μενού λογαριασμού",
   "openNavigation": "Άνοιγμα πλοήγησης",
+  "primaryNavigation": "Κύρια πλοήγηση",
+  "workspaceAreas": "Περιοχές χώρου εργασίας",
+  "collapseNavigation": "Σύμπτυξη πλοήγησης",
+  "expandNavigation": "Ανάπτυξη πλοήγησης",
   "signOut": "Αποσύνδεση",
   "installationAdministrator": "Διαχειριστής εγκατάστασης",
-  "workspaceMember": "Μέλος χώρου εργασίας"
+  "workspaceMember": "Μέλος χώρου εργασίας",
+  "customerServices": "Υπηρεσίες πελατών",
+  "billing": "Χρεώσεις",
+  "catalog": "Κατάλογος",
+  "groups": {
+    "home": "Αρχική",
+    "relationships": "Σχέσεις",
+    "work": "Εργασία",
+    "operations": "Λειτουργίες",
+    "workspace": "Χώρος εργασίας"
+  }
 }

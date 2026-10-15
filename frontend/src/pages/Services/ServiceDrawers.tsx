@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import {
   Alert,
@@ -18,6 +19,7 @@ import {
   useCancelSubscription,
   useCreateCatalogItem,
   useCreateSubscription,
+  usePauseSubscription,
   useRecordPayment,
   useResumeSubscription,
   useUpdateCatalogItem,
@@ -80,6 +82,7 @@ export function CatalogDrawer({
   item?: ServiceCatalogItem
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const create = useCreateCatalogItem(organizationId)
   const update = useUpdateCatalogItem(organizationId)
   const mutation = item ? update : create
@@ -101,8 +104,8 @@ export function CatalogDrawer({
   return (
     <Drawer anchor="right" open onClose={mutation.isPending ? undefined : onClose} sx={drawerSx}>
       <Header
-        title={item ? 'Edit catalog service' : 'Add catalog service'}
-        description="Set reusable commercial defaults. Customer agreements keep their own copy."
+        title={item ? t('crm.services.drawer.editCatalog') : t('crm.services.drawer.addCatalog')}
+        description={t('crm.services.drawer.catalogHint')}
         onClose={onClose}
       />
       <Divider />
@@ -110,19 +113,19 @@ export function CatalogDrawer({
         {mutation.isError ? <Alert severity="error">{mutation.error.message}</Alert> : null}
         <TextField
           required
-          label="Service name"
+          label={t('crm.services.drawer.serviceName')}
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           autoFocus
         />
         <TextField
-          label="Internal code"
+          label={t('crm.services.drawer.internalCode')}
           value={form.internal_code}
           onChange={(e) => setForm({ ...form, internal_code: e.target.value })}
-          helperText="Optional reference used by your team."
+          helperText={t('crm.services.drawer.internalCodeHint')}
         />
         <TextField
-          label="Description"
+          label={t('crm.services.drawer.description')}
           multiline
           minRows={3}
           value={form.description}
@@ -132,7 +135,7 @@ export function CatalogDrawer({
           <TextField
             required
             type="number"
-            label="Net price"
+            label={t('crm.services.drawer.netPrice')}
             value={form.default_net_price}
             onChange={(e) => setForm({ ...form, default_net_price: e.target.value })}
             fullWidth
@@ -140,7 +143,7 @@ export function CatalogDrawer({
           />
           <TextField
             required
-            label="Currency"
+            label={t('crm.services.drawer.currency')}
             value={form.currency}
             onChange={(e) =>
               setForm({ ...form, currency: e.target.value.toUpperCase().slice(0, 3) })
@@ -151,7 +154,7 @@ export function CatalogDrawer({
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
             select
-            label="Billing cycle"
+            label={t('crm.services.drawer.billingCycle')}
             value={form.billing_interval}
             onChange={(e) =>
               setForm({ ...form, billing_interval: e.target.value as BillingInterval })
@@ -166,7 +169,7 @@ export function CatalogDrawer({
           </TextField>
           <TextField
             type="number"
-            label="VAT rate (%)"
+            label={t('crm.services.drawer.vat')}
             value={form.default_tax_rate}
             onChange={(e) => setForm({ ...form, default_tax_rate: e.target.value })}
             sx={{ width: { sm: 180 } }}
@@ -180,7 +183,7 @@ export function CatalogDrawer({
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
           }
-          label="Available for new subscriptions"
+          label={t('crm.services.drawer.available')}
         />
         <Button
           variant="contained"
@@ -188,7 +191,9 @@ export function CatalogDrawer({
           disabled={!form.name.trim() || mutation.isPending}
           onClick={submit}
         >
-          {mutation.isPending ? 'Saving…' : 'Save service'}
+          {mutation.isPending
+            ? t('crm.services.drawer.saving')
+            : t('crm.services.drawer.saveService')}
         </Button>
       </Stack>
     </Drawer>
@@ -208,10 +213,12 @@ export function SubscriptionDrawer({
   subscription?: CustomerSubscription
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const create = useCreateSubscription(organizationId)
   const update = useUpdateSubscription(organizationId)
   const mutation = subscription ? update : create
   const cancel = useCancelSubscription(organizationId)
+  const pause = usePauseSubscription(organizationId)
   const resume = useResumeSubscription(organizationId)
   const [confirmCancellation, setConfirmCancellation] = useState(false)
   const [form, setForm] = useState({
@@ -227,10 +234,10 @@ export function SubscriptionDrawer({
     renewal_date: subscription?.renewal_date ?? '',
     end_date: subscription?.end_date ?? '',
     auto_renew: subscription?.auto_renew ?? true,
-    status: subscription?.status ?? ('active' as CustomerSubscription['status']),
     operational_reference: subscription?.operational_reference ?? '',
     notes: subscription?.notes ?? '',
   })
+  const usesCatalogDefaults = !subscription && Boolean(form.catalog_item)
   useEffect(() => {
     if (subscription || !form.catalog_item) return
     const item = catalog.find((candidate) => candidate.id === form.catalog_item)
@@ -245,7 +252,6 @@ export function SubscriptionDrawer({
       }))
   }, [catalog, form.catalog_item, subscription])
   const submit = () => {
-    const { status, ...formWithoutStatus } = form
     const normalizedDates = {
       catalog_item: form.catalog_item || null,
       renewal_date: form.renewal_date || null,
@@ -253,27 +259,45 @@ export function SubscriptionDrawer({
     }
     if (subscription) {
       const body = {
-        ...formWithoutStatus,
+        ...form,
         ...normalizedDates,
-        ...(!['cancelling', 'cancelled'].includes(subscription.effective_status) ? { status } : {}),
       }
       update.mutate({ id: subscription.id, body }, { onSuccess: onClose })
+    } else if (usesCatalogDefaults) {
+      create.mutate(
+        {
+          company: form.company,
+          catalog_item: form.catalog_item,
+          start_date: form.start_date,
+          auto_renew: form.auto_renew,
+          operational_reference: form.operational_reference,
+          notes: form.notes,
+        },
+        { onSuccess: onClose },
+      )
     } else {
-      create.mutate({ ...formWithoutStatus, ...normalizedDates, status }, { onSuccess: onClose })
+      create.mutate({ ...form, ...normalizedDates }, { onSuccess: onClose })
     }
   }
   return (
     <Drawer anchor="right" open onClose={mutation.isPending ? undefined : onClose} sx={drawerSx}>
       <Header
-        title={subscription ? 'Edit customer subscription' : 'Add customer subscription'}
-        description="Track what the customer receives, when it renews, and what is due."
+        title={
+          subscription
+            ? t('crm.services.drawer.editCustomer')
+            : t('crm.services.drawer.addCustomer')
+        }
+        description={t('crm.services.drawer.customerHint')}
         onClose={onClose}
       />
       <Divider />
       <Stack spacing={2.25} sx={{ p: 3 }}>
-        {mutation.isError || cancel.isError || resume.isError ? (
+        {mutation.isError || cancel.isError || pause.isError || resume.isError ? (
           <Alert severity="error">
-            {mutation.error?.message ?? cancel.error?.message ?? resume.error?.message}
+            {mutation.error?.message ??
+              cancel.error?.message ??
+              pause.error?.message ??
+              resume.error?.message}
           </Alert>
         ) : null}
         {subscription?.effective_status === 'cancelling' &&
@@ -300,7 +324,7 @@ export function SubscriptionDrawer({
         <TextField
           select
           required
-          label="Customer"
+          label={t('crm.services.drawer.customer')}
           value={form.company}
           onChange={(e) => setForm({ ...form, company: e.target.value })}
         >
@@ -312,11 +336,11 @@ export function SubscriptionDrawer({
         </TextField>
         <TextField
           select
-          label="Catalog service"
+          label={t('crm.services.drawer.catalogService')}
           value={form.catalog_item}
           onChange={(e) => setForm({ ...form, catalog_item: e.target.value })}
         >
-          <MenuItem value="">Custom service</MenuItem>
+          <MenuItem value="">{t('crm.services.drawer.customService')}</MenuItem>
           {catalog
             .filter((item) => item.is_active || item.id === form.catalog_item)
             .map((item) => (
@@ -325,115 +349,107 @@ export function SubscriptionDrawer({
               </MenuItem>
             ))}
         </TextField>
-        <TextField
-          required
-          label="Subscription name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
+        {usesCatalogDefaults ? (
+          <Alert severity="info">{t('crm.services.drawer.catalogDefaults')}</Alert>
+        ) : (
+          <>
+            <TextField
+              required
+              label={t('crm.services.drawer.serviceName')}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                required
+                type="number"
+                label={t('crm.services.drawer.netAmount')}
+                value={form.net_price}
+                onChange={(e) => setForm({ ...form, net_price: e.target.value })}
+                fullWidth
+                slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+              />
+              <TextField
+                label={t('crm.services.drawer.vat')}
+                type="number"
+                value={form.tax_rate}
+                onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
+                sx={{ width: { sm: 140 } }}
+                slotProps={{ htmlInput: { min: 0, max: 100 } }}
+              />
+              <TextField
+                label={t('crm.services.drawer.currency')}
+                value={form.currency}
+                onChange={(e) =>
+                  setForm({ ...form, currency: e.target.value.toUpperCase().slice(0, 3) })
+                }
+                sx={{ width: { sm: 130 } }}
+              />
+            </Stack>
+            <TextField
+              select
+              label={t('crm.services.drawer.billingCycle')}
+              value={form.billing_interval}
+              onChange={(e) =>
+                setForm({ ...form, billing_interval: e.target.value as BillingInterval })
+              }
+            >
+              {intervals.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </>
+        )}
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
-            required
-            type="number"
-            label="Net amount"
-            value={form.net_price}
-            onChange={(e) => setForm({ ...form, net_price: e.target.value })}
-            fullWidth
-            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
-          />
-          <TextField
-            label="VAT (%)"
-            type="number"
-            value={form.tax_rate}
-            onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
-            sx={{ width: { sm: 140 } }}
-            slotProps={{ htmlInput: { min: 0, max: 100 } }}
-          />
-          <TextField
-            label="Currency"
-            value={form.currency}
-            onChange={(e) =>
-              setForm({ ...form, currency: e.target.value.toUpperCase().slice(0, 3) })
-            }
-            sx={{ width: { sm: 130 } }}
-          />
-        </Stack>
-        <TextField
-          select
-          label="Billing cycle"
-          value={form.billing_interval}
-          onChange={(e) =>
-            setForm({ ...form, billing_interval: e.target.value as BillingInterval })
-          }
-        >
-          {intervals.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            label="Starts"
+            label={t('crm.services.drawer.starts')}
             type="date"
             value={form.start_date}
             onChange={(e) => setForm({ ...form, start_date: e.target.value })}
             fullWidth
             slotProps={{ inputLabel: { shrink: true } }}
           />
-          <TextField
-            label="First charge due"
-            type="date"
-            value={form.next_billing_date}
-            onChange={(e) => setForm({ ...form, next_billing_date: e.target.value })}
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
+          {!usesCatalogDefaults ? (
+            <TextField
+              label={t('crm.services.drawer.firstCharge')}
+              type="date"
+              value={form.next_billing_date}
+              onChange={(e) => setForm({ ...form, next_billing_date: e.target.value })}
+              fullWidth
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+          ) : null}
         </Stack>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
-            label="Renewal date"
+            label={t('crm.services.drawer.renewalDate')}
             type="date"
             value={form.renewal_date}
             onChange={(e) => setForm({ ...form, renewal_date: e.target.value })}
             fullWidth
             slotProps={{ inputLabel: { shrink: true } }}
-            helperText="Optional reminder for the commercial renewal."
+            helperText={t('crm.services.drawer.renewalHint')}
           />
           <TextField
-            label="End date"
+            label={t('crm.services.drawer.endDate')}
             type="date"
             value={form.end_date}
             onChange={(e) => setForm({ ...form, end_date: e.target.value })}
             fullWidth
             slotProps={{ inputLabel: { shrink: true } }}
-            helperText="No new charge is created after this date."
+            helperText={t('crm.services.drawer.endDateHint')}
           />
         </Stack>
-        {subscription &&
-        subscription.effective_status !== 'cancelling' &&
-        subscription.effective_status !== 'cancelled' ? (
-          <TextField
-            select
-            label="Status"
-            value={form.status}
-            onChange={(e) =>
-              setForm({ ...form, status: e.target.value as CustomerSubscription['status'] })
-            }
-          >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="paused">Paused</MenuItem>
-            <MenuItem value="expired">Expired</MenuItem>
-          </TextField>
-        ) : null}
         <TextField
-          label="Operational reference"
+          label={t('crm.services.drawer.reference')}
           value={form.operational_reference}
           onChange={(e) => setForm({ ...form, operational_reference: e.target.value })}
-          helperText="Optional account, domain, asset, or contract reference."
+          helperText={t('crm.services.drawer.referenceHint')}
         />
         <TextField
-          label="Internal notes"
+          label={t('crm.services.drawer.notes')}
           multiline
           minRows={3}
           value={form.notes}
@@ -446,22 +462,42 @@ export function SubscriptionDrawer({
               onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })}
             />
           }
-          label="Create the next charge after full payment"
+          label={t('crm.services.drawer.autoRenew')}
         />
         <Button
           variant="contained"
           size="large"
           disabled={
             !form.company ||
-            !form.name.trim() ||
+            (!usesCatalogDefaults && !form.name.trim()) ||
             mutation.isPending ||
             cancel.isPending ||
             resume.isPending
           }
           onClick={submit}
         >
-          {mutation.isPending ? 'Saving…' : 'Save subscription'}
+          {mutation.isPending
+            ? t('crm.services.drawer.saving')
+            : t('crm.services.drawer.saveCustomer')}
         </Button>
+        {subscription?.effective_status === 'active' ? (
+          <Button
+            variant="outlined"
+            disabled={pause.isPending}
+            onClick={() => pause.mutate(subscription.id, { onSuccess: onClose })}
+          >
+            {pause.isPending ? t('crm.services.drawer.pausing') : t('crm.services.drawer.pause')}
+          </Button>
+        ) : null}
+        {subscription?.effective_status === 'paused' ? (
+          <Button
+            variant="outlined"
+            disabled={resume.isPending}
+            onClick={() => resume.mutate(subscription.id, { onSuccess: onClose })}
+          >
+            {resume.isPending ? t('crm.services.drawer.resuming') : t('crm.services.drawer.resume')}
+          </Button>
+        ) : null}
         {subscription &&
         !['cancelling', 'cancelled', 'expired'].includes(subscription.effective_status) ? (
           <>
@@ -469,8 +505,8 @@ export function SubscriptionDrawer({
             {confirmCancellation ? (
               <Alert severity="warning">
                 <Typography variant="body2" sx={{ mb: 1.5 }}>
-                  End-of-period cancellation keeps the service available through the current
-                  coverage period and cancels only later charges.
+                  Ending at period close keeps the service available through the current coverage
+                  period and cancels only later charges.
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                   <Button
@@ -484,7 +520,7 @@ export function SubscriptionDrawer({
                       )
                     }
                   >
-                    {cancel.isPending ? 'Scheduling…' : 'Cancel at period end'}
+                    {cancel.isPending ? 'Scheduling…' : 'End at period close'}
                   </Button>
                   <Button
                     color="error"
@@ -496,7 +532,7 @@ export function SubscriptionDrawer({
                       )
                     }
                   >
-                    Cancel immediately
+                    End immediately
                   </Button>
                   <Button color="inherit" onClick={() => setConfirmCancellation(false)}>
                     Keep subscription
@@ -505,7 +541,7 @@ export function SubscriptionDrawer({
               </Alert>
             ) : (
               <Button color="error" variant="outlined" onClick={() => setConfirmCancellation(true)}>
-                Cancel subscription…
+                {t('crm.services.drawer.end')}
               </Button>
             )}
           </>
@@ -524,6 +560,7 @@ export function PaymentDrawer({
   charge: Charge
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const mutation = useRecordPayment(organizationId)
   const [form, setForm] = useState({
     amount: charge.outstanding_amount,
@@ -535,25 +572,26 @@ export function PaymentDrawer({
   return (
     <Drawer anchor="right" open onClose={mutation.isPending ? undefined : onClose} sx={drawerSx}>
       <Header
-        title="Record payment"
+        title={t('crm.services.drawer.recordPayment')}
         description={`${charge.company_name} · ${charge.subscription_name}`}
         onClose={onClose}
       />
       <Divider />
       <Stack spacing={2.25} sx={{ p: 3 }}>
         <Alert severity="info">
-          Outstanding:{' '}
-          {Number(charge.outstanding_amount).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-          })}{' '}
-          {charge.currency}
+          {t('crm.services.drawer.outstanding', {
+            amount: Number(charge.outstanding_amount).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            }),
+            currency: charge.currency,
+          })}
         </Alert>
         {mutation.isError ? <Alert severity="error">{mutation.error.message}</Alert> : null}
         <TextField
           required
           autoFocus
           type="number"
-          label="Amount received"
+          label={t('crm.services.drawer.amountReceived')}
           value={form.amount}
           onChange={(e) => setForm({ ...form, amount: e.target.value })}
           slotProps={{ htmlInput: { min: 0.01, max: charge.outstanding_amount, step: 0.01 } }}
@@ -561,24 +599,24 @@ export function PaymentDrawer({
         <TextField
           required
           type="date"
-          label="Payment date"
+          label={t('crm.services.drawer.paymentDate')}
           value={form.paid_date}
           onChange={(e) => setForm({ ...form, paid_date: e.target.value })}
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <TextField
-          label="Payment method"
+          label={t('crm.services.drawer.paymentMethod')}
           value={form.payment_method}
           onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
-          placeholder="Bank transfer, card, cash…"
+          placeholder={t('crm.services.drawer.paymentMethodPlaceholder')}
         />
         <TextField
-          label="Reference"
+          label={t('crm.services.drawer.paymentReference')}
           value={form.external_reference}
           onChange={(e) => setForm({ ...form, external_reference: e.target.value })}
         />
         <TextField
-          label="Note"
+          label={t('crm.services.drawer.note')}
           multiline
           minRows={3}
           value={form.note}
@@ -592,7 +630,9 @@ export function PaymentDrawer({
             mutation.mutate({ chargeId: charge.id, body: form }, { onSuccess: onClose })
           }
         >
-          {mutation.isPending ? 'Recording…' : 'Record payment'}
+          {mutation.isPending
+            ? t('crm.services.drawer.recording')
+            : t('crm.services.drawer.recordPayment')}
         </Button>
       </Stack>
     </Drawer>

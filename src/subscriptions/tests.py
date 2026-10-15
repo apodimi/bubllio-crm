@@ -1,17 +1,58 @@
 from datetime import date
+from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from companies.models import Company
+from companies.models import Company, CompanyTimelineEvent
 from organizations.models import Organization, OrganizationMembership
 
-from .models import Charge, CustomerSubscription, ServiceCatalogItem
+from .models import Charge, CustomerSubscription, Payment, ServiceCatalogItem
+from .services import subscription_overview
 
 
 class SubscriptionApiTests(APITestCase):
+    def test_overview_aggregates_without_loading_models_or_multiplying_payments(self):
+        first = self.create_subscription(currency="EUR")
+        eur_charge = Charge.objects.get(subscription_id=first.data['id'])
+        Payment.objects.create(organization=self.organization, charge=eur_charge, amount='10.00', paid_date=date(2026, 10, 5))
+        Payment.objects.create(organization=self.organization, charge=eur_charge, amount='20.00', paid_date=date(2026, 10, 5))
+        second = self.create_subscription(catalog_item=None, name='Quarterly', net_price='60.00', tax_rate='0', currency='USD', billing_interval='quarterly')
+        usd_charge = Charge.objects.get(subscription_id=second.data['id'])
+        Payment.objects.create(organization=self.organization, charge=usd_charge, amount='60.00', paid_date=date(2026, 10, 5))
+        third = self.create_subscription()
+        Charge.objects.filter(subscription_id=third.data['id']).update(state='cancelled')
+        with patch('subscriptions.services.timezone.localdate', return_value=date(2026, 10, 13)), \
+             patch.object(Charge, 'from_db', side_effect=AssertionError('No charge hydration')), \
+             patch.object(Payment, 'from_db', side_effect=AssertionError('No payment hydration')), \
+             patch.object(CustomerSubscription, 'from_db', side_effect=AssertionError('No subscription hydration')):
+            result = subscription_overview(self.organization)
+        self.assertEqual(result['open_balances'], {'EUR': Decimal('94.00')})
+        self.assertEqual(result['overdue_balances'], {'EUR': Decimal('94.00')})
+        self.assertEqual(result['overdue_charges'], 1)
+        self.assertEqual(result['collected_this_month'], {'EUR': Decimal('30.00'), 'USD': Decimal('60.00')})
+        self.assertEqual(result['monthly_recurring_revenue'], {'EUR': Decimal('200.00'), 'USD': Decimal('20.00')})
+
+    def test_billing_query_count_does_not_grow_with_charges(self):
+        self.create_subscription()
+        overview_url = reverse("subscription-overview", kwargs={"organization_id": self.organization.id})
+        def measure(url):
+            with CaptureQueriesContext(connection) as queries:
+                response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            return len(queries)
+
+        baseline = {url: measure(url) for url in (self.charges_url(), overview_url)}
+        for _ in range(5):
+            self.create_subscription()
+        for url, count in baseline.items():
+            self.assertEqual(measure(url), count)
+
     def setUp(self):
         self.user = get_user_model().objects.create_user("billing-user")
         self.organization = Organization.objects.create(name="Main workspace", slug="main-workspace")
@@ -65,6 +106,13 @@ class SubscriptionApiTests(APITestCase):
         self.assertEqual(charge.tax_amount, 24)
         self.assertEqual(charge.gross_amount, 124)
         self.assertEqual(charge.coverage_end, date(2026, 11, 4))
+        self.assertTrue(
+            CompanyTimelineEvent.objects.filter(
+                company=self.company,
+                event_type=CompanyTimelineEvent.EventType.SERVICE_CREATED,
+                source_id=response.data["id"],
+            ).exists()
+        )
 
     def test_custom_subscription_requires_commercial_fields(self):
         response = self.client.post(
@@ -110,6 +158,13 @@ class SubscriptionApiTests(APITestCase):
             Charge.objects.filter(
                 subscription_id=subscription_response.data["id"], due_date=date(2026, 11, 5)
             ).exists()
+        )
+        self.assertEqual(
+            CompanyTimelineEvent.objects.filter(
+                company=self.company,
+                event_type=CompanyTimelineEvent.EventType.PAYMENT_RECORDED,
+            ).count(),
+            2,
         )
 
     def test_overpayment_is_rejected_without_creating_payment(self):
@@ -309,7 +364,7 @@ class SubscriptionApiTests(APITestCase):
         self.assertEqual(overview.data["collected_this_month"]["EUR"], 24)
         self.assertEqual(overview.data["monthly_recurring_revenue"]["EUR"], 100)
 
-    def test_pause_cancels_future_charge_and_resume_reopens_it(self):
+    def test_pause_action_cancels_future_charge_and_resume_reopens_it(self):
         response = self.create_subscription()
         subscription = CustomerSubscription.objects.get(id=response.data["id"])
         charge = subscription.charges.get()
@@ -322,23 +377,61 @@ class SubscriptionApiTests(APITestCase):
             format="json",
         )
 
-        detail_url = reverse(
-            "subscription-detail",
+        pause_url = reverse(
+            "subscription-pause",
             kwargs={
                 "organization_id": self.organization.id,
                 "subscription_id": subscription.id,
             },
         )
-        pause_response = self.client.patch(detail_url, {"status": "paused"}, format="json")
+        pause_response = self.client.post(pause_url, format="json")
         future_charge = subscription.charges.get(due_date=date(2026, 11, 5))
 
         self.assertEqual(pause_response.status_code, status.HTTP_200_OK)
         self.assertEqual(future_charge.state, Charge.State.CANCELLED)
 
-        resume_response = self.client.patch(detail_url, {"status": "active"}, format="json")
+        resume_response = self.client.post(
+            reverse(
+                "subscription-resume",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription.id,
+                },
+            ),
+            format="json",
+        )
         future_charge.refresh_from_db()
         self.assertEqual(resume_response.status_code, status.HTTP_200_OK)
         self.assertEqual(future_charge.state, Charge.State.OPEN)
+
+    def test_status_cannot_be_changed_through_generic_update(self):
+        response = self.create_subscription()
+        detail_url = reverse(
+            "subscription-detail",
+            kwargs={
+                "organization_id": self.organization.id,
+                "subscription_id": response.data["id"],
+            },
+        )
+
+        update_response = self.client.patch(detail_url, {"status": "paused"}, format="json")
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data["status"], "active")
+
+    def test_catalog_service_creation_defaults_first_charge_to_start_date(self):
+        response = self.client.post(
+            self.subscriptions_url(),
+            {
+                "company": self.company.id,
+                "catalog_item": self.catalog_item.id,
+                "start_date": "2026-10-05",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["next_billing_date"], "2026-10-05")
 
     def test_past_end_date_is_effectively_expired_and_excluded_from_metrics(self):
         subscription = CustomerSubscription.objects.create(

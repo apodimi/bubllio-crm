@@ -22,8 +22,7 @@ export function useOrganizationSettings(id: string, canManage = true) {
     enabled: canManage,
   })
   const saveSettings = useMutation({
-    mutationFn: (body: Partial<WorkspaceSettings>) =>
-      organizationService.patchSettings(id, body),
+    mutationFn: (body: Partial<WorkspaceSettings>) => organizationService.patchSettings(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['organizations', id, 'settings'] }),
   })
   const createAccount = useMutation({

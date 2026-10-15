@@ -16,8 +16,6 @@ Organization
        -> Contact
        -> Deal
        -> Task
-  -> Automation
-       -> AutomationRun
 
 User
   -> UserProfile
@@ -35,7 +33,6 @@ An organization owns its CRM data:
 - contacts
 - deals and sales pipeline
 - tasks and follow-ups
-- automations
 - users and role-based permissions through memberships
 - pending invitations to users who are not members yet
 - organization settings and encrypted SMTP email accounts
@@ -47,8 +44,8 @@ defaults currently prepare currency, fiscal-year start, tax rate, payment terms,
 and document numbering; they do not create accounting documents by themselves.
 
 Users may opt into one private personal workspace through the workspace
-picker. It is a normal tenant for the user's own companies, contacts and
-automations, but it is marked `is_personal` and has a single owner. Personal
+picker. It is a normal tenant for the user's own companies and contacts, but it is marked
+`is_personal` and has a single owner. Personal
 workspaces cannot be deleted, invited to, or given additional members.
 Team/shared workspaces remain normal organizations: users see them after an
 accepted invitation or when they create one for themselves. A workspace
@@ -86,6 +83,12 @@ Each company receives an organization-scoped customer code (`CUS-00001`, then
 account owner. Tax/VAT IDs and email addresses are checked case-insensitively
 for exact duplicates inside the same organization.
 
+Non-empty company email/tax IDs and contact emails are also protected by
+tenant-scoped database uniqueness constraints, including archived records.
+Customer codes use a transactional counter per organization rather than scanning
+existing companies. See the [database upgrade procedure](../development/migrations.md#crm-database-performance-upgrade)
+for duplicate preflight checks, counter backfill, and deployment precautions.
+
 Customer-facing company URLs use this shorter code as their public reference.
 The API still accepts the original UUID in detail and action routes so existing
 bookmarks and integrations remain compatible.
@@ -98,6 +101,18 @@ records only; a company with contacts cannot be deleted.
 `CompanyActivity` records who created, updated, assigned, archived, or restored
 a company. It also records when a contact is added. Activity entries store safe
 metadata such as changed field names rather than previous field values.
+
+`CompanyTimelineEvent` is the customer-facing, append-only history for a company.
+It combines company and contact changes with deals, tasks, customer services,
+payments, and manual workspace notes. Events store a stable type, category,
+optional source reference, actor, timestamp, and safe display metadata. Manual
+notes store their text in `body`; system events do not copy previous field values.
+The timeline is indexed for newest-first company reads and category filters.
+
+The API is `/api/v1/organizations/<organization_id>/companies/<company_id>/timeline/`.
+Workspace viewers may read it; roles with `manage_crm` may add a note. Ownership
+always comes from the authorized organization and company URL. Results are
+paginated with a default page size of 25 and a maximum of 100.
 
 ## Contact
 
@@ -171,8 +186,7 @@ Company 1 -> many Deals
 Company 1 -> many Tasks
 Company 1 -> many CustomerSubscriptions
 User 1 -> many assigned Companies
-Organization 1 -> many Automations
-Automation 1 -> many AutomationRuns
+Company 1 -> many CompanyTimelineEvents
 Organization 1 -> 1 OrganizationSettings
 Organization 1 -> many EmailAccounts
 User 1 -> 0 or 1 personal Organization
@@ -195,8 +209,9 @@ metadata. All move, complete and reopen operations use the same row-locking
 service so these values cannot drift apart. Overdue remains a derived status
 for an incomplete task whose due time has passed, not a mutable database flag.
 The earliest incomplete task linked to a deal is its next action in the
-frontend. Reminder delivery and the unified customer timeline are not yet
-implemented.
+frontend. Task creation, updates, workflow changes, completion, and reopening
+are recorded in the owning company's customer timeline. Reminder delivery is
+not yet implemented.
 
 ## Services and billing
 
@@ -219,6 +234,12 @@ end, cancels only later open charges, and prevents payment from generating
 another charge. It may be resumed before that effective date without duplicating
 the next charge. Immediate cancellation remains an explicit exceptional action.
 
+The public workflow calls these records **customer services**. Lifecycle changes
+use explicit pause, resume, and end actions; generic updates edit agreement data
+but cannot change status. When a catalog service is selected, the backend copies
+its commercial defaults and uses the start date as the first charge date unless
+the client explicitly provides another date.
+
 ## Business Logic
 
 Business logic means rules that belong to the product domain, not just HTTP.
@@ -226,10 +247,7 @@ Business logic means rules that belong to the product domain, not just HTTP.
 Examples:
 
 - A contact's company must belong to the same organization.
-- A company creation can trigger automations.
-- An automation only runs inside its own organization.
-- An email account may only be accessed through its organization's authorized
-  settings endpoints; automation sending is not connected to these accounts yet.
+- An email account may only be accessed through its organization's authorized settings endpoints.
 - An authenticated user may access an organization only through a membership and
   the capabilities granted by its role.
 
@@ -247,10 +265,8 @@ api/*.py                                 -> HTTP request/response coordination
 
 Views should not become the place where all product rules live.
 
-For the event-to-action path, read [Automations](automations.md). A future
-`Create contact` action would create a CRM record; a `Contact created` trigger
-would react to one. Neither is currently implemented in the automation system.
-The [workflow roadmap](automation-roadmap.md) explains this distinction.
+The [workflow roadmap](automation-roadmap.md) describes a possible future event-to-action system;
+it is not implemented.
 ## Tenant access boundary
 
 Every authenticated user can access normal REST resources only in organizations

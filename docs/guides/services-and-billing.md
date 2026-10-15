@@ -22,36 +22,41 @@ Store the usual net price, currency, VAT rate, and billing cycle. These values
 are defaults: they save time but may be changed for an individual customer.
 
 Mark a catalog service inactive when it should no longer be offered. Existing
-customer subscriptions remain unchanged.
+customer services remain unchanged.
 
-## Add a customer subscription
+## Add a customer service
 
-Open **Services → Customer subscriptions** and select **Add subscription**.
-Choose the customer and either a catalog service or a custom service. Confirm:
+Open **Services → Customer services** and select **Add customer service**.
+Choose the customer and either a catalog service or a custom service. A catalog
+service supplies the name, price, VAT, currency, billing cycle, and first charge
+date automatically. For a custom service, enter those commercial details.
 
 - the agreed net amount and VAT rate;
 - whether the cycle is one-off, monthly, quarterly, six-monthly, or annual;
-- the start date and first charge date;
+- the start date; custom services may use a different first charge date;
 - whether the next charge should be created automatically after full payment;
 - an optional operational reference and internal notes.
 
 The first charge is created immediately. The agreed values are copied into the
-subscription, so future catalog edits do not change an existing agreement.
+customer service, so future catalog edits do not change an existing agreement.
 
 ## Record a payment
 
-Open **Services → Charges** and select **Record** beside an open charge. Enter
+Open **Services → Billing** and select **Record** beside an open charge. Enter
 the amount received, payment date, method, and any external reference.
 
 Partial payments are supported. The charge remains open and shows the exact
 outstanding amount. The system rejects amounts above the outstanding balance.
 When a recurring charge is fully paid, the next charge is created once, provided
-the subscription is active, auto-renew is enabled, and its end date has not
+the customer service is active, auto-renew is enabled, and its end date has not
 passed.
 
-## Cancel or resume a subscription
+## Pause, end, or resume a customer service
 
-The normal cancellation option is **Cancel at period end**. The subscription
+Use **Pause service** for a temporary interruption and **Resume service** to
+continue it. These are explicit actions rather than editable status fields.
+
+The normal ending option is **End at period close**. The customer service
 then enters **Ending at period close** and remains available through the last
 day of its current coverage period. Any later, unpaid charge that was prepared
 by the system is cancelled, while paid charges and payment history remain.
@@ -61,7 +66,7 @@ new charge is created. Until the effective cancellation date, the user may
 select **Keep active** to resume the subscription. This reopens the already
 prepared next charge instead of creating a duplicate.
 
-**Cancel immediately** is intended for exceptional cases. It ends access on the
+**End immediately** is intended for exceptional cases. It ends access on the
 current date but does not erase amounts already owed or payments already made.
 
 ## Understand the statuses
@@ -71,7 +76,7 @@ current date but does not erase amounts already owed or payments already made.
 - **Overdue:** the due date has passed.
 - **Partially paid:** some money was received but a balance remains.
 - **Paid:** the full gross amount was received.
-- **Paused:** the customer subscription is temporarily on hold.
+- **Paused:** the customer service is temporarily on hold.
 - **Ending at period close:** cancellation is scheduled, but the service remains
   active through the displayed date.
 - **Cancelled / expired:** the agreement is no longer active. History remains.
@@ -86,7 +91,7 @@ currency. Monthly recurring revenue excludes VAT and one-off services.
 ## Permissions and data safety
 
 Workspace viewers can read services and charges. Owners, administrators, and
-members can create services, edit subscriptions, and record payments according
+members can create services, edit customer services, and record payments according
 to the existing CRM permissions. Every company, service, charge, and payment is
 isolated to its own workspace. References from another workspace are rejected.
 

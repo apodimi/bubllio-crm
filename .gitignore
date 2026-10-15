@@ -46,6 +46,7 @@ htmlcov/
 .playwright-cli/
 output/playwright/
 .impeccable/
+.bubllio-update-agent/
 
 # IDEs
 .idea/

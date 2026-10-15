@@ -9,7 +9,7 @@ The Dokploy deployment runs six services:
 - `backend`: the private Bubllio API on port `8000`;
 - `postgres`: the private database with persistent storage;
 - `rabbitmq`: the private background-job broker;
-- `worker`: processes queued emails and automations;
+- `worker`: processes queued emails;
 - `beat`: republishes pending/recoverable jobs once per minute.
 
 The database and backend are intentionally not published on host ports.
@@ -115,8 +115,7 @@ Test:
 3. SMTP test message;
 4. invitation delivery and acceptance;
 5. password reset delivery;
-6. an automation run reaching `success` or a useful `failed` state;
-7. logout and login again.
+6. logout and login again.
 
 After setup succeeds, the first-run endpoint locks itself automatically. Removing
 `BUBLLIO_SETUP_TOKEN` from Dokploy later is optional defense in depth; it is not
@@ -140,10 +139,16 @@ is not a verified backup.
 ## Updating
 
 1. Take and verify a database backup.
-2. Select the exact new Bubllio release tag or commit.
-3. Deploy from Dokploy.
-4. Confirm all services are healthy and call `/health/`.
-5. Run login, workspace access, invitation, and one critical CRM flow.
+2. Restore that backup into an isolated database and verify representative CRM
+   records before changing production.
+3. Record the currently running image digest or commit and review the new
+   release's migration plan.
+4. Select the exact new Bubllio release tag or commit.
+5. Use a maintenance window for releases with locking or state migrations; stop
+   old writers before the new backend startup applies migrations.
+6. Deploy from Dokploy and confirm all services are healthy and `/health/` passes.
+7. Run login, workspace access, invitation, and one critical CRM flow before
+   ending the maintenance window.
 
 Keep the previous release identifier available. Database migrations can require a
 forward fix, so an application rollback does not replace a database backup.

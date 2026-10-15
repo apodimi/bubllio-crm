@@ -36,14 +36,13 @@ Bearer token. Use HTTPS outside localhost.
 | `organization_id` | Created organization UUID |
 | `membership_id` | Membership to update or remove |
 | `company_id` | Created company UUID |
-| `automation_id` | Created automation UUID |
 | `email_account_id` | Created SMTP account UUID |
 | `company_search`, `contact_search` | Search values |
 
 For UI-managed SMTP testing, also set `BUBLLIO_EMAIL_ENCRYPTION_KEYS` in the
 server's ignored `.env` file. Postman never stores that encryption key.
 
-Organization, company, and automation creation requests save returned
+Organization and company creation requests save returned
 IDs into the environment automatically.
 
 ## Recommended flow
@@ -56,15 +55,7 @@ IDs into the environment automatically.
 4. Create and search companies under the organization.
 5. Create and search contacts. A contact's company must belong to the same
    organization.
-6. Create a `company.created` email automation as an owner or administrator.
-7. Create another company to exercise the automatic event path, then inspect
-   console email output and run history. Earlier companies are not replayed.
-8. Optionally run Test Automation to execute the action directly again. This
-   does not create a company or verify event dispatch.
-9. Optionally delete the organization as its owner; this also deletes its rules
-   and run history.
-
-For expected results at each step, follow [Your First Automation](guides/first-automation.md).
+6. Optionally delete the organization as its owner.
 
 To test owner handoff, sign in as an installation administrator, create a
 workspace with a different `owner_email`, then inspect
@@ -172,16 +163,7 @@ GET  /api/v1/organizations/<organization_id>/contacts/?search=<term>
 POST /api/v1/organizations/<organization_id>/contacts/
 ```
 
-Automations:
-
-```text
-GET  /api/v1/organizations/<organization_id>/automations/
-POST /api/v1/organizations/<organization_id>/automations/
-GET  /api/v1/organizations/<organization_id>/automations/runs/
-POST /api/v1/organizations/<organization_id>/automations/<automation_id>/test/
-```
-
-Do not include `organization` in company, contact, or automation request bodies.
+Do not include `organization` in company or contact request bodies.
 The server takes ownership from `<organization_id>` after checking the user's
 membership. Response bodies still include the read-only organization UUID.
 Company search covers its name, tax ID, industry, contact details, city, country,
@@ -227,35 +209,6 @@ Create contact:
   "email": "maria@acme.test"
 }
 ```
-
-Create automation:
-
-```json
-{
-  "name": "Notify accounting",
-  "trigger": "company.created",
-  "action_type": "send_email",
-  "action_config": {
-    "to": ["accounting@example.com"],
-    "subject": "New company",
-    "body": "A company was added to Bubllio CRM."
-  },
-  "is_active": true
-}
-```
-
-Automation email uses Django's console backend, so messages appear in the terminal
-running `runserver`. The separate SMTP account test endpoint attempts real delivery;
-setting an account as default does not connect it to automations.
-
-Only `company.created` is automatically emitted. Other accepted trigger choices
-are currently unwired. There is no automation update/delete endpoint yet.
-
-Test Automation performs the configured action even for inactive rules and
-returns HTTP 201 even for a recorded failure. Inspect `status` and
-`run.error_message`. Its payload is stored in history, not rendered into email.
-See [Automations](architecture/automations.md) for the complete behavior and
-limitations.
 
 For the complete authorization rules, read
 `docs/architecture/authentication-and-roles.md`.

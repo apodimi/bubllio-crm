@@ -73,16 +73,6 @@ def build_workspace_data_export(organization):
                     }
                     for task in organization.tasks.all()
                 ],
-                "automations": [
-                    {"id": a.id, "name": a.name, "trigger": a.trigger,
-                     "action_type": a.action_type, "action_config": a.action_config,
-                     "is_active": a.is_active, "created_at": a.created_at,
-                     "updated_at": a.updated_at,
-                     "runs": [{"id": r.id, "trigger": r.trigger, "status": r.status,
-                               "payload": r.payload, "created_at": r.created_at}
-                              for r in a.runs.all()]}
-                    for a in organization.automations.all()
-                ],
             }
 
 
@@ -94,7 +84,6 @@ def build_installation_data_export():
         "companies",
         "contacts",
         "tasks",
-        "automations__runs",
     ).select_related("settings")
 
     workspaces = [

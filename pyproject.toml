@@ -1,8 +1,10 @@
 [project]
 name = "bubllio-crm"
-version = "0.1.1"
-description = "Add your description here"
+version = "0.2.0"
+description = "A source-available, self-hosted CRM for customer operations"
 readme = "README.md"
+license = "Elastic-2.0"
+license-files = ["LICENSE.md"]
 authors = [{ name = "Bubllio Contributors" }]
 requires-python = ">=3.13"
 dependencies = [

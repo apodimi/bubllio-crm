@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from companies.models import Company
+from companies.models import Company, CompanyTimelineEvent
 from contacts.models import Contact
 from deals.models import Deal
 from organizations.models import Organization, OrganizationMembership
@@ -90,6 +90,13 @@ class TaskApiTests(APITestCase):
         self.assertEqual(response.data["workflow_status"], "todo")
         self.assertEqual(Task.objects.get().organization, self.organization)
         self.assertEqual(Task.objects.get().created_by, self.user)
+        self.assertTrue(
+            CompanyTimelineEvent.objects.filter(
+                company=self.company,
+                event_type=CompanyTimelineEvent.EventType.TASK_CREATED,
+                source_id=response.data["id"],
+            ).exists()
+        )
 
     def test_cross_tenant_relationships_are_rejected(self):
         hidden_contact = Contact.objects.create(
@@ -190,6 +197,17 @@ class TaskApiTests(APITestCase):
         self.assertEqual(reopened.data["workflow_status"], "todo")
         self.assertIsNone(reopened.data["completed_at"])
         self.assertEqual(Task.objects.filter(id=task.id).count(), 1)
+        self.assertEqual(
+            list(
+                CompanyTimelineEvent.objects.filter(company=self.company).values_list(
+                    "event_type", flat=True
+                )
+            ),
+            [
+                CompanyTimelineEvent.EventType.TASK_REOPENED,
+                CompanyTimelineEvent.EventType.TASK_COMPLETED,
+            ],
+        )
 
     def test_buckets_and_owner_filter(self):
         overdue = self.create_task(

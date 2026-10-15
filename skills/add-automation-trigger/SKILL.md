@@ -5,8 +5,8 @@ description: Implement and wire a Bubllio CRM automation trigger from a real dom
 
 # Add an Automation Trigger
 
-Read `docs/architecture/automations.md` and inspect `automations/events.py`,
-`automations/services.py`, and the emitting app before editing.
+This workflow is roadmap-only. Read `docs/architecture/automation-roadmap.md` and
+re-establish an approved architecture before adding runtime code.
 
 ## Required behavior
 

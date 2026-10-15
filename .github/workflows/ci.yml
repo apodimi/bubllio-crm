@@ -1,6 +1,9 @@
 name: Verify monorepo
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -29,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
         env:
           POSTGRES_DB: bubllio_test
           POSTGRES_USER: bubllio
@@ -58,6 +61,7 @@ jobs:
           RABBITMQ_PASSWORD: ci-rabbitmq-password
         run: |
           docker compose -f compose.production.yaml config --quiet
+          docker compose -f compose.production.yaml -f compose.update-agent.yaml config --quiet
           docker compose -f compose.dokploy.yaml config --quiet
       - uses: astral-sh/setup-uv@v6
         with:
@@ -103,3 +107,49 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+
+  update-agent:
+    name: Verify update agent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --project updater --frozen
+      - run: uv run --project updater python -W error::ResourceWarning -m unittest discover -s updater/tests -v
+      - run: uv build --project updater --wheel --out-dir /tmp/bubllio-updater-dist
+
+  production-images:
+    name: Build production images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read release version
+        id: release
+        shell: python
+        run: |
+          import os
+          import tomllib
+          from pathlib import Path
+
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"version={version}\n")
+      - name: Build backend release image
+        run: >-
+          docker build
+          --build-arg BUBLLIO_RELEASE_VERSION=${{ steps.release.outputs.version }}
+          --build-arg BUBLLIO_RELEASE_SHA=${{ github.sha }}
+          --tag bubllio-crm-backend:ci
+          .
+      - name: Verify backend release identity
+        run: >-
+          docker run --rm --entrypoint .venv/bin/python
+          bubllio-crm-backend:ci
+          -c "from bubllio_crm.release import current_commit_sha,current_version; assert current_version() == '${{ steps.release.outputs.version }}'; assert current_commit_sha() == '${{ github.sha }}'"
+      - name: Build frontend release image
+        run: docker build --tag bubllio-crm-frontend:ci frontend

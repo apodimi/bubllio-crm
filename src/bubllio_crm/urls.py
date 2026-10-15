@@ -32,6 +32,12 @@ from accounts.views import (
 )
 from onboarding.api.setup import InstallationSetupAPIView, InstallationSmtpTestAPIView
 from onboarding.api.update_status import InstallationUpdateStatusAPIView
+from onboarding.api.update_center import (
+    InstallationUpdateCenterStatusAPIView,
+    InstallationUpdateDetailAPIView,
+    InstallationUpdatePreflightAPIView,
+    InstallationUpdateStartAPIView,
+)
 from onboarding.api.production_readiness import InstallationProductionReadinessAPIView
 from onboarding.api.system_information import InstallationSystemInformationAPIView
 from onboarding.api.installation_audit_log import InstallationAuditLogAPIView
@@ -48,6 +54,26 @@ urlpatterns = [
         "api/v1/installation/update-status/",
         InstallationUpdateStatusAPIView.as_view(),
         name="installation-update-status",
+    ),
+    path(
+        "api/v1/installation/updates/status/",
+        InstallationUpdateCenterStatusAPIView.as_view(),
+        name="installation-update-center-status",
+    ),
+    path(
+        "api/v1/installation/updates/preflight/",
+        InstallationUpdatePreflightAPIView.as_view(),
+        name="installation-update-preflight",
+    ),
+    path(
+        "api/v1/installation/updates/",
+        InstallationUpdateStartAPIView.as_view(),
+        name="installation-update-start",
+    ),
+    path(
+        "api/v1/installation/updates/<uuid:run_id>/",
+        InstallationUpdateDetailAPIView.as_view(),
+        name="installation-update-detail",
     ),
     path(
         "api/v1/installation/production-readiness/",

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   Avatar,
+  Box,
+  Button,
   Divider,
   IconButton,
   ListItemIcon,
@@ -11,14 +13,20 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import BusinessRounded from '@mui/icons-material/BusinessRounded'
 import MenuRounded from '@mui/icons-material/MenuRounded'
 import ManageAccountsRounded from '@mui/icons-material/ManageAccountsRounded'
 import LogoutRounded from '@mui/icons-material/LogoutRounded'
+import CheckRounded from '@mui/icons-material/CheckRounded'
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '../common/LanguageSwitcher'
 
 type WorkspaceHeaderProps = {
+  organizationId?: string
   workspaceName?: string
+  organizations: Array<{ id: string; name: string }>
+  onOrganizationChange: (organizationId: string) => void
   onOpenNavigation: () => void
   username: string | null
   isSuperuser: boolean
@@ -26,7 +34,10 @@ type WorkspaceHeaderProps = {
 }
 
 export function WorkspaceHeader({
+  organizationId,
   workspaceName,
+  organizations,
+  onOrganizationChange,
   onOpenNavigation,
   username,
   isSuperuser,
@@ -34,111 +45,238 @@ export function WorkspaceHeader({
 }: WorkspaceHeaderProps) {
   const { t } = useTranslation()
   const [accountAnchor, setAccountAnchor] = useState<null | HTMLElement>(null)
+  const [workspaceAnchor, setWorkspaceAnchor] = useState<null | HTMLElement>(null)
   const initials = username?.slice(0, 1).toUpperCase() ?? '?'
-
+  const organizationInitials = (name: string) =>
+    name
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
   return (
-    <Stack
-      direction="row"
+    <Box
       sx={{
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        px: { xs: 2, md: 5 },
-        py: 1.75,
         position: 'sticky',
         top: 0,
         zIndex: 'appBar',
-        bgcolor: 'rgba(255,255,255,.78)',
-        backdropFilter: 'blur(18px)',
-        boxShadow: 'inset 0 -1px rgba(15,31,56,.08)',
+        bgcolor: 'background.default',
       }}
     >
-      <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
-        <IconButton
-          aria-label={t('navigation.openNavigation')}
-          onClick={onOpenNavigation}
-          sx={{ display: { md: 'none' } }}
-        >
-          <MenuRounded />
-        </IconButton>
-        <Typography variant="body2" color="text.secondary">
-          {t('common.workspace')} <span style={{ margin: '0 10px', opacity: 0.35 }}>/</span>{' '}
-          {workspaceName ?? t('common.allWorkspaces')}
-        </Typography>
-      </Stack>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5 }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: { xs: 'none', sm: 'block' } }}
-        >
-          BUBLLIO CRM
-        </Typography>
-        <LanguageSwitcher compact />
-        <Tooltip title={t('navigation.accountMenu')}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: { xs: 1.5, md: 3, lg: 4.5 },
+          minHeight: { xs: 64, md: 80 },
+        }}
+      >
+        <Stack direction="row" sx={{ gap: { xs: 0.25, sm: 1 }, alignItems: 'center', minWidth: 0 }}>
           <IconButton
-            aria-label={t('navigation.openAccountMenu')}
-            onClick={(event) => setAccountAnchor(event.currentTarget)}
-            sx={{ p: 0.25 }}
+            aria-label={t('navigation.openNavigation')}
+            onClick={onOpenNavigation}
+            sx={{ display: { md: 'none' } }}
           >
-            <Avatar
+            <MenuRounded />
+          </IconButton>
+          {organizationId && workspaceName ? (
+            <Button
+              aria-label={t('common.selectWorkspace')}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(workspaceAnchor)}
+              endIcon={<KeyboardArrowDownRounded />}
+              onClick={(event) => setWorkspaceAnchor(event.currentTarget)}
               sx={{
-                width: 36,
-                height: 36,
-                background: 'linear-gradient(135deg, #005bef, #1473ff)',
-                color: 'primary.contrastText',
-                fontSize: 14,
-                fontWeight: 800,
-                boxShadow: '0 8px 18px rgba(0,91,239,.22)',
+                minWidth: { xs: 52, sm: 0 },
+                width: { xs: 52, sm: 'auto' },
+                px: { xs: 0.75, sm: 1 },
+                border: { xs: 1, sm: 0 },
+                borderColor: { xs: 'divider', sm: 'transparent' },
+                borderRadius: 0.75,
+                bgcolor: { xs: 'background.paper', sm: 'transparent' },
+                color: 'text.primary',
+                fontWeight: 650,
+                '& .MuiButton-endIcon': { ml: { xs: 0.15, sm: 0.5 }, mr: 0 },
               }}
             >
-              {initials}
-            </Avatar>
-          </IconButton>
-        </Tooltip>
-        <Menu
-          anchorEl={accountAnchor}
-          open={Boolean(accountAnchor)}
-          onClose={() => setAccountAnchor(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          slotProps={{ paper: { sx: { minWidth: 220, mt: 1 } } }}
-        >
-          <MenuItem disabled sx={{ opacity: 1, display: 'block', py: 1.25 }}>
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {username}
+              <Box
+                aria-hidden
+                sx={{
+                  display: { xs: 'grid', sm: 'none' },
+                  placeItems: 'center',
+                  color: 'primary.main',
+                }}
+              >
+                <BusinessRounded sx={{ fontSize: 18 }} />
+              </Box>
+              <Typography
+                component="span"
+                variant="body2"
+                noWrap
+                sx={{ display: { xs: 'none', sm: 'block' }, maxWidth: 260 }}
+              >
+                {workspaceName}
+              </Typography>
+            </Button>
+          ) : (
+            <Typography variant="body2" sx={{ fontWeight: 650 }}>
+              {t('common.allWorkspaces')}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {isSuperuser
-                ? t('navigation.installationAdministrator')
-                : t('navigation.workspaceMember')}
-            </Typography>
-          </MenuItem>
-          {isSuperuser && (
+          )}
+          <Menu
+            anchorEl={workspaceAnchor}
+            open={Boolean(workspaceAnchor)}
+            onClose={() => setWorkspaceAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            slotProps={{ paper: { sx: { minWidth: 260, mt: 0.75, p: 0.5 } } }}
+          >
+            {organizations.map((organization) => (
+              <MenuItem
+                key={organization.id}
+                selected={organization.id === organizationId}
+                onClick={() => {
+                  setWorkspaceAnchor(null)
+                  onOrganizationChange(organization.id)
+                }}
+                sx={{ borderRadius: 1 }}
+              >
+                <Avatar
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    mr: 1.25,
+                    bgcolor: 'action.selected',
+                    color: 'primary.main',
+                    fontSize: 11,
+                    fontWeight: 800,
+                  }}
+                >
+                  {organizationInitials(organization.name)}
+                </Avatar>
+                <Typography variant="body2" noWrap sx={{ flex: 1, fontWeight: 600 }}>
+                  {organization.name}
+                </Typography>
+                {organization.id === organizationId ? (
+                  <CheckRounded color="primary" fontSize="small" />
+                ) : null}
+              </MenuItem>
+            ))}
+            <Divider sx={{ my: 0.5 }} />
             <MenuItem
               component={Link}
-              to="/account/settings"
-              onClick={() => setAccountAnchor(null)}
+              to="/"
+              onClick={() => setWorkspaceAnchor(null)}
+              sx={{ borderRadius: 1 }}
+            >
+              {t('common.allWorkspaces')}
+            </MenuItem>
+          </Menu>
+        </Stack>
+        <Stack
+          direction="row"
+          sx={{ alignItems: 'center', flexShrink: 0, gap: { xs: 0.25, sm: 1.25 } }}
+        >
+          <LanguageSwitcher compact />
+          <Tooltip title={t('navigation.accountMenu')}>
+            <Button
+              aria-label={t('navigation.openAccountMenu')}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(accountAnchor)}
+              onClick={(event) => setAccountAnchor(event.currentTarget)}
+              endIcon={<KeyboardArrowDownRounded />}
+              sx={{
+                minHeight: { xs: 44, sm: 48 },
+                minWidth: { xs: 44, sm: 0 },
+                p: { xs: 0.5, sm: 0.5 },
+                pr: { xs: 0.5, sm: 1.25 },
+                gap: { xs: 0, sm: 1 },
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                boxShadow: 1,
+                '&:hover': { bgcolor: 'background.paper', boxShadow: 2 },
+                '& .MuiButton-endIcon': {
+                  display: { xs: 'none', sm: 'flex' },
+                  ml: 0,
+                  color: 'text.secondary',
+                },
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: { xs: 36, sm: 38 },
+                  height: { xs: 36, sm: 38 },
+                  borderRadius: 1.5,
+                  bgcolor: 'text.primary',
+                  color: 'background.paper',
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                {initials}
+              </Avatar>
+              <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, textAlign: 'left' }}>
+                <Typography variant="caption" noWrap sx={{ display: 'block', fontWeight: 800 }}>
+                  {username}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  noWrap
+                  sx={{ display: 'block', maxWidth: 180, fontSize: 10.5 }}
+                >
+                  {workspaceName ?? t('common.allWorkspaces')}
+                </Typography>
+              </Box>
+            </Button>
+          </Tooltip>
+          <Menu
+            anchorEl={accountAnchor}
+            open={Boolean(accountAnchor)}
+            onClose={() => setAccountAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            slotProps={{ paper: { sx: { minWidth: 220, mt: 1 } } }}
+          >
+            <MenuItem disabled sx={{ opacity: 1, display: 'block', py: 1.25 }}>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                {username}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {isSuperuser
+                  ? t('navigation.installationAdministrator')
+                  : t('navigation.workspaceMember')}
+              </Typography>
+            </MenuItem>
+            {isSuperuser ? (
+              <MenuItem
+                component={Link}
+                to="/account/settings"
+                onClick={() => setAccountAnchor(null)}
+              >
+                <ListItemIcon>
+                  <ManageAccountsRounded fontSize="small" />
+                </ListItemIcon>
+                {t('navigation.accountSettings')}
+              </MenuItem>
+            ) : null}
+            <Divider />
+            <MenuItem
+              onClick={() => {
+                setAccountAnchor(null)
+                void onLogout()
+              }}
             >
               <ListItemIcon>
-                <ManageAccountsRounded fontSize="small" />
+                <LogoutRounded fontSize="small" />
               </ListItemIcon>
-              {t('navigation.accountSettings')}
+              {t('navigation.signOut')}
             </MenuItem>
-          )}
-          <Divider />
-          <MenuItem
-            onClick={() => {
-              setAccountAnchor(null)
-              void onLogout()
-            }}
-          >
-            <ListItemIcon>
-              <LogoutRounded fontSize="small" />
-            </ListItemIcon>
-            {t('navigation.signOut')}
-          </MenuItem>
-        </Menu>
+          </Menu>
+        </Stack>
       </Stack>
-    </Stack>
+    </Box>
   )
 }

@@ -5,7 +5,12 @@ export const outlinedInput: Components<Theme>['MuiOutlinedInput'] = {
   styleOverrides: {
     root: ({ theme }) => ({
       backgroundColor: theme.palette.background.paper,
-      borderRadius: 12,
+      borderRadius: 8,
+      fontSize: '0.875rem',
+      '@media (pointer: coarse)': {
+        fontSize: '1rem',
+        minHeight: 44,
+      },
       transition: theme.transitions.create(['background-color', 'border-color', 'box-shadow'], {
         duration: theme.transitions.duration.shorter,
       }),
@@ -32,6 +37,7 @@ export const outlinedInput: Components<Theme>['MuiOutlinedInput'] = {
       },
     }),
     input: {
+      '&.MuiInputBase-inputSizeSmall': { paddingTop: 8, paddingBottom: 8 },
       '&::placeholder': {
         opacity: 0.72,
       },

@@ -1,0 +1,9 @@
+services:
+  backend:
+    volumes:
+      - type: bind
+        source: ${BUBLLIO_UPDATE_AGENT_RUNTIME_HOST:-/run/bubllio-update-agent}
+        target: /run/bubllio-update-agent
+        read_only: true
+        bind:
+          create_host_path: false

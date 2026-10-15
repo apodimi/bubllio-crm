@@ -3,10 +3,10 @@
 The frontend uses one centralized Material UI theme. A developer changing the
 brand should start with `brand.ts` and should not edit individual pages.
 
-The default visual direction is Atlassian-inspired: professional blue actions,
-blue-gray neutrals, compact controls, clear focus states, restrained borders,
-and minimal elevation. It is an original Bubllio theme, not a copy of another
-product's components or branding.
+The default visual direction is a calm customer-operations workspace: professional
+blue actions, blue-gray neutrals, compact controls, clear focus states, restrained
+borders, white working surfaces, and minimal elevation. It borrows the spatial
+clarity of modern financial dashboards while remaining an original Bubllio system.
 
 ## Quick customization
 
@@ -46,6 +46,13 @@ The application bundles Manrope and Inter locally through `@fontsource`.
 - Manrope is the display face for headings, buttons, product labels, and
   high-emphasis navigation text.
 - Inter is the body face for paragraphs, forms, tables, and data-heavy UI.
+
+The product uses a compact, explicit heading scale instead of Material UI's
+display-sized defaults: page headings (`h3`/`h4`) are 24px, dialog and major
+section headings (`h5`) are 20px, and subsection headings (`h6`) are 18px.
+These sizes are defined in rem so browser text scaling remains available.
+Use `component="h1"` for the page's main heading independently of its visual
+variant. Avoid page-local font-size overrides; keep body and form text readable.
 
 Use Material UI typography variants instead of adding `fontFamily` in pages or
 components. If the brand typography changes, update the semantic `body` and

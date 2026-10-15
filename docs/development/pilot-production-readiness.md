@@ -36,7 +36,7 @@ every P0 gate below has evidence and an owner.
 - [ ] Automate database backups and complete one timed restore rehearsal.
 - [ ] Run all backend, frontend, build, and Playwright gates on the release SHA.
 - [ ] Run tenant-boundary tests with two organizations for every pilot-critical
-      CRM, membership, invitation, provisioning, and automation flow.
+      CRM, membership, invitation, and provisioning flow.
 - [ ] Complete customer acceptance and record rollback criteria and operator.
 
 ## Pilot scope
@@ -52,13 +52,11 @@ Supported for the first customer:
 - installation setup and administrator access;
 - workspace creation, membership, roles, and invitations;
 - companies and contacts;
-- current documented automation behavior only;
 - organization SMTP setup and test delivery;
 - account and privacy settings already represented in the product.
 
-Explicitly out of scope unless separately accepted: visual workflow building,
-durable queues, retries, schedules, waits, branching, loops, and claims that
-organization SMTP already powers automation delivery.
+Explicitly out of scope unless separately accepted: visual workflow building, durable queues,
+retries, schedules, waits, branching, and loops.
 
 ## Delivery sequence
 

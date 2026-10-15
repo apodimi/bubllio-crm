@@ -3,6 +3,46 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.0 — 2026-10-15
+
+### Added
+
+- redesigned Overview focused on the next action, today's task queue, items that
+  need attention, billing pulse, and workspace totals;
+- customer timeline, stronger company/contact search and ownership workflows,
+  and expanded service and billing operations;
+- responsive dock navigation, mobile navigation, and bundled Keyline icons;
+- an installation-admin Update Center and an independent, provider-agnostic
+  update agent with HMAC-authenticated orchestration, persistent progress,
+  digest-pinned Compose deployments, and signed release verification;
+- automated release publication with GHCR images, build attestations, a
+  canonical Sigstore-signed manifest, and an attested updater wheel.
+
+### Changed
+
+- company and contact identity rules are now enforced per workspace with indexed
+  list paths and transaction-safe customer-code allocation;
+- production images now contain immutable version and commit provenance;
+- the release requires a maintenance window while timeline, identity, and index
+  migrations run. Duplicate email or tax identities abort safely and must be
+  resolved before retrying.
+
+### Removed
+
+- Automations are no longer exposed through the UI, API, admin, signals, or
+  execution services. Phase 1 deliberately retains legacy models, tables, and
+  outbox rows for rollback; workers ignore those rows. Physical data deletion is
+  deferred to a separately approved cleanup release.
+
+### Upgrade notes
+
+- take a verified PostgreSQL backup and complete an isolated restore rehearsal;
+- stop old web, worker, and beat writers before deploying this release;
+- review and apply the migration plan once, then verify health, login, workspace
+  access, invitations, tasks, companies, contacts, services, and billing;
+- keep the previous release identifier available. See
+  `docs/development/updating.md` for the full runbook.
+
 ## 0.1.1 — 2026-10-08
 
 ### Fixed
@@ -37,5 +77,5 @@ First internal production release.
 - Back up the database and complete a restore rehearsal before onboarding users.
 - Configure HTTPS, production secrets, SMTP, monitoring, and off-server backups.
 - Follow `docs/development/dokploy-deployment.md` for Dokploy installations.
-- Automation delivery remains limited to the behavior documented in
-  `docs/architecture/automations.md` and `docs/architecture/email-adapters.md`.
+- Workflow automation is not part of the current product. Any future version is
+  tracked separately in `docs/architecture/automation-roadmap.md`.

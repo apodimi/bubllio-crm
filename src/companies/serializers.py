@@ -1,11 +1,18 @@
 from rest_framework import serializers
+from bubllio_crm.identity_serializers import TenantIdentitySaveMixin
 
 from organizations.models import OrganizationMembership
 
-from .models import Company, CompanyActivity
+from .models import Company, CompanyActivity, CompanyTimelineEvent
 
 
-class CompanySerializer(serializers.ModelSerializer):
+class CrmSummarySerializer(serializers.Serializer):
+    companies = serializers.IntegerField()
+    contacts = serializers.IntegerField()
+
+
+class CompanySerializer(TenantIdentitySaveMixin, serializers.ModelSerializer):
+    identity_fields = ("email", "tax_id")
     assigned_to_name = serializers.SerializerMethodField()
 
     def get_assigned_to_name(self, company) -> str | None:
@@ -99,6 +106,33 @@ class CompanyActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyActivity
         fields = ("id", "action", "actor_name", "details", "created_at")
+
+
+class CompanyTimelineEventSerializer(serializers.ModelSerializer):
+    actor_name = serializers.SerializerMethodField()
+
+    def get_actor_name(self, event) -> str:
+        if not event.actor:
+            return "System"
+        return event.actor.get_full_name() or event.actor.username
+
+    class Meta:
+        model = CompanyTimelineEvent
+        fields = (
+            "id",
+            "category",
+            "event_type",
+            "source_type",
+            "source_id",
+            "actor_name",
+            "body",
+            "details",
+            "occurred_at",
+        )
+
+
+class CompanyTimelineNoteSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=5000, allow_blank=False, trim_whitespace=True)
 
 
 class CompanyAssigneeSerializer(serializers.ModelSerializer):

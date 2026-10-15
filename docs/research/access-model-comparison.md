@@ -54,7 +54,7 @@ implementation on them.
 | Create a shared workspace | Only an installation administrator may call `POST /api/v1/organizations/`. | Keep workspace provisioning centralized for managed installations. |
 | Assign business owner | Creator nominates `owner_email`. If different from their own email, the workspace is isolated pending email acceptance; acceptance removes the provisional creator membership and installs the business owner. | Consider configurable owner-invitation expiry/recovery policy if enterprise deployments need it. |
 | Configure workspace | Owner/admin can change settings and SMTP, manage allowed members; only owner can transfer ownership/delete. | Preserve these four simple roles until actual use cases require finer permissions. |
-| Read workspace data | Any membership can read all companies, contacts, automations, and runs in that workspace. | Consider record/team visibility only when requirements identify who must be hidden from whom; design it separately from action roles. |
+| Read workspace data | Any membership can read all companies and contacts in that workspace. | Consider record/team visibility only when requirements identify who must be hidden from whom; design it separately from action roles. |
 | Personal workspace | Installation policy defaults to off; when on, any user may create one. | For a company-managed installation, keep off unless there is a clear business reason and data-governance policy. |
 
 ### Recommended provisioning journey

@@ -1,10 +1,31 @@
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Skeleton, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 export function Loading() {
   const { t } = useTranslation()
   return (
-    <Box role="status" sx={{ p: 6, textAlign: 'center' }}>
-      <CircularProgress size={26} aria-label={t('common.loading')} />
+    <Box
+      role="status"
+      aria-live="polite"
+      aria-label={t('common.loading')}
+      sx={{ py: { xs: 3, md: 5 }, width: '100%' }}
+    >
+      <Typography
+        component="span"
+        sx={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+        }}
+      >
+        {t('common.loading')}
+      </Typography>
+      <Stack spacing={1.25} aria-hidden="true">
+        <Skeleton variant="rounded" width="32%" height={24} />
+        <Skeleton variant="rounded" width="68%" height={14} />
+        <Skeleton variant="rounded" width="100%" height={72} sx={{ mt: 1 }} />
+      </Stack>
     </Box>
   )
 }
@@ -27,9 +48,15 @@ export function Failure({ error, retry }: { error: Error; retry?: () => void }) 
 }
 export function Empty({ title, description }: { title: string; description: string }) {
   return (
-    <Stack spacing={1} sx={{ p: 6, textAlign: 'center' }}>
+    <Stack spacing={0.75} sx={{ px: 3, py: { xs: 5, md: 7 }, textAlign: 'center' }}>
       <Typography variant="h6">{title}</Typography>
-      <Typography color="text.secondary">{description}</Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ maxWidth: '65ch', alignSelf: 'center' }}
+      >
+        {description}
+      </Typography>
     </Stack>
   )
 }
@@ -42,7 +69,6 @@ export function PageHeading({
   description: string
   action?: React.ReactNode
 }) {
-  const { t } = useTranslation()
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}
@@ -50,24 +76,20 @@ export function PageHeading({
         justifyContent: 'space-between',
         alignItems: { xs: 'flex-start', sm: 'center' },
         gap: 2,
-        mb: 4,
+        mb: 2.5,
       }}
     >
-      <Box sx={{ maxWidth: 720 }}>
+      <Box sx={{ minWidth: 0, maxWidth: '65ch' }}>
         <Typography
-          variant="overline"
-          color="primary.main"
-          sx={{ letterSpacing: '.14em', fontSize: 10.5 }}
-        >
-          {t('common.workspace')}
-        </Typography>
-        <Typography
-          variant="h3"
-          sx={{ mt: 0.35, mb: 1, fontSize: { xs: 30, md: 38 }, letterSpacing: '-.035em' }}
+          variant="h2"
+          component="h1"
+          sx={{ mb: 0.5, overflowWrap: 'anywhere', textWrap: 'balance' }}
         >
           {title}
         </Typography>
-        <Typography color="text.secondary">{description}</Typography>
+        <Typography color="text.secondary" sx={{ maxWidth: '60ch' }}>
+          {description}
+        </Typography>
       </Box>
       {action}
     </Stack>

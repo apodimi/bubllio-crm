@@ -40,3 +40,30 @@ export interface CompanyActivity {
   details: { fields?: string[]; contact_name?: string }
   created_at: string
 }
+
+export type CompanyTimelineCategory =
+  'company' | 'contact' | 'deal' | 'task' | 'service' | 'payment' | 'note'
+
+export interface CompanyTimelineEvent {
+  id: string
+  category: CompanyTimelineCategory
+  event_type: string
+  source_type: string
+  source_id: string | null
+  actor_name: string
+  body: string
+  details: {
+    fields?: string[]
+    contact_name?: string
+    deal_title?: string
+    task_title?: string
+    subscription_name?: string
+    from_stage?: string
+    to_stage?: string
+    from_status?: string
+    to_status?: string
+    amount?: string
+    currency?: string
+  }
+  occurred_at: string
+}

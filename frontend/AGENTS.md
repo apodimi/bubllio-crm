@@ -132,6 +132,9 @@ the working tree is already formatted.
   packages first, project-owned shared or feature modules second, and local
   relative modules last. Keep imports alphabetized within each group and use a
   domain entry point when it prevents a long list of imports from one folder.
+- Use only one import declaration per module. When a module provides both
+  runtime values and TypeScript types, combine them with an inline type modifier,
+  for example `import { useState, type SubmitEvent } from 'react'`.
 - Generated output and test artifacts are ignored by `.prettierignore` and must
   never be formatted or committed.
 

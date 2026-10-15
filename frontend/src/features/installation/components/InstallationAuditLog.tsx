@@ -69,7 +69,10 @@ export function InstallationAuditLog() {
                     <TableCell>{event.target ?? '—'}</TableCell>
                     <TableCell sx={{ minWidth: 180 }}>
                       {Object.entries(event.details)
-                        .map(([key, value]) => `${key.replaceAll('_', ' ')}: ${Array.isArray(value) ? value.join(', ') : String(value)}`)
+                        .map(
+                          ([key, value]) =>
+                            `${key.replaceAll('_', ' ')}: ${Array.isArray(value) ? value.join(', ') : String(value)}`,
+                        )
                         .join(' · ') || '—'}
                     </TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>

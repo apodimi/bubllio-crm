@@ -3,7 +3,6 @@ import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
 import RestoreRounded from '@mui/icons-material/RestoreRounded'
-import HistoryRounded from '@mui/icons-material/HistoryRounded'
 import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded'
 import PhoneOutlined from '@mui/icons-material/PhoneOutlined'
 import {
@@ -20,14 +19,10 @@ import {
 import { Link, useParams } from '@tanstack/react-router'
 import { Failure, Loading } from '../../components/common/Feedback'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
-import {
-  useArchiveCompany,
-  useCompany,
-  useCompanyActivity,
-  useRestoreCompany,
-} from '../../features/companies'
+import { useArchiveCompany, useCompany, useRestoreCompany } from '../../features/companies'
 import { CompanyDialog } from '../../features/companies/components/CompanyDialog'
 import { CompanyProfileContent } from '../../features/companies/components/CompanyProfileContent'
+import { CompanyTimeline } from '../../features/companies/components/CompanyTimeline'
 import { useContacts } from '../../features/contacts'
 import { useSubscriptions } from '../../features/subscriptions'
 
@@ -42,7 +37,6 @@ export function CompanyDetailPage() {
   })
   const company = useCompany(organization.id, companyId)
   const contacts = useContacts(organization.id, { company: company.data?.id ?? '' })
-  const activity = useCompanyActivity(organization.id, companyId)
   const subscriptions = useSubscriptions(organization.id)
   const archive = useArchiveCompany(organization.id)
   const restore = useRestoreCompany(organization.id)
@@ -281,48 +275,11 @@ export function CompanyDetailPage() {
             </Stack>
           )}
         </Paper>
-        <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3 }, gridColumn: { lg: '1 / -1' } }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 2.5 }}>
-            <HistoryRounded color="primary" />
-            <Typography variant="h6">Activity</Typography>
-          </Stack>
-          {activity.isPending ? (
-            <Loading />
-          ) : activity.isError ? (
-            <Failure error={activity.error} retry={() => void activity.refetch()} />
-          ) : activity.data.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No activity recorded yet.
-            </Typography>
-          ) : (
-            <Stack divider={<Divider />}>
-              {activity.data.map((item) => (
-                <Stack
-                  key={item.id}
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={{ xs: 0.5, sm: 2 }}
-                  sx={{ py: 1.75, justifyContent: 'space-between' }}
-                >
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                      {item.action === 'contact_added'
-                        ? `Added contact ${item.details.contact_name ?? ''}`
-                        : item.action === 'assigned'
-                          ? 'Changed account owner'
-                          : `${item.action[0].toUpperCase()}${item.action.slice(1)} company`}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      by {item.actor_name}
-                    </Typography>
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(item.created_at)}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-          )}
-        </Paper>
+        <CompanyTimeline
+          organizationId={organization.id}
+          companyId={companyId}
+          canManage={canManage}
+        />
       </Box>
 
       {editing ? (

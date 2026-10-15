@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     environment:
       POSTGRES_DB: bubllio
       POSTGRES_USER: bubllio
@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
   rabbitmq:
-    image: rabbitmq:4.2-alpine
+    image: rabbitmq:4.2-alpine@sha256:2430a17fa578447eaaabdabc64b805052e4f8f3736a5ebbe4cc55cf4de5690e0
     environment:
       RABBITMQ_DEFAULT_USER: bubllio
       RABBITMQ_DEFAULT_PASS: bubllio

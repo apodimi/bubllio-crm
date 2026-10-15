@@ -14,7 +14,6 @@ class IsInstallationAdmin(BasePermission):
 class Capability:
     VIEW_CRM = "view_crm"
     MANAGE_CRM = "manage_crm"
-    MANAGE_AUTOMATIONS = "manage_automations"
     MANAGE_MEMBERS = "manage_members"
     DELETE_ORGANIZATION = "delete_organization"
     MANAGE_SETTINGS = "manage_settings"
@@ -24,7 +23,6 @@ ROLE_CAPABILITIES = {
     OrganizationMembership.Role.OWNER: {
         Capability.VIEW_CRM,
         Capability.MANAGE_CRM,
-        Capability.MANAGE_AUTOMATIONS,
         Capability.MANAGE_MEMBERS,
         Capability.DELETE_ORGANIZATION,
         Capability.MANAGE_SETTINGS,
@@ -32,7 +30,6 @@ ROLE_CAPABILITIES = {
     OrganizationMembership.Role.ADMIN: {
         Capability.VIEW_CRM,
         Capability.MANAGE_CRM,
-        Capability.MANAGE_AUTOMATIONS,
         Capability.MANAGE_MEMBERS,
         Capability.MANAGE_SETTINGS,
     },

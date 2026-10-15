@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   CatalogItemInput,
+  CreateSubscriptionInput,
   PaymentInput,
   SubscriptionInput,
 } from '../../../types/subscription.types'
@@ -15,18 +16,21 @@ const keys = {
   overview: (organizationId: string) => [...keys.root(organizationId), 'overview'] as const,
 }
 
-export const useCatalog = (organizationId: string) =>
+export const useCatalog = (organizationId: string, enabled = true) =>
   useQuery({
+    enabled,
     queryKey: keys.catalog(organizationId),
     queryFn: ({ signal }) => subscriptionService.listCatalog(organizationId, signal),
   })
-export const useSubscriptions = (organizationId: string) =>
+export const useSubscriptions = (organizationId: string, enabled = true) =>
   useQuery({
+    enabled,
     queryKey: keys.subscriptions(organizationId),
     queryFn: ({ signal }) => subscriptionService.listSubscriptions(organizationId, signal),
   })
-export const useCharges = (organizationId: string) =>
+export const useCharges = (organizationId: string, enabled = true) =>
   useQuery({
+    enabled,
     queryKey: keys.charges(organizationId),
     queryFn: ({ signal }) => subscriptionService.listCharges(organizationId, signal),
   })
@@ -55,7 +59,7 @@ export function useUpdateCatalogItem(organizationId: string) {
 export function useCreateSubscription(organizationId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (body: SubscriptionInput) =>
+    mutationFn: (body: CreateSubscriptionInput) =>
       subscriptionService.createSubscription(organizationId, body),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
   })
@@ -88,6 +92,14 @@ export function useResumeSubscription(organizationId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => subscriptionService.resumeSubscription(organizationId, id),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+  })
+}
+
+export function usePauseSubscription(organizationId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => subscriptionService.pauseSubscription(organizationId, id),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
   })
 }

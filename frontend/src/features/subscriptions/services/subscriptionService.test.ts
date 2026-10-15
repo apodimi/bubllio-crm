@@ -12,10 +12,10 @@ describe('subscriptionService', () => {
 
     await subscriptionService.cancelSubscription('org-a', 'sub-a', 'end_of_period')
 
-    expect(request).toHaveBeenCalledWith(
-      '/organizations/org-a/services/subscriptions/sub-a/cancel/',
-      { method: 'POST', body: { mode: 'end_of_period' } },
-    )
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/services/subscriptions/sub-a/end/', {
+      method: 'POST',
+      body: { mode: 'end_of_period' },
+    })
   })
 
   it('loads overview metrics from the tenant-scoped endpoint', async () => {

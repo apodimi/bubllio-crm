@@ -272,47 +272,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "Automations",
-      "description": "Current Django implementation: one company.created trigger and one fixed send_email action per rule. No worker required. Create a NEW company after saving a rule to exercise dispatch; existing companies are not replayed. Other declared triggers are unwired. SMTP accounts are not yet used by automations.",
-      "item": [
-        {
-          "name": "List Automations",
-          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/automations/"}
-        },
-        {
-          "name": "Create Company Email Automation",
-          "event": [{
-            "listen": "test",
-            "script": {"type": "text/javascript", "exec": [
-              "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
-              "const data = pm.response.json();",
-              "if (data.id) pm.environment.set(\"automation_id\", data.id);"
-            ]}
-          }],
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Notify accounting\",\n  \"trigger\": \"company.created\",\n  \"action_type\": \"send_email\",\n  \"action_config\": {\n    \"to\": [\"accounting@example.com\"],\n    \"subject\": \"New company\",\n    \"body\": \"A new company was added.\"\n  },\n  \"is_active\": true\n}"},
-            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/automations/"
-          }
-        },
-        {
-          "name": "Test Automation",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {"mode": "raw", "raw": "{\n  \"payload\": {\n    \"test\": true,\n    \"source\": \"postman\"\n  }\n}"},
-            "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/automations/{{automation_id}}/test/",
-            "description": "Executes the real action and records a run, even for inactive rules. Does not create a company or verify event dispatch. HTTP 201 can contain status=failed: inspect status and run.error_message. Payload is logged, not interpolated into email. Checked-in transport is console output."
-          }
-        },
-        {
-          "name": "List Automation Runs",
-          "request": {"method": "GET", "url": "{{base_url}}/api/{{api_version}}/organizations/{{organization_id}}/automations/runs/"}
-        }
-      ]
     }
   ]
 }

@@ -9,10 +9,19 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
 from access.permissions import Capability, get_organization_for_user
+from bubllio_crm.pagination import collection_response
 
-from .models import Company, CompanyActivity
-from .serializers import CompanyActivitySerializer, CompanyAssigneeSerializer, CompanySerializer
-from .services import create_company, record_company_activity
+from .models import Company, CompanyActivity, CompanyTimelineEvent
+from .serializers import (
+    CompanyActivitySerializer,
+    CompanyAssigneeSerializer,
+    CompanySerializer,
+    CompanyTimelineEventSerializer,
+    CompanyTimelineNoteSerializer,
+    CrmSummarySerializer,
+)
+from .services import create_company, record_company_activity, record_company_timeline_event
+from .summary import crm_summary
 
 
 def get_company_by_public_reference(*, organization, reference):
@@ -25,6 +34,16 @@ def get_company_by_public_reference(*, organization, reference):
             customer_code__iexact=reference,
         )
     return get_object_or_404(Company, organization=organization, id=company_id)
+
+
+class CompanySummaryAPIView(APIView):
+    serializer_class = CrmSummarySerializer
+
+    def get(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM,
+        )
+        return Response(crm_summary(organization))
 
 
 class CompanyListCreateAPIView(APIView):
@@ -80,8 +99,7 @@ class CompanyListCreateAPIView(APIView):
         elif assigned_to:
             companies = companies.filter(assigned_to_id=assigned_to)
 
-        serializer = CompanySerializer(companies, many=True)
-        return Response(serializer.data)
+        return collection_response(request, companies.order_by("name", "id"), CompanySerializer)
 
     def post(self, request, organization_id):
         organization = get_organization_for_user(
@@ -197,6 +215,74 @@ class CompanyActivityAPIView(APIView):
             organization=organization, reference=company_id
         )
         return Response(CompanyActivitySerializer(company.activities.all(), many=True).data)
+
+
+class CompanyTimelineAPIView(APIView):
+    serializer_class = CompanyTimelineEventSerializer
+
+    def get(self, request, organization_id, company_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.VIEW_CRM,
+        )
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
+        events = company.timeline_events.select_related("actor")
+        category = request.query_params.get("category")
+        if category:
+            if category not in CompanyTimelineEvent.Category.values:
+                return Response(
+                    {"category": ["Select a valid timeline category."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            events = events.filter(category=category)
+        try:
+            page = int(request.query_params.get("page", 1))
+            page_size = int(request.query_params.get("page_size", 25))
+            if page < 1 or not 1 <= page_size <= 100:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response(
+                {"page": ["Use page >= 1 and page_size between 1 and 100."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        count = events.count()
+        offset = (page - 1) * page_size
+        return Response(
+            {
+                "count": count,
+                "results": CompanyTimelineEventSerializer(
+                    events[offset : offset + page_size], many=True
+                ).data,
+            }
+        )
+
+    def post(self, request, organization_id, company_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.MANAGE_CRM,
+        )
+        company = get_company_by_public_reference(
+            organization=organization, reference=company_id
+        )
+        serializer = CompanyTimelineNoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        event = record_company_timeline_event(
+            company=company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.NOTE,
+            event_type=CompanyTimelineEvent.EventType.NOTE_ADDED,
+            source_type="company",
+            source_id=company.id,
+            body=serializer.validated_data["body"],
+        )
+        return Response(
+            CompanyTimelineEventSerializer(event).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CompanyArchiveAPIView(APIView):

@@ -1,93 +1,173 @@
 # Updating a self-hosted installation
 
-Bubllio CRM uses stable GitHub Releases as the update source of truth. An
-installation administrator sees a banner when the latest published release is
-newer than the installed package version. Drafts and prereleases do not trigger
-the banner.
+Bubllio CRM can check for stable GitHub Releases and, after a one-time operator
+bootstrap, install eligible releases from Account settings. Deployment
+privileges stay in the independent Bubllio Update Agent; the browser and Django
+never receive Docker access, provider credentials, arbitrary commands, or
+arbitrary download URLs.
 
-The check is deliberately read-only. Bubllio does not pull code, replace
-containers, run migrations, or restart services from the web application.
-Operators remain in control of deployment credentials and rollback.
+The agent is provider-agnostic at its boundary. Version 0.2.0 includes the
+generic Docker Compose adapter. A native Dokploy adapter and other providers can
+implement the same adapter contract without changing the CRM API.
 
-## Before upgrading
+## What the Update button does
 
-1. Open the release linked by the banner and read its release notes.
-2. Back up the database and any deployment-managed files or volumes.
-3. Confirm the release's supported Python, Node, and database versions.
-4. Record the currently deployed tag or image digest so it can be restored.
+1. The CRM discovers the latest stable `vMAJOR.MINOR.PATCH` GitHub Release.
+2. The agent downloads the manifest and Sigstore bundle from its fixed,
+   operator-configured release source.
+3. The agent verifies the exact repository, release version, workflow identity,
+   commit SHA, supported source-version range, image digests, and migration
+   policy.
+4. Preflight validates the fixed Compose project and reports blockers without
+   exposing provider details.
+5. Only an `online_safe` release can proceed automatically. The agent runs the
+   configured backup command, pulls digest-pinned images, deploys them, and
+   waits for health verification.
+6. Job state remains in the agent's own SQLite store while the CRM restarts.
+   Account settings reconnects and resumes progress reporting afterward.
 
-## Upgrade
+`maintenance` and `irreversible` releases remain operator-managed. The UI links
+to their release notes instead of bypassing the safety classification.
 
-Follow the deployment method used by the installation and deploy the exact
-release tag, not a moving branch. Install locked dependencies, then run:
+## Bootstrap 0.2.0 manually
 
-```bash
-uv run python src/manage.py migrate
-uv run python src/manage.py check --deploy
+Version 0.2.0 introduces the Update Center and contains migrations that require
+a maintenance window. An older CRM cannot safely trigger a service it does not
+yet know about, so **0.2.0 is a manual bootstrap release**.
+
+Before upgrading:
+
+1. Take an off-host PostgreSQL backup and complete an isolated restore
+   rehearsal.
+2. Record the currently deployed tag or image digest.
+3. Review `uv run python src/manage.py migrate --plan` against a copy of the
+   production database and resolve duplicate identities before the window.
+4. Stop the old web, worker, and beat writers, apply the migrations once, deploy
+   the matching backend and frontend release, then verify health and sign-in.
+
+The first Automations removal release deliberately retains legacy automation
+tables and ignored outbox rows. Do not drop them in this deployment. Their
+physical deletion requires a later, separately approved irreversible release.
+
+After 0.2.0 is healthy, install the agent outside the CRM lifecycle by following
+[`updater/README.md`](../../updater/README.md). Its machine account is a
+deployment administrator: Docker access is effectively root-equivalent, so do
+not mount the Docker socket into Django and do not run the agent inside the
+Compose project it updates.
+
+## Connect the agent
+
+For a same-host Docker Compose installation, mount only the agent's narrow
+runtime directory read-only into the backend. Keep the agent socket at
+`/run/bubllio-update-agent/agent.sock`, create it as mode `0660` with group GID
+`10001`, and set:
+
+```text
+BUBLLIO_UPDATE_AGENT_ENABLED=true
+BUBLLIO_UPDATE_AGENT_SOCKET=/run/bubllio-update-agent/agent.sock
+BUBLLIO_UPDATE_AGENT_RUNTIME_HOST=/run/bubllio-update-agent
+BUBLLIO_UPDATE_AGENT_INSTALLATION_ID=replace-with-the-agent-installation-uuid
+BUBLLIO_UPDATE_AGENT_SECRET=replace-with-a-unique-random-secret-of-at-least-32-bytes
+BUBLLIO_UPDATE_AGENT_TIMEOUT=5
 ```
 
-Build and deploy the frontend for that same tag, restart the application using
-the installation's process manager, and verify sign-in plus one representative
-workspace flow. Release-specific steps take precedence over this general
-checklist.
+Use the same HMAC secret in the agent service environment. Start and subsequently
+manage the CRM with both Compose files:
 
-## Configuration and privacy
+```bash
+docker compose --env-file .env.production \
+  -f compose.production.yaml \
+  -f compose.update-agent.yaml up -d
+```
 
-The backend checks
-`https://api.github.com/repos/<owner>/<repository>/releases/latest` with a
-three-second timeout. A result is cached for `BUBLLIO_UPDATE_CHECK_TTL` seconds
-(six hours by default), and failures never block the CRM. GitHub receives the
-server IP address and a Bubllio version user agent as part of this request.
+The override mounts the runtime directory read-only instead of bind-mounting the
+socket inode. The backend therefore reconnects when the external agent safely
+replaces its socket during restart. The agent's `compose_files` setting must
+contain those same two files so a deployment preserves the socket mount.
 
-Disable the request completely when an installation is offline or policy does
-not allow it:
+The agent atomically owns `.bubllio-update-agent/release.env`, containing the
+version and signed digest-pinned image references. Every agent reconciliation
+adds it as the final Compose `--env-file`. Manual Compose recovery must do the
+same so shell variables or mutable tags cannot silently replace the verified
+images:
+
+```bash
+env -u BUBLLIO_IMAGE_TAG \
+  -u BUBLLIO_BACKEND_IMAGE \
+  -u BUBLLIO_FRONTEND_IMAGE \
+  docker compose --env-file .env.production \
+    --env-file .bubllio-update-agent/release.env \
+    -f compose.production.yaml \
+    -f compose.update-agent.yaml up -d
+```
+
+For a remote runner, leave the socket
+unset and use an HTTPS `BUBLLIO_UPDATE_AGENT_URL`. Plain HTTP is accepted
+automatically only for loopback; the insecure override is reserved for an
+explicitly isolated management network. Provider credentials and backup
+configuration belong only to the agent.
+
+The generic Compose adapter expects `BUBLLIO_BACKEND_IMAGE` and
+`BUBLLIO_FRONTEND_IMAGE` to resolve to the digest-pinned images from the signed
+manifest. The supplied production Compose file supports those variables while
+retaining local source builds for manual operation. Each image configuration
+also has an explicit service allowlist: the agent pulls only `backend`, `worker`,
+`beat`, and `frontend`. It does not refresh mutable PostgreSQL or RabbitMQ images
+as a side effect of a CRM release.
+
+## Release checking and privacy
+
+`BUBLLIO_UPDATE_CHECK_ENABLED` controls the read-only GitHub release check.
+`BUBLLIO_UPDATE_REPOSITORY` defaults to `apodimi/bubllio-crm`, accepts only an
+`owner/repository` value, and is cached for `BUBLLIO_UPDATE_CHECK_TTL` seconds.
+Disable it for offline installations:
 
 ```text
 BUBLLIO_UPDATE_CHECK_ENABLED=false
 ```
 
-`BUBLLIO_UPDATE_REPOSITORY` defaults to `apodimi/bubllio-crm` and accepts
-only an `owner/repository` value. The endpoint and banner are available only to
-active installation administrators.
+GitHub receives the server IP and Bubllio version user agent. The endpoints and
+Update Center are available only to active installation administrators.
 
-## Backup and restore status
+## Backup and recovery status
 
-Bubllio does not create database backups. Use the backup mechanism supported by
-the hosting provider or database service. After the backup job completes, report
-its result from the application environment:
+The Account settings backup panel is operational evidence, not the backup
+engine. Record externally verified jobs with:
 
 ```bash
 uv run python src/manage.py record_backup_event --kind backup --status success
+uv run python src/manage.py record_backup_event --kind restore_test --status success
 ```
 
-For failed runs, use `--status failure`. After completing a restore rehearsal,
-record it with `--kind restore_test`. The Account settings panel shows the last
-reported result, marks backups overdue after 24 hours, and recommends a restore
-test every 90 days. These intervals can be changed with
-`BUBLLIO_BACKUP_MAX_AGE_HOURS` and `BUBLLIO_RESTORE_TEST_MAX_AGE_DAYS`.
-
-The status is only as trustworthy as the scheduler that reports it. Run the
-reporting command after verifying the actual backup/restore operation succeeded;
-store backup artifacts outside the application database and test recovery in an
-isolated environment. Never put provider credentials or backup paths in the
-reported event.
-
-Installation administrators can also download a JSON data export from Account
-settings. It excludes passwords, authentication tokens, encrypted SMTP
-passwords, and automation error messages. The export contains customer data and
-must be stored securely. It is intended for local inspection and portability;
-it is not a replacement for a database-native backup and tested restore.
+The update agent separately runs its fixed backup executable immediately before
+an eligible deployment. It never performs an automatic database restore. If a
+failure occurs after deployment begins, the state becomes
+`MANUAL_INTERVENTION`; follow the release-specific recovery notes. Prefer a
+forward fix after migrations unless the signed manifest explicitly declares an
+application rollback compatible.
 
 ## Publishing a release
 
-1. Update the matching version in `pyproject.toml` and `frontend/package.json`
-   using `MAJOR.MINOR.PATCH`, then run
-   `uv run python scripts/check_release_version.py`.
-2. Run the full backend, frontend, and browser verification gates.
-3. Merge the release-ready changes and create a matching tag such as `v0.2.0`.
-4. Publish a non-draft, non-prerelease GitHub Release for that tag.
-5. Include upgrade notes, migrations, breaking changes, and rollback guidance.
+1. Update the matching version in `pyproject.toml`, `frontend/package.json`, and
+   `release/policies/<version>.json`.
+2. Classify the migrations honestly and set the supported source-version range.
+3. Run `uv run python scripts/check_release_version.py` and all backend,
+   PostgreSQL, frontend, browser, migration, image, and security gates.
+4. Commit the exact release tree and create the matching immutable tag, such as
+   `v0.2.0`.
+5. Push the commit and tag. `.github/workflows/release.yml` publishes the two
+   GHCR images, build attestations, updater wheel, canonical manifest, Sigstore
+   bundle, and GitHub Release notes extracted from `CHANGELOG.md`.
 
-The update checker intentionally accepts only `vMAJOR.MINOR.PATCH` or
-`MAJOR.MINOR.PATCH`. This keeps version ordering predictable without trusting
-arbitrary release text.
+GHCR creates a package as private on its first publication. For the first
+release, the workflow intentionally stops after pushing the candidate images if
+an anonymous digest pull fails. Open both package settings, change
+`bubllio-crm-backend` and `bubllio-crm-frontend` to **Public**, then rerun the
+failed workflow. GitHub documents this default and the visibility control in
+[Working with the Container registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+The workflow will not create the public version tags or publish the draft
+GitHub Release until both anonymous pulls succeed.
+
+The workflow embeds the exact version and commit SHA in the backend image and
+signs the manifest with its GitHub Actions OIDC identity. The agent pins that
+repository, workflow, tag, and issuer and fails closed on any mismatch.

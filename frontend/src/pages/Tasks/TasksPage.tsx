@@ -8,6 +8,7 @@ import EventRounded from '@mui/icons-material/EventRounded'
 import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
 import ViewKanbanRounded from '@mui/icons-material/ViewKanbanRounded'
 import ViewListRounded from '@mui/icons-material/ViewListRounded'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   Alert,
   Avatar,
@@ -65,6 +66,8 @@ const dueLabel = (value: string) =>
 
 export function TasksPage() {
   const organization = useWorkspace()
+  const navigate = useNavigate({ from: '/organizations/$organizationId/tasks' })
+  const routeSearch = useSearch({ from: '/organizations/$organizationId/tasks' })
   const userId = useAuthStore((state) => state.user?.id)
   const canManage = canCreateRecords(organization)
   const preferenceKey = `bubllio:tasks-view:v1:${userId ?? 'anonymous'}:${organization.id}`
@@ -78,7 +81,9 @@ export function TasksPage() {
   const [bucket, setBucket] = useState<TaskBucket>('today')
   const [owner, setOwner] = useState<'me' | 'all' | 'unassigned'>('me')
   const [kind, setKind] = useState<TaskKind | 'all'>('all')
-  const [drawer, setDrawer] = useState<CrmTask | true | null>(null)
+  const [drawer, setDrawer] = useState<CrmTask | true | null>(
+    routeSearch.create === true ? true : null,
+  )
   const tasks = useTasks(organization.id, {
     bucket: view === 'board' ? 'all' : bucket,
     assignedTo: owner === 'all' ? '' : owner,
@@ -375,7 +380,10 @@ export function TasksPage() {
           organizationId={organization.id}
           companies={companies.data}
           task={drawer === true ? undefined : drawer}
-          onClose={() => setDrawer(null)}
+          onClose={() => {
+            setDrawer(null)
+            if (routeSearch.create) void navigate({ search: { create: undefined } })
+          }}
         />
       ) : null}
     </>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import AddRounded from '@mui/icons-material/AddRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import PaymentsRounded from '@mui/icons-material/PaymentsRounded'
@@ -9,14 +10,12 @@ import {
   IconButton,
   Paper,
   Stack,
-  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -31,7 +30,7 @@ import type {
 } from '../../types/subscription.types'
 import { CatalogDrawer, PaymentDrawer, SubscriptionDrawer } from './ServiceDrawers'
 
-type View = 'subscriptions' | 'charges' | 'catalog'
+type ServicesView = 'customer-services' | 'billing' | 'catalog'
 const intervalLabels = {
   one_off: 'One-off',
   monthly: 'Monthly',
@@ -61,20 +60,24 @@ const date = (value: string) =>
     new Date(`${value}T00:00:00`),
   )
 
-export function ServicesPage() {
+function ServicesPage({ view }: { view: ServicesView }) {
+  const { t } = useTranslation()
   const organization = useWorkspace()
-  const catalog = useCatalog(organization.id)
-  const subscriptions = useSubscriptions(organization.id)
-  const charges = useCharges(organization.id)
-  const companies = useCompanies(organization.id, { archived: 'active' })
   const canManage = canCreateRecords(organization)
-  const [view, setView] = useState<View>('subscriptions')
   const [catalogDrawer, setCatalogDrawer] = useState<ServiceCatalogItem | true | null>(null)
   const [subscriptionDrawer, setSubscriptionDrawer] = useState<CustomerSubscription | true | null>(
     null,
   )
   const [paymentCharge, setPaymentCharge] = useState<Charge | null>(null)
-  const query = view === 'catalog' ? catalog : view === 'charges' ? charges : subscriptions
+  const catalog = useCatalog(organization.id, view === 'catalog' || Boolean(subscriptionDrawer))
+  const subscriptions = useSubscriptions(organization.id, view !== 'catalog')
+  const charges = useCharges(organization.id, view === 'billing')
+  const companies = useCompanies(
+    organization.id,
+    { archived: 'active' },
+    Boolean(subscriptionDrawer),
+  )
+  const query = view === 'catalog' ? catalog : view === 'billing' ? charges : subscriptions
   const overdue = (charges.data ?? []).filter((charge) => charge.payment_status === 'overdue')
   const openBalances = useMemo(
     () =>
@@ -95,88 +98,99 @@ export function ServicesPage() {
     <Button
       variant="contained"
       startIcon={<AddRounded />}
-      disabled={view === 'subscriptions' && !(companies.data ?? []).length}
+      disabled={view === 'customer-services' && !(companies.data ?? []).length}
       onClick={() => (view === 'catalog' ? setCatalogDrawer(true) : setSubscriptionDrawer(true))}
     >
-      {view === 'catalog' ? 'Add catalog service' : 'Add subscription'}
+      {view === 'catalog' ? t('crm.services.addCatalog') : t('crm.services.addCustomer')}
     </Button>
   ) : null
 
   return (
     <>
       <PageHeading
-        title="Services & billing"
-        description="Track active customer services, renewals, charges, and incoming payments."
-        action={view === 'charges' ? null : addAction}
+        title={
+          view === 'catalog'
+            ? t('crm.services.catalogTitle')
+            : view === 'billing'
+              ? t('crm.services.billingTitle')
+              : t('crm.services.customerTitle')
+        }
+        description={
+          view === 'catalog'
+            ? t('crm.services.catalogDescription')
+            : view === 'billing'
+              ? t('crm.services.billingDescription')
+              : t('crm.services.customerDescription')
+        }
+        action={view === 'billing' ? null : addAction}
       />
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
-        <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
-          <Typography color="text.secondary" variant="body2">
-            Active subscriptions
-          </Typography>
-          <Typography variant="h5" sx={{ mt: 0.5 }}>
-            {(subscriptions.data ?? []).filter((item) => item.status === 'active').length}
-          </Typography>
-        </Paper>
-        <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
-          <Typography color="text.secondary" variant="body2">
-            Needs attention
-          </Typography>
-          <Typography
-            variant="h5"
-            color={overdue.length ? 'error.main' : 'text.primary'}
-            sx={{ mt: 0.5 }}
-          >
-            {overdue.length} overdue
-          </Typography>
-        </Paper>
-        <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
-          <Typography color="text.secondary" variant="body2">
-            Open balance
-          </Typography>
-          <Typography variant="h5" sx={{ mt: 0.5 }}>
-            {openBalances.length
-              ? openBalances
-                  .map(([currency, amount]) => money(amount.toFixed(2), currency))
-                  .join(' · ')
-              : '0.00'}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Each currency is shown separately.
-          </Typography>
-        </Paper>
-      </Stack>
+      {view === 'billing' ? (
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+            <Typography color="text.secondary" variant="body2">
+              {t('crm.services.activeSubscriptions')}
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 0.5 }}>
+              {(subscriptions.data ?? []).filter((item) => item.status === 'active').length}
+            </Typography>
+          </Paper>
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+            <Typography color="text.secondary" variant="body2">
+              {t('crm.services.needsAttention')}
+            </Typography>
+            <Typography
+              variant="h5"
+              color={overdue.length ? 'error.main' : 'text.primary'}
+              sx={{ mt: 0.5 }}
+            >
+              {t('crm.services.overdueCount', { count: overdue.length })}
+            </Typography>
+          </Paper>
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+            <Typography color="text.secondary" variant="body2">
+              {t('crm.services.openBalance')}
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 0.5 }}>
+              {openBalances.length
+                ? openBalances
+                    .map(([currency, amount]) => money(amount.toFixed(2), currency))
+                    .join(' · ')
+                : '0.00'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t('crm.services.currencyNote')}
+            </Typography>
+          </Paper>
+        </Stack>
+      ) : null}
       <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-        <Tabs
-          value={view}
-          onChange={(_, value: View) => setView(value)}
-          aria-label="Services sections"
-          sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab value="subscriptions" label="Customer subscriptions" />
-          <Tab value="charges" label="Charges" />
-          <Tab value="catalog" label="Catalog" />
-        </Tabs>
         {query.isError ? (
           <Box sx={{ p: 3 }}>
             <Failure error={query.error} retry={() => void query.refetch()} />
           </Box>
         ) : query.isPending ? (
           <Loading />
-        ) : view === 'subscriptions' ? (
+        ) : view === 'customer-services' ? (
           <SubscriptionsTable
             rows={subscriptions.data ?? []}
             canManage={canManage}
             onEdit={setSubscriptionDrawer}
+            t={t}
           />
-        ) : view === 'charges' ? (
+        ) : view === 'billing' ? (
           <ChargesTable
             rows={charges.data ?? []}
             canManage={canManage}
             onPayment={setPaymentCharge}
+            t={t}
           />
         ) : (
-          <CatalogTable rows={catalog.data ?? []} canManage={canManage} onEdit={setCatalogDrawer} />
+          <CatalogTable
+            rows={catalog.data ?? []}
+            canManage={canManage}
+            onEdit={setCatalogDrawer}
+            t={t}
+          />
         )}
       </Paper>
       {catalogDrawer ? (
@@ -185,6 +199,21 @@ export function ServicesPage() {
           item={catalogDrawer === true ? undefined : catalogDrawer}
           onClose={() => setCatalogDrawer(null)}
         />
+      ) : null}
+      {subscriptionDrawer && (companies.error || catalog.error) ? (
+        <Failure
+          error={(companies.error || catalog.error)!}
+          retry={() => {
+            void companies.refetch()
+            void catalog.refetch()
+          }}
+        />
+      ) : null}
+      {subscriptionDrawer &&
+      (!companies.data || !catalog.data) &&
+      !companies.error &&
+      !catalog.error ? (
+        <Loading />
       ) : null}
       {subscriptionDrawer && companies.data && catalog.data ? (
         <SubscriptionDrawer
@@ -206,20 +235,34 @@ export function ServicesPage() {
   )
 }
 
+export function CustomerServicesPage() {
+  return <ServicesPage view="customer-services" />
+}
+
+export function BillingPage() {
+  return <ServicesPage view="billing" />
+}
+
+export function ServiceCatalogPage() {
+  return <ServicesPage view="catalog" />
+}
+
 function SubscriptionsTable({
   rows,
   canManage,
   onEdit,
+  t,
 }: {
   rows: CustomerSubscription[]
   canManage: boolean
   onEdit: (row: CustomerSubscription) => void
+  t: ReturnType<typeof useTranslation>['t']
 }) {
   if (!rows.length)
     return (
       <Empty
-        title="No customer subscriptions yet"
-        description="Add the first service agreement to start tracking charges and renewals."
+        title={t('crm.services.noSubscriptions')}
+        description={t('crm.services.noSubscriptionsDescription')}
       />
     )
   return (
@@ -227,13 +270,13 @@ function SubscriptionsTable({
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Service</TableCell>
-            <TableCell>Customer</TableCell>
-            <TableCell>Cycle</TableCell>
-            <TableCell>Next charge</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell align="right">Amount</TableCell>
-            {canManage ? <TableCell align="right">Actions</TableCell> : null}
+            <TableCell>{t('crm.services.service')}</TableCell>
+            <TableCell>{t('crm.services.customer')}</TableCell>
+            <TableCell>{t('crm.services.cycle')}</TableCell>
+            <TableCell>{t('crm.services.nextCharge')}</TableCell>
+            <TableCell>{t('crm.services.status')}</TableCell>
+            <TableCell align="right">{t('crm.services.amount')}</TableCell>
+            {canManage ? <TableCell align="right">{t('crm.services.actions')}</TableCell> : null}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -289,34 +332,50 @@ function ChargesTable({
   rows,
   canManage,
   onPayment,
+  t,
 }: {
   rows: Charge[]
   canManage: boolean
   onPayment: (row: Charge) => void
+  t: ReturnType<typeof useTranslation>['t']
 }) {
   if (!rows.length)
     return (
       <Empty
-        title="No charges yet"
-        description="A charge is created when you add a customer subscription."
+        title={t('crm.services.noCharges')}
+        description={t('crm.services.noChargesDescription')}
       />
     )
+  const priority = {
+    overdue: 0,
+    partially_paid: 1,
+    due: 2,
+    upcoming: 3,
+    paid: 4,
+    waived: 5,
+    cancelled: 6,
+  }
+  const sortedRows = [...rows].sort(
+    (left, right) =>
+      priority[left.payment_status] - priority[right.payment_status] ||
+      left.due_date.localeCompare(right.due_date),
+  )
   return (
     <TableContainer>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Due date</TableCell>
-            <TableCell>Customer</TableCell>
-            <TableCell>Service</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell align="right">Gross</TableCell>
-            <TableCell align="right">Outstanding</TableCell>
-            {canManage ? <TableCell align="right">Payment</TableCell> : null}
+            <TableCell>{t('crm.services.dueDate')}</TableCell>
+            <TableCell>{t('crm.services.customer')}</TableCell>
+            <TableCell>{t('crm.services.service')}</TableCell>
+            <TableCell>{t('crm.services.status')}</TableCell>
+            <TableCell align="right">{t('crm.services.gross')}</TableCell>
+            <TableCell align="right">{t('crm.services.outstanding')}</TableCell>
+            {canManage ? <TableCell align="right">{t('crm.services.payment')}</TableCell> : null}
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map((row) => (
+          {sortedRows.map((row) => (
             <TableRow hover key={row.id}>
               <TableCell>{date(row.due_date)}</TableCell>
               <TableCell>{row.company_name}</TableCell>
@@ -342,7 +401,7 @@ function ChargesTable({
                     disabled={row.state !== 'open' || Number(row.outstanding_amount) === 0}
                     onClick={() => onPayment(row)}
                   >
-                    Record
+                    {t('crm.services.record')}
                   </Button>
                 </TableCell>
               ) : null}
@@ -358,16 +417,18 @@ function CatalogTable({
   rows,
   canManage,
   onEdit,
+  t,
 }: {
   rows: ServiceCatalogItem[]
   canManage: boolean
   onEdit: (row: ServiceCatalogItem) => void
+  t: ReturnType<typeof useTranslation>['t']
 }) {
   if (!rows.length)
     return (
       <Empty
-        title="Build your service catalog"
-        description="Create reusable services with standard pricing, VAT, and billing cycles."
+        title={t('crm.services.noCatalog')}
+        description={t('crm.services.noCatalogDescription')}
       />
     )
   return (
@@ -375,12 +436,12 @@ function CatalogTable({
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Service</TableCell>
-            <TableCell>Code</TableCell>
-            <TableCell>Cycle</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell align="right">Default price</TableCell>
-            {canManage ? <TableCell align="right">Actions</TableCell> : null}
+            <TableCell>{t('crm.services.service')}</TableCell>
+            <TableCell>{t('crm.services.code')}</TableCell>
+            <TableCell>{t('crm.services.cycle')}</TableCell>
+            <TableCell>{t('crm.services.status')}</TableCell>
+            <TableCell align="right">{t('crm.services.defaultPrice')}</TableCell>
+            {canManage ? <TableCell align="right">{t('crm.services.actions')}</TableCell> : null}
           </TableRow>
         </TableHead>
         <TableBody>

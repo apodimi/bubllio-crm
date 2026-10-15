@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { SubmitEvent } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { FormProvider, useForm } from 'react-hook-form'
 import {
@@ -137,7 +137,7 @@ export function SetupPage({ onComplete }: { onComplete: () => void }) {
     }
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (step === steps.length - 1) void form.handleSubmit(complete)(event)
     else void next()

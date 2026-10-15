@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
-import { alpha } from '@mui/material/styles'
+import type { SubmitEvent } from 'react'
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { BrandLogo } from '../../components/common/BrandLogo'
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
@@ -14,7 +13,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
     const values = new FormData(form)
@@ -33,51 +32,50 @@ export function LoginPage() {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+        gridTemplateColumns: { xs: '1fr', md: 'minmax(360px, .82fr) minmax(480px, 1.18fr)' },
+        bgcolor: 'background.default',
       }}
     >
       <Stack
         sx={{
           justifyContent: 'space-between',
-          bgcolor: 'primary.dark',
-          color: 'primary.contrastText',
-          p: { xs: 4, md: 8 },
+          bgcolor: 'primary.light',
+          color: 'text.primary',
+          p: { xs: 3, sm: 4, md: 7 },
+          borderRight: { md: 1 },
+          borderColor: { md: 'divider' },
         }}
       >
         <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <BrandLogo inverse product="CRM" />
+          <BrandLogo product="CRM" />
           <LanguageSwitcher />
         </Stack>
-        <Box sx={{ py: 6 }}>
-          <Chip
-            label={t('auth.badge')}
-            sx={(theme) => ({
-              bgcolor: alpha(theme.palette.primary.contrastText, 0.08),
-              color: 'primary.light',
-              mb: 3,
-            })}
-          />
-          <Typography variant="h3" sx={{ maxWidth: 480, mb: 3 }}>
+        <Box sx={{ py: { xs: 5, md: 8 } }}>
+          <Typography variant="h2" sx={{ maxWidth: 480, mb: 2, textWrap: 'balance' }}>
             {t('auth.heroLineOne')}
             <br />
             {t('auth.heroLineTwo')}
           </Typography>
-          <Typography sx={{ color: 'primary.light', maxWidth: 380, opacity: 0.82 }}>
+          <Typography color="text.secondary" sx={{ maxWidth: 420 }}>
             {t('auth.heroDescription')}
           </Typography>
         </Box>
-        <Typography variant="body2" sx={{ opacity: 0.6 }}>
+        <Typography variant="body2" color="text.secondary">
           {t('auth.tagline')}
         </Typography>
       </Stack>
-      <Stack sx={{ justifyContent: 'center', p: { xs: 3, md: 8 } }}>
+      <Stack
+        component="main"
+        id="main-content"
+        sx={{ justifyContent: 'center', p: { xs: 2, sm: 4, md: 8 } }}
+      >
         <Paper
           variant="outlined"
-          sx={{ p: { xs: 3, sm: 5 }, maxWidth: 480, width: '100%', mx: 'auto' }}
+          sx={{ p: { xs: 3, sm: 5 }, maxWidth: 500, width: '100%', mx: 'auto' }}
         >
-          <Typography variant="h4" sx={{ mb: 1 }}>
+          <Typography variant="h3" component="h1" sx={{ mb: 1 }}>
             {t('auth.welcomeBack')}
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 4 }}>

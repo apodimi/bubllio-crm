@@ -59,7 +59,6 @@ configuration. VITE_API_BASE_PATH is a same-origin path, normally /api/v1.
   invitations; acceptance adds a role only to that workspace.
 - Workspace overview with live company/contact/enabled-rule counts.
 - Company and contact lists, local search and creation forms.
-- Read-only automation rules and run history.
 - Responsive MUI shell, loading/error/empty states and server validation messages.
 - Viewer roles cannot see create-company/contact controls; backend authorization
   remains authoritative. Workspace roles come from membership; the independent

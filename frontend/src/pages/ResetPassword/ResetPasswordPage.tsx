@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { SubmitEvent } from 'react'
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { authService } from '../../features/auth/services/authService'
@@ -17,7 +17,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
 
-  async function submit(event: FormEvent) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setMessage('')

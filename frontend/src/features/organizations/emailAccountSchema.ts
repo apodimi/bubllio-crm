@@ -16,4 +16,9 @@ export const emailAccountSchema = z.object({
 
 export type EmailAccountFormValues = z.infer<typeof emailAccountSchema>
 
+export const createEmailAccountSchema = emailAccountSchema.refine(
+  (values) => values.password.length > 0,
+  { path: ['password'], message: 'SMTP password is required.' },
+)
+
 export const testRecipientSchema = z.string().trim().email('Enter a valid test recipient.')

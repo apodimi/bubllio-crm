@@ -1,4 +1,6 @@
 class AutomationTrigger:
+    """Legacy trigger values kept only to preserve the stored model schema."""
+
     ORGANIZATION_CREATED = "organization.created"
     ORGANIZATION_UPDATED = "organization.updated"
     COMPANY_CREATED = "company.created"

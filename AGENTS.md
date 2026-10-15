@@ -3,13 +3,12 @@
 ## Project Context
 
 Bubllio CRM is a multi-tenant Django REST Framework backend. An `Organization`
-owns its companies, contacts, automations, and automation runs. Preserve tenant
+owns its companies, contacts, deals, tasks, and subscriptions. Preserve tenant
 boundaries whenever data is created, queried, updated, or deleted.
 
 Read the relevant architecture document before changing a domain:
 
 - `docs/architecture/crm-domain.md`
-- `docs/architecture/automations.md`
 - `docs/architecture/email-adapters.md`
 - `docs/api/rest-patterns.md`
 - `docs/development/databases.md` for database configuration or backend changes.
@@ -73,9 +72,10 @@ machine, editor, agent, or local workflow.
 
 Load the matching skill before performing one of these workflows:
 
+- `skills/orchestrate-product-squad/SKILL.md`: coordinate a substantial product
+  initiative across architecture, research, UX/UI, full-stack implementation,
+  and independent QA/security review.
 - `skills/add-crm-resource/SKILL.md`: add or expand a REST resource.
-- `skills/add-automation-trigger/SKILL.md`: implement an automation event.
-- `skills/add-automation-action/SKILL.md`: implement an action executor.
 - `skills/write-api-tests/SKILL.md`: add Django/DRF API tests.
 - `skills/verify-django-project/SKILL.md`: verify a completed change.
 - `skills/audit-tenant-boundaries/SKILL.md`: audit organization isolation and

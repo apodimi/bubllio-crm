@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Lower
 
 
 class Contact(models.Model):
@@ -39,7 +40,12 @@ class Contact(models.Model):
 
     class Meta:
         ordering = ("first_name", "last_name", "id")
+        indexes = [
+            models.Index(fields=("organization", "last_name", "first_name", "id"), name="contact_org_name_idx"),
+            models.Index(fields=("organization", "archived_at", "last_name", "first_name", "id"), name="contact_org_active_name_idx"),
+        ]
         constraints = [
+            models.UniqueConstraint(Lower("email"), models.F("organization"), condition=~Q(email=""), name="contact_org_email_ci_unique"),
             models.UniqueConstraint(
                 fields=("company",), condition=Q(is_primary=True, archived_at__isnull=True),
                 name="unique_active_primary_contact_per_company",

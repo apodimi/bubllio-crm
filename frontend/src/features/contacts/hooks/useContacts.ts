@@ -19,9 +19,18 @@ const contactsQuery = (organizationId: string, filters: ContactFilters) =>
 export const useContacts = (organizationId: string, filters: ContactFilters = {}) =>
   useQuery(contactsQuery(organizationId, filters))
 
+export function useContactPage(organizationId: string, filters: ContactFilters, page: number) {
+  const query = useQuery({
+    queryKey: [...contactKeys.list(organizationId, filters), 'page', page],
+    queryFn: ({ signal }) => contactService.page(organizationId, filters, page, signal),
+  })
+  return { ...query, data: query.data?.results, count: query.data?.count ?? 0 }
+}
+
 function useInvalidateContacts(organizationId: string) {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: contactKeys.byOrganization(organizationId) })
+  return () =>
+    queryClient.invalidateQueries({ queryKey: contactKeys.byOrganization(organizationId) })
 }
 
 export const useCreateContact = (organizationId: string) => {
@@ -49,16 +58,22 @@ export const useDeleteContact = (organizationId: string) => {
   })
 }
 
-export const useContactActivity = (organizationId: string, contactId: string) => useQuery({
-  queryKey: [...contactKeys.byOrganization(organizationId), contactId, 'activity'],
-  queryFn: ({ signal }) => contactService.activity(organizationId, contactId, signal),
-  enabled: Boolean(contactId),
-})
+export const useContactActivity = (organizationId: string, contactId: string) =>
+  useQuery({
+    queryKey: [...contactKeys.byOrganization(organizationId), contactId, 'activity'],
+    queryFn: ({ signal }) => contactService.activity(organizationId, contactId, signal),
+    enabled: Boolean(contactId),
+  })
 
 function useContactAction(organizationId: string, action: 'archive' | 'restore') {
   const invalidate = useInvalidateContacts(organizationId)
-  return useMutation({ mutationFn: (contactId: string) => contactService[action](organizationId, contactId), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (contactId: string) => contactService[action](organizationId, contactId),
+    onSuccess: invalidate,
+  })
 }
 
-export const useArchiveContact = (organizationId: string) => useContactAction(organizationId, 'archive')
-export const useRestoreContact = (organizationId: string) => useContactAction(organizationId, 'restore')
+export const useArchiveContact = (organizationId: string) =>
+  useContactAction(organizationId, 'archive')
+export const useRestoreContact = (organizationId: string) =>
+  useContactAction(organizationId, 'restore')

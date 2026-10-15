@@ -9,15 +9,15 @@ export const brand = {
     primary: '#005bef',
     secondary: '#1473ff',
     lightBlue: '#eaf2ff',
-    background: '#f5f8ff',
+    background: '#f7f8fa',
     surface: '#ffffff',
     text: '#0f1f38',
   },
   typography: {
-    body: '"Manrope", "Inter", "Segoe UI", sans-serif',
+    body: '"Inter", "Segoe UI", sans-serif',
     display: '"Manrope", "Inter", "Segoe UI", sans-serif',
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 8,
   },
 } as const

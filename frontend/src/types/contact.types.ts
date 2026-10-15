@@ -20,7 +20,13 @@ export interface Contact {
 
 export type ContactInput = Omit<
   Contact,
-  'id' | 'organization' | 'company_name' | 'assigned_to_name' | 'created_at' | 'updated_at' | 'archived_at'
+  | 'id'
+  | 'organization'
+  | 'company_name'
+  | 'assigned_to_name'
+  | 'created_at'
+  | 'updated_at'
+  | 'archived_at'
 >
 
 export interface ContactActivity {

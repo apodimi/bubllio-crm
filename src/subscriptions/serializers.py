@@ -6,10 +6,7 @@ from organizations.models import OrganizationMembership
 from .models import Charge, CustomerSubscription, Payment, ServiceCatalogItem
 from .services import (
     ensure_charge,
-    expire_subscription,
-    pause_subscription,
     record_payment,
-    resume_subscription,
 )
 
 
@@ -93,6 +90,7 @@ class CustomerSubscriptionSerializer(serializers.ModelSerializer):
             "cancellation_effective_date",
             "cancelled_at",
             "effective_status",
+            "status",
             "created_at",
             "updated_at",
         )
@@ -128,18 +126,9 @@ class CustomerSubscriptionSerializer(serializers.ModelSerializer):
             organization=organization, user=assigned_to
         ).exists():
             raise serializers.ValidationError({"assigned_to": "Choose a member of this workspace."})
-        requested_status = attrs.get("status")
-        if requested_status in {
-            CustomerSubscription.Status.CANCELLING,
-            CustomerSubscription.Status.CANCELLED,
-        }:
-            raise serializers.ValidationError(
-                {"status": "Use the cancellation action to end a subscription safely."}
-            )
-
-        for field in ("start_date", "next_billing_date"):
-            if not self.instance and not attrs.get(field):
-                attrs[field] = timezone.localdate()
+        if not self.instance:
+            attrs.setdefault("start_date", timezone.localdate())
+            attrs.setdefault("next_billing_date", attrs["start_date"])
 
         if not self.instance and catalog_item:
             defaults = {
@@ -186,29 +175,6 @@ class CustomerSubscriptionSerializer(serializers.ModelSerializer):
         subscription = super().create(validated_data)
         ensure_charge(subscription)
         return subscription
-
-    def update(self, instance, validated_data):
-        requested_status = validated_data.pop("status", None)
-        previous_status = instance.effective_status
-        subscription = super().update(instance, validated_data)
-        if requested_status == CustomerSubscription.Status.PAUSED:
-            return pause_subscription(subscription=subscription)
-        if (
-            requested_status == CustomerSubscription.Status.ACTIVE
-            and previous_status
-            in {
-                CustomerSubscription.Status.PAUSED,
-                CustomerSubscription.Status.CANCELLING,
-            }
-        ):
-            return resume_subscription(subscription=subscription)
-        if requested_status == CustomerSubscription.Status.EXPIRED:
-            return expire_subscription(subscription=subscription)
-        if requested_status:
-            subscription.status = requested_status
-            subscription.save(update_fields=("status", "updated_at"))
-        return subscription
-
 
 class PaymentSerializer(serializers.ModelSerializer):
     recorded_by_name = serializers.SerializerMethodField()

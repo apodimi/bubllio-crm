@@ -23,8 +23,8 @@ configuration check.
 | Resume populated demo | `./scripts/demo-dev.sh start` |
 | Local email inbox | `./scripts/mailpit-dev.sh` |
 
-Features that send transactional email or execute automations use background
-jobs. Run these in separate terminals when testing those flows:
+Features that send transactional email use background jobs. Run these in separate terminals when
+testing those flows:
 
 ```bash
 docker compose up -d rabbitmq

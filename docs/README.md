@@ -15,19 +15,20 @@ what you are trying to do.
    walkthrough.
 6. [Production readiness](development/pilot-production-readiness.md) — evidence
    required before real customer data.
-7. [Updates](development/updating.md) — releases, backups, upgrades, and rollback.
+7. [Updates](development/updating.md) — signed releases, the independent update
+   agent, backups, upgrades, and rollback.
 
 ## Using Bubllio
 
 These guides explain the product in business language:
 
 - [Contacts and companies](guides/contact-management.md)
+- [Customer timeline](guides/customer-timeline.md)
 - [Sales pipeline](guides/sales-pipeline.md)
 - [Tasks and follow-ups](guides/tasks-and-follow-ups.md)
 - [Services and billing](guides/services-and-billing.md)
 - [Roles and access](guides/roles-and-access.md)
 - [Installation settings](guides/installation-settings.md)
-- [First automation](guides/first-automation.md)
 
 ## Contributing
 
@@ -54,7 +55,6 @@ the domain you are changing:
 - [CRM domain](architecture/crm-domain.md)
 - [Authentication and roles](architecture/authentication-and-roles.md)
 - [Privacy and security](architecture/privacy-and-security.md)
-- [Automations](architecture/automations.md)
 - [Email delivery](architecture/email-adapters.md)
 
 ## API

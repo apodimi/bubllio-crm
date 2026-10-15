@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from companies.models import Company
+from companies.models import Company, CompanyTimelineEvent
 from contacts.models import Contact
 from organizations.models import Organization, OrganizationMembership
 from .models import Deal
@@ -28,6 +28,13 @@ class DealApiTests(APITestCase):
         self.assertEqual(response.data["net_value"], "12000.00")
         self.assertEqual(response.data["tax_value"], "2880.00")
         self.assertEqual(response.data["gross_value"], "14880.00")
+        self.assertTrue(
+            CompanyTimelineEvent.objects.filter(
+                company=self.company,
+                event_type=CompanyTimelineEvent.EventType.DEAL_CREATED,
+                source_id=response.data["id"],
+            ).exists()
+        )
 
     def test_tax_inclusive_amount_is_split_correctly(self):
         response = self.client.post(self.url(), {"company": self.company.id, "title": "Tax inclusive", "value": "124.00", "tax_rate": "24.00", "amount_includes_tax": True}, format="json")
@@ -62,6 +69,10 @@ class DealApiTests(APITestCase):
         self.assertEqual(response.data["stage"], "proposal")
         self.assertEqual(response.data["sort_order"], 1)
         self.assertEqual(list(Deal.objects.filter(stage="proposal").order_by("sort_order").values_list("id", flat=True)), [first.id, moved.id, second.id])
+        event = CompanyTimelineEvent.objects.get(source_id=moved.id)
+        self.assertEqual(event.event_type, CompanyTimelineEvent.EventType.DEAL_STAGE_CHANGED)
+        self.assertEqual(event.details["from_stage"], "lead")
+        self.assertEqual(event.details["to_stage"], "proposal")
 
     def test_move_deal_validates_position(self):
         deal = Deal.objects.create(organization=self.org, company=self.company, title="Move")

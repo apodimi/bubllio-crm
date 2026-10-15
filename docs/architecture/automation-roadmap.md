@@ -1,7 +1,7 @@
 # Workflow Direction: Build on Django
 
-Status: design direction, not implemented functionality. For the running system,
-read [Automations: Current Behavior](automations.md).
+Status: future design direction only. Bubllio does not currently ship an automation engine,
+automation API, or automation UI.
 
 ## Product Goal
 
@@ -15,9 +15,8 @@ When a company is created
   -> Send an email to the contact
 ```
 
-These are proposed blocks. Today only `company.created -> send_email` exists,
-with fixed email configuration. There is no frontend builder in this repository.
-The trigger can serve as the visual Start block without another backend operation.
+These are proposed blocks. None of them is implemented. There is no frontend builder or backend
+workflow runtime in this repository.
 
 ## Initial Technical Decision
 
@@ -51,10 +50,8 @@ this block is still an open requirement.
 
 ## Incremental Delivery
 
-1. Make the current path trustworthy: expose only wired triggers, require valid
-   configuration, clarify manual tests, and test the signal-to-run path. Preserve
-   existing rules and runs through explicit migrations if structure changes.
-2. Reuse organization SMTP sending for the email action, with same-tenant account
+1. Define tenant-owned workflow models, authorization, validation, and execution semantics.
+2. Reuse organization SMTP sending for a future email action, with same-tenant account
    validation and explicit account-selection and inactive-account policies.
 3. Add ordered actions. Start with one entry trigger and a linear list of steps.
    Persist a definition snapshot/version and per-step results so later edits
@@ -66,7 +63,7 @@ this block is still an open requirement.
    Choose frontend tooling when frontend work begins.
 
 Each stage needs implementation, migration review where relevant, tests, and
-documentation updates. This list does not change today's API schema.
+documentation updates. This list does not describe today's API schema.
 Conditions, branches, loops, schedules, waits, and user-supplied code are outside
 the first linear version.
 

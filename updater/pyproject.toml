@@ -1,0 +1,18 @@
+[project]
+name = "bubllio-update-agent"
+version = "0.1.0"
+description = "A local, provider-agnostic update runner for self-hosted Bubllio CRM installations"
+readme = "README.md"
+license = "Elastic-2.0"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.13"
+dependencies = ["cryptography>=46.0.1"]
+
+[project.scripts]
+bubllio-update-agent = "bubllio_update_agent.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
+
+

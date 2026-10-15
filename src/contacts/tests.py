@@ -10,6 +10,19 @@ from .models import Contact
 
 
 class ContactTenantAccessTests(APITestCase):
+    def test_paginated_contacts_are_filtered_and_tenant_scoped(self):
+        self.client.force_authenticate(self.user)
+        Contact.objects.create(organization=self.organization, company=self.company, first_name="Anna")
+        Contact.objects.create(organization=self.other_organization, company=self.other_company, first_name="Hidden")
+        first = self.client.get(self.url(), {"page": 1, "page_size": 1})
+        second = self.client.get(self.url(), {"page": 2, "page_size": 1})
+        self.assertEqual(first.data["count"], 2)
+        self.assertEqual(len(first.data["results"]), 1)
+        self.assertNotEqual(first.data["results"][0]["id"], second.data["results"][0]["id"])
+        self.assertEqual(self.client.get(self.url(), {"page": 1, "search": "Maria"}).data["count"], 1)
+        hidden = reverse("contact-list", kwargs={"organization_id": self.other_organization.id})
+        self.assertEqual(self.client.get(hidden, {"page": 1}).status_code, 404)
+
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="member")
         self.organization = Organization.objects.create(name="Nerds Lab", slug="nerds-lab")

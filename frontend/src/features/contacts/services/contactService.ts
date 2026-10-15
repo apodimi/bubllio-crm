@@ -1,6 +1,7 @@
 import { request } from '../../../services/api'
 import { organizationPath } from '../../organizations/services/organizationService'
 import type { Contact, ContactActivity, ContactInput } from '../../../types/contact.types'
+import type { PageResult } from '../../../types/pagination.types'
 
 export interface ContactFilters {
   search?: string
@@ -14,6 +15,13 @@ const contactPath = (organizationId: string, contactId?: string) =>
   (contactId ? encodeURIComponent(contactId) + '/' : '')
 
 export const contactService = {
+  page: (organizationId: string, filters: ContactFilters, page: number, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ page: String(page + 1), page_size: '50' })
+    if (filters.search?.trim()) params.set('search', filters.search.trim())
+    if (filters.company) params.set('company', filters.company)
+    if (filters.archived) params.set('archived', filters.archived)
+    return request<PageResult<Contact>>(contactPath(organizationId) + '?' + params, { signal })
+  },
   list: (organizationId: string, filters: ContactFilters = {}, signal?: AbortSignal) => {
     const params = new URLSearchParams()
     if (filters.search?.trim()) params.set('search', filters.search.trim())

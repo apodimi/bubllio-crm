@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-bubllio}
@@ -17,7 +17,7 @@ services:
       - private
 
   rabbitmq:
-    image: rabbitmq:4.2-alpine
+    image: rabbitmq:4.2-alpine@sha256:2430a17fa578447eaaabdabc64b805052e4f8f3736a5ebbe4cc55cf4de5690e0
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: bubllio
@@ -34,7 +34,12 @@ services:
       - private
 
   backend:
-    build: .
+    image: ${BUBLLIO_BACKEND_IMAGE:-bubllio-crm-backend:local}
+    build:
+      context: .
+      args:
+        BUBLLIO_RELEASE_VERSION: ${BUBLLIO_RELEASE_VERSION:-}
+        BUBLLIO_RELEASE_SHA: ${BUBLLIO_RELEASE_SHA:-}
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
@@ -53,6 +58,13 @@ services:
       BUBLLIO_SETUP_TOKEN: ${BUBLLIO_SETUP_TOKEN:-}
       BUBLLIO_EMAIL_ENCRYPTION_KEYS: ${BUBLLIO_EMAIL_ENCRYPTION_KEYS:?Set BUBLLIO_EMAIL_ENCRYPTION_KEYS}
       BUBLLIO_EMAIL_ENCRYPTION_KEY: ${BUBLLIO_EMAIL_ENCRYPTION_KEY:-}
+      BUBLLIO_UPDATE_AGENT_ENABLED: ${BUBLLIO_UPDATE_AGENT_ENABLED:-false}
+      BUBLLIO_UPDATE_AGENT_URL: ${BUBLLIO_UPDATE_AGENT_URL:-}
+      BUBLLIO_UPDATE_AGENT_SOCKET: ${BUBLLIO_UPDATE_AGENT_SOCKET:-}
+      BUBLLIO_UPDATE_AGENT_SECRET: ${BUBLLIO_UPDATE_AGENT_SECRET:-}
+      BUBLLIO_UPDATE_AGENT_INSTALLATION_ID: ${BUBLLIO_UPDATE_AGENT_INSTALLATION_ID:-}
+      BUBLLIO_UPDATE_AGENT_TIMEOUT: ${BUBLLIO_UPDATE_AGENT_TIMEOUT:-5}
+      BUBLLIO_UPDATE_AGENT_ALLOW_INSECURE_HTTP: ${BUBLLIO_UPDATE_AGENT_ALLOW_INSECURE_HTTP:-false}
       CELERY_BROKER_URL: amqp://bubllio:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672/bubllio
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
@@ -67,7 +79,12 @@ services:
       - private
 
   worker:
-    build: .
+    image: ${BUBLLIO_BACKEND_IMAGE:-bubllio-crm-backend:local}
+    build:
+      context: .
+      args:
+        BUBLLIO_RELEASE_VERSION: ${BUBLLIO_RELEASE_VERSION:-}
+        BUBLLIO_RELEASE_SHA: ${BUBLLIO_RELEASE_SHA:-}
     restart: unless-stopped
     entrypoint: []
     command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "worker", "--loglevel=INFO"]
@@ -90,7 +107,12 @@ services:
       - private
 
   beat:
-    build: .
+    image: ${BUBLLIO_BACKEND_IMAGE:-bubllio-crm-backend:local}
+    build:
+      context: .
+      args:
+        BUBLLIO_RELEASE_VERSION: ${BUBLLIO_RELEASE_VERSION:-}
+        BUBLLIO_RELEASE_SHA: ${BUBLLIO_RELEASE_SHA:-}
     restart: unless-stopped
     entrypoint: []
     command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "beat", "--loglevel=INFO", "--schedule=/tmp/celerybeat-schedule"]
@@ -110,6 +132,7 @@ services:
       - private
 
   frontend:
+    image: ${BUBLLIO_FRONTEND_IMAGE:-bubllio-crm-frontend:local}
     build: ./frontend
     restart: unless-stopped
     depends_on:

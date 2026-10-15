@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   Alert,
@@ -32,6 +31,7 @@ import { SystemInformationPanel } from '../../features/installation/components/S
 import { InstallationAuditLog } from '../../features/installation/components/InstallationAuditLog'
 import { BackupStatusPanel } from '../../features/installation/components/BackupStatusPanel'
 import { useOrganizations } from '../../features/organizations'
+import { UpdateCenter } from '../../features/updates/components/UpdateCenter'
 
 export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
@@ -105,7 +105,7 @@ export function AccountSettingsPage() {
       />
     )
 
-  async function saveProfile(event: FormEvent) {
+  async function saveProfile(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     await accountSettings.save.mutateAsync({
       ...profileValues,
@@ -114,7 +114,7 @@ export function AccountSettingsPage() {
     })
   }
 
-  async function changePassword(event: FormEvent) {
+  async function changePassword(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (passwordValues.new_password !== passwordValues.confirm_password) return
     await accountSettings.changePassword.mutateAsync({
@@ -124,7 +124,7 @@ export function AccountSettingsPage() {
     setPasswordValues({ current_password: '', new_password: '', confirm_password: '' })
   }
 
-  async function submit(event: FormEvent) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const { password, ...smtpValues } = values
     await installation.save.mutateAsync({
@@ -159,12 +159,11 @@ export function AccountSettingsPage() {
     window.location.assign('/')
   }
 
-  async function inviteAdministrator(event: FormEvent) {
+  async function inviteAdministrator(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     await administrators.invite.mutateAsync(administratorEmail.trim())
     setAdministratorEmail('')
   }
-
 
   return (
     <Stack spacing={3.5} sx={{ maxWidth: 980 }}>
@@ -186,13 +185,11 @@ export function AccountSettingsPage() {
             </Typography>
           </Box>
         </Stack>
-      <Chip
-          label={
-            isSuperuser ? 'Installation administrator' : 'Workspace member'
-          }
+        <Chip
+          label={isSuperuser ? 'Installation administrator' : 'Workspace member'}
           color="primary"
           variant="outlined"
-      />
+        />
       </Stack>
       <Paper
         variant="outlined"
@@ -206,7 +203,8 @@ export function AccountSettingsPage() {
           <Box>
             <Typography variant="h6">Workspace settings</Typography>
             <Typography variant="body2" color="text.secondary">
-              Company identity, regional preferences, ERP defaults, email connections, people, and workspace data.
+              Company identity, regional preferences, ERP defaults, email connections, people, and
+              workspace data.
             </Typography>
           </Box>
           {organizations.data?.map((organization) => (
@@ -387,6 +385,7 @@ export function AccountSettingsPage() {
           </Typography>
         </Box>
       )}
+      {isSuperuser && <UpdateCenter />}
       {isSuperuser && (
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, borderRadius: 3 }}>
           <Stack spacing={2}>

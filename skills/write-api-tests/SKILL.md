@@ -1,6 +1,6 @@
 ---
 name: write-api-tests
-description: Write focused Django REST Framework tests for Bubllio CRM endpoints, domain invariants, tenant isolation, signals, and automation runs. Use for new feature coverage or regression tests; do not replace behavior changes with tests that encode a known bug.
+description: Write focused Django REST Framework tests for Bubllio CRM endpoints, domain invariants, tenant isolation, and signals. Use for new feature coverage or regression tests; do not replace behavior changes with tests that encode a known bug.
 ---
 
 # Write API Tests
@@ -18,9 +18,8 @@ Cover the relevant subset of:
 - search and filtering semantics;
 - important side effects.
 
-For automations, assert both the action boundary and resulting `AutomationRun`.
-Include negative cases such as inactive rules and mismatched triggers. Mock
-external systems, not the domain logic being tested.
+For asynchronous delivery, assert both the domain action and resulting outbox
+boundary. Mock external systems, not the domain logic being tested.
 
 Use helpers only when repetition justifies them. Keep fixtures small, make
 organization ownership obvious, and avoid relying on ordering unless guaranteed.

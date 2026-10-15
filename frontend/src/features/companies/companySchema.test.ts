@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { companySchema } from './companySchema'
+import { companySchema, timelineNoteSchema } from './companySchema'
 
 describe('companySchema', () => {
   it('accepts a complete company', () => {
@@ -40,5 +40,14 @@ describe('companySchema', () => {
       lifecycle_stage: 'lead',
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('timelineNoteSchema', () => {
+  it('trims valid notes and rejects empty notes', () => {
+    expect(timelineNoteSchema.parse({ body: '  Follow up next week.  ' }).body).toBe(
+      'Follow up next week.',
+    )
+    expect(timelineNoteSchema.safeParse({ body: '   ' }).success).toBe(false)
   })
 })

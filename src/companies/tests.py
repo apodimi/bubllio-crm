@@ -5,13 +5,31 @@ from rest_framework.test import APITestCase
 
 from organizations.models import Organization, OrganizationMembership
 
-from .models import Company, CompanyActivity
+from .models import Company, CompanyActivity, CompanyTimelineEvent
 
 
 User = get_user_model()
 
 
 class CompanyTenantAccessTests(APITestCase):
+    def test_paginated_companies_and_summary_are_tenant_scoped(self):
+        self.client.force_authenticate(self.user)
+        Company.objects.create(organization=self.organization, name="Another")
+        first = self.client.get(self.url(), {"page": 1, "page_size": 1})
+        second = self.client.get(self.url(), {"page": 2, "page_size": 1})
+        self.assertEqual(first.data["count"], 2)
+        self.assertEqual(len(first.data["results"]), 1)
+        self.assertNotEqual(first.data["results"][0]["id"], second.data["results"][0]["id"])
+        filtered = self.client.get(self.url(), {"page": 1, "search": "Visible"})
+        self.assertEqual(filtered.data["count"], 1)
+        self.assertEqual(self.client.get(self.url(), {"page": 0}).status_code, 400)
+        self.assertEqual(self.client.get(self.url(), {"page": 1, "page_size": 101}).status_code, 400)
+        self.assertEqual(self.client.get(self.url(self.other_organization), {"page": 1}).status_code, 404)
+        summary = reverse("crm-summary", kwargs={"organization_id": self.organization.id})
+        self.assertEqual(self.client.get(summary).data, {"companies": 2, "contacts": 0})
+        hidden = reverse("crm-summary", kwargs={"organization_id": self.other_organization.id})
+        self.assertEqual(self.client.get(hidden).status_code, 404)
+
     def setUp(self):
         self.user = User.objects.create_user(username="member")
         self.other_user = User.objects.create_user(username="other")
@@ -82,6 +100,13 @@ class CompanyTenantAccessTests(APITestCase):
             CompanyActivity.objects.filter(
                 company_id=response.data["id"],
                 action=CompanyActivity.Action.CREATED,
+                actor=self.user,
+            ).exists()
+        )
+        self.assertTrue(
+            CompanyTimelineEvent.objects.filter(
+                company_id=response.data["id"],
+                event_type=CompanyTimelineEvent.EventType.COMPANY_CREATED,
                 actor=self.user,
             ).exists()
         )
@@ -292,6 +317,82 @@ class CompanyTenantAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data[0]["action"], CompanyActivity.Action.ASSIGNED)
         self.assertEqual(response.data[0]["details"]["fields"], ["assigned_to"])
+
+    def test_timeline_lists_events_and_creates_notes(self):
+        company = Company.objects.get(name="Visible Company")
+        self.client.force_authenticate(self.user)
+        record = CompanyTimelineEvent.objects.create(
+            organization=self.organization,
+            company=company,
+            actor=self.user,
+            category=CompanyTimelineEvent.Category.COMPANY,
+            event_type=CompanyTimelineEvent.EventType.COMPANY_UPDATED,
+            source_type="company",
+            source_id=company.id,
+            details={"fields": ["name"]},
+        )
+
+        created = self.client.post(
+            self.action_url(company, "timeline"),
+            {"body": "Customer asked for a proposal next week."},
+            format="json",
+        )
+        listed = self.client.get(
+            self.action_url(company, "timeline"),
+            {"page": 1, "page_size": 1},
+        )
+        notes = self.client.get(
+            self.action_url(company, "timeline"),
+            {"category": "note"},
+        )
+
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(created.data["event_type"], "note.added")
+        self.assertEqual(created.data["actor_name"], "member")
+        self.assertEqual(listed.data["count"], 2)
+        self.assertEqual(len(listed.data["results"]), 1)
+        self.assertEqual(notes.data["count"], 1)
+        self.assertEqual(notes.data["results"][0]["body"], created.data["body"])
+        self.assertTrue(CompanyTimelineEvent.objects.filter(id=record.id).exists())
+
+    def test_timeline_rejects_blank_notes_and_invalid_filters(self):
+        company = Company.objects.get(name="Visible Company")
+        self.client.force_authenticate(self.user)
+
+        blank = self.client.post(
+            self.action_url(company, "timeline"), {"body": "   "}, format="json"
+        )
+        invalid_category = self.client.get(
+            self.action_url(company, "timeline"), {"category": "unknown"}
+        )
+        invalid_page = self.client.get(
+            self.action_url(company, "timeline"), {"page": 0}
+        )
+
+        self.assertEqual(blank.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_category.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_page.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_timeline_is_tenant_scoped_and_viewer_cannot_add_notes(self):
+        company = Company.objects.get(name="Visible Company")
+        hidden = Company.objects.get(name="Hidden Company")
+        viewer = User.objects.create_user(username="timeline-viewer")
+        OrganizationMembership.objects.create(
+            organization=self.organization,
+            user=viewer,
+            role=OrganizationMembership.Role.VIEWER,
+        )
+        self.client.force_authenticate(viewer)
+
+        allowed = self.client.get(self.action_url(company, "timeline"))
+        denied_write = self.client.post(
+            self.action_url(company, "timeline"), {"body": "Denied"}, format="json"
+        )
+        hidden_read = self.client.get(self.action_url(hidden, "timeline"))
+
+        self.assertEqual(allowed.status_code, status.HTTP_200_OK)
+        self.assertEqual(denied_write.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(hidden_read.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_viewer_cannot_archive_company(self):
         company = Company.objects.get(name="Visible Company")

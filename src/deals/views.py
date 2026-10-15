@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 from access.permissions import Capability, get_organization_for_user
+from companies.models import CompanyTimelineEvent
+from companies.services import record_company_timeline_event
 from .models import Deal
 from .serializers import DealSerializer
 from .services import move_deal
@@ -36,7 +38,16 @@ class DealListCreateAPIView(APIView):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
         serializer = DealSerializer(data=request.data, context={"organization": organization})
         serializer.is_valid(raise_exception=True)
-        serializer.save(organization=organization)
+        deal = serializer.save(organization=organization)
+        record_company_timeline_event(
+            company=deal.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.DEAL,
+            event_type=CompanyTimelineEvent.EventType.DEAL_CREATED,
+            source_type="deal",
+            source_id=deal.id,
+            details={"deal_title": deal.title, "stage": deal.stage},
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -56,7 +67,26 @@ class DealDetailAPIView(APIView):
         organization, deal = self._deal(request, organization_id, deal_id, Capability.MANAGE_CRM)
         serializer = DealSerializer(deal, data=request.data, partial=True, context={"organization": organization})
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        previous_stage = deal.stage
+        changed_fields = list(serializer.validated_data)
+        deal = serializer.save()
+        event_type = (
+            CompanyTimelineEvent.EventType.DEAL_STAGE_CHANGED
+            if "stage" in changed_fields and deal.stage != previous_stage
+            else CompanyTimelineEvent.EventType.DEAL_UPDATED
+        )
+        details = {"deal_title": deal.title, "fields": changed_fields}
+        if event_type == CompanyTimelineEvent.EventType.DEAL_STAGE_CHANGED:
+            details.update({"from_stage": previous_stage, "to_stage": deal.stage})
+        record_company_timeline_event(
+            company=deal.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.DEAL,
+            event_type=event_type,
+            source_type="deal",
+            source_id=deal.id,
+            details=details,
+        )
         return Response(serializer.data)
 
     def delete(self, request, organization_id, deal_id):
@@ -71,8 +101,22 @@ class DealArchiveAPIView(APIView):
     def post(self, request, organization_id, deal_id):
         organization = get_organization_for_user(user=request.user, organization_id=organization_id, capability=Capability.MANAGE_CRM)
         deal = get_object_or_404(Deal, organization=organization, id=deal_id)
-        deal.archived_at = None if deal.archived_at else timezone.now()
+        restoring = deal.archived_at is not None
+        deal.archived_at = None if restoring else timezone.now()
         deal.save(update_fields=("archived_at", "updated_at"))
+        record_company_timeline_event(
+            company=deal.company,
+            actor=request.user,
+            category=CompanyTimelineEvent.Category.DEAL,
+            event_type=(
+                CompanyTimelineEvent.EventType.DEAL_RESTORED
+                if restoring
+                else CompanyTimelineEvent.EventType.DEAL_ARCHIVED
+            ),
+            source_type="deal",
+            source_id=deal.id,
+            details={"deal_title": deal.title},
+        )
         return Response(DealSerializer(deal).data)
 
 
@@ -90,4 +134,13 @@ class DealMoveAPIView(APIView):
             return Response({"position": ["Enter a non-negative whole number."]}, status=status.HTTP_400_BAD_REQUEST)
         if stage == Deal.Stage.LOST and not deal.lost_reason.strip():
             return Response({"lost_reason": ["Add a reason before moving a deal to Lost."]}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(DealSerializer(move_deal(deal=deal, stage=stage, position=position)).data)
+        return Response(
+            DealSerializer(
+                move_deal(
+                    deal=deal,
+                    stage=stage,
+                    position=position,
+                    actor=request.user,
+                )
+            ).data
+        )

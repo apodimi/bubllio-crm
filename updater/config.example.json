@@ -1,0 +1,46 @@
+{
+  "installation_id": "00000000-0000-4000-8000-000000000001",
+  "repository": "apodimi/bubllio-crm",
+  "current_version": "0.2.0",
+  "release_source": {
+    "manifest_url_template": "https://github.com/apodimi/bubllio-crm/releases/download/v{version}/release-manifest.json",
+    "bundle_url_template": "https://github.com/apodimi/bubllio-crm/releases/download/v{version}/release-manifest.sigstore.json",
+    "allowed_redirect_hosts": ["release-assets.githubusercontent.com"],
+    "max_redirects": 3
+  },
+  "manifest_verifier": {
+    "kind": "sigstore_cosign",
+    "cosign_executable": "/usr/local/bin/cosign",
+    "certificate_identity_template": "https://github.com/apodimi/bubllio-crm/.github/workflows/release.yml@refs/tags/v{version}",
+    "certificate_oidc_issuer": "https://token.actions.githubusercontent.com"
+  },
+  "state_path": "/var/lib/bubllio-update-agent/state.sqlite3",
+  "unix_socket_path": "/run/bubllio-update-agent/agent.sock",
+  "socket_group_gid": 10001,
+  "request_max_age_seconds": 60,
+  "provider": {
+    "kind": "docker_compose",
+    "docker_executable": "/usr/bin/docker",
+    "project_directory": "/opt/bubllio",
+    "compose_files": ["compose.production.yaml", "compose.update-agent.yaml"],
+    "env_file": ".env.production",
+    "managed_release_env_file": ".bubllio-update-agent/release.env",
+    "release_variable": "BUBLLIO_IMAGE_TAG",
+    "images": {
+      "backend": {
+        "repository": "ghcr.io/apodimi/bubllio-crm-backend",
+        "environment_variable": "BUBLLIO_BACKEND_IMAGE",
+        "services": ["backend", "worker", "beat"]
+      },
+      "frontend": {
+        "repository": "ghcr.io/apodimi/bubllio-crm-frontend",
+        "environment_variable": "BUBLLIO_FRONTEND_IMAGE",
+        "services": ["frontend"]
+      }
+    },
+    "backup_executable": "/usr/local/sbin/bubllio-backup",
+    "backup_arguments": [],
+    "health_url": "http://127.0.0.1:8080/health/"
+  }
+}
+

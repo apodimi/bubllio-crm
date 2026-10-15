@@ -30,7 +30,6 @@
 - Actionable Overview με προσωπικά tasks, overdue follow-ups και billing attention.
 - Organization και ERP defaults.
 - SMTP account configuration.
-- Βασικές automations και automation runs.
 - Installation administration, production-readiness checks, backup status,
   local data export και GitHub update notifications.
 - Business και technical documentation για τα παραπάνω.

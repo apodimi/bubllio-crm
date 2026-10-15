@@ -13,6 +13,8 @@ class OutboxMessage(models.Model):
             "Installation administrator invitation",
         )
         PASSWORD_RESET = "password_reset", "Password reset"
+        # Retained temporarily so a production rollback can recover pre-removal
+        # outbox rows. Runtime dispatch ignores this legacy kind.
         AUTOMATION_RUN = "automation_run", "Automation run"
 
     class Status(models.TextChoices):

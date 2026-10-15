@@ -14,6 +14,9 @@ with (ROOT / "pyproject.toml").open("rb") as pyproject_file:
 with (ROOT / "frontend" / "package.json").open(encoding="utf-8") as package_file:
     frontend_version = json.load(package_file)["version"]
 
+with (ROOT / "release" / "policies" / f"{backend_version}.json").open(encoding="utf-8") as policy_file:
+    policy_version = json.load(policy_file)["version"]
+
 if not SEMVER.fullmatch(backend_version):
     raise SystemExit(f"Backend version is not MAJOR.MINOR.PATCH: {backend_version}")
 
@@ -21,6 +24,12 @@ if backend_version != frontend_version:
     raise SystemExit(
         "Release versions do not match: "
         f"pyproject.toml={backend_version}, frontend/package.json={frontend_version}"
+    )
+
+if backend_version != policy_version:
+    raise SystemExit(
+        "Release versions do not match: "
+        f"pyproject.toml={backend_version}, release policy={policy_version}"
     )
 
 print(f"Bubllio CRM release version: {backend_version}")

@@ -2,6 +2,7 @@ import { request } from '../../../services/api'
 import type {
   CatalogItemInput,
   Charge,
+  CreateSubscriptionInput,
   CustomerSubscription,
   Payment,
   PaymentInput,
@@ -25,7 +26,7 @@ export const subscriptionService = {
     }),
   listSubscriptions: (organizationId: string, signal?: AbortSignal) =>
     request<CustomerSubscription[]>(`${root(organizationId)}subscriptions/`, { signal }),
-  createSubscription: (organizationId: string, body: SubscriptionInput) =>
+  createSubscription: (organizationId: string, body: CreateSubscriptionInput) =>
     request<CustomerSubscription>(`${root(organizationId)}subscriptions/`, {
       method: 'POST',
       body,
@@ -37,12 +38,17 @@ export const subscriptionService = {
     ),
   cancelSubscription: (organizationId: string, id: string, mode: 'end_of_period' | 'immediate') =>
     request<CustomerSubscription>(
-      `${root(organizationId)}subscriptions/${encodeURIComponent(id)}/cancel/`,
+      `${root(organizationId)}subscriptions/${encodeURIComponent(id)}/end/`,
       { method: 'POST', body: { mode } },
     ),
   resumeSubscription: (organizationId: string, id: string) =>
     request<CustomerSubscription>(
       `${root(organizationId)}subscriptions/${encodeURIComponent(id)}/resume/`,
+      { method: 'POST' },
+    ),
+  pauseSubscription: (organizationId: string, id: string) =>
+    request<CustomerSubscription>(
+      `${root(organizationId)}subscriptions/${encodeURIComponent(id)}/pause/`,
       { method: 'POST' },
     ),
   overview: (organizationId: string, signal?: AbortSignal) =>

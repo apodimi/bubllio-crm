@@ -132,6 +132,10 @@ class Charge(models.Model):
 
     class Meta:
         ordering = ("due_date", "created_at")
+        indexes = [
+            models.Index(fields=("organization", "state", "due_date", "created_at"), name="charge_org_state_due_idx"),
+            models.Index(fields=("organization", "due_date", "created_at"), name="charge_org_due_idx"),
+        ]
         constraints = [
             models.UniqueConstraint(fields=("subscription", "due_date"), name="unique_charge_due_date_per_subscription"),
             models.CheckConstraint(condition=models.Q(net_amount__gte=0, tax_amount__gte=0, gross_amount__gte=0), name="charge_amounts_not_negative"),
@@ -141,6 +145,11 @@ class Charge(models.Model):
 
     @property
     def paid_amount(self):
+        # List/overview reads prefetch payments. aggregate() bypasses that cache
+        # and would issue a new SUM query for every serialized monetary field.
+        payments = getattr(self, "_prefetched_objects_cache", {}).get("payments")
+        if payments is not None:
+            return sum((payment.amount for payment in payments), Decimal("0.00"))
         return self.payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
 
     @property
@@ -172,6 +181,7 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ("-paid_date", "-created_at")
+        indexes = [models.Index(fields=("organization", "paid_date"), name="payment_org_date_idx")]
         constraints = [
             models.CheckConstraint(condition=models.Q(amount__gt=0), name="payment_amount_positive")
         ]

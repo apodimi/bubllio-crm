@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { SubmitEvent } from 'react'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import {
   Alert,
@@ -83,7 +83,7 @@ export function DealDrawer({
     (contact) => contact.company === values.company,
   )
 
-  async function submit(event: FormEvent) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     try {
       await mutation.mutateAsync(values)

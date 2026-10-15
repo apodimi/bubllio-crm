@@ -10,6 +10,9 @@ describe('i18n', () => {
     await i18n.changeLanguage('el')
 
     expect(i18n.t('navigation.companies')).toBe('Εταιρείες')
+    expect(i18n.t('crm.dashboard.companies')).toBe('Εταιρείες')
+    expect(i18n.t('crm.services.drawer.recordPayment')).toBe('Καταχώριση πληρωμής')
+    expect(i18n.t('updates.title')).toBe('Κέντρο ενημερώσεων')
     expect(i18n.resolvedLanguage).toBe('el')
   })
 

@@ -51,7 +51,7 @@ There are three different questions, which must not be conflated:
    membership in workspaces created by somebody else.
 3. **Record visibility:** which records inside an accessible workspace are
    visible? Currently all four workspace roles can read all of that workspace's
-   companies, contacts, automations, and run history. There is no team-,
+   companies and contacts. There is no team-,
    record-, or field-level visibility policy yet.
 
 An `Organization` is a workspace and security boundary, **not** a CRM company
@@ -68,9 +68,8 @@ user can access that organization. Do not guess ownership during migration.
 
 | Capability | Owner | Admin | Member | Viewer |
 |---|---:|---:|---:|---:|
-| View companies, contacts, automations, and run history | Yes | Yes | Yes | Yes |
+| View companies and contacts | Yes | Yes | Yes | Yes |
 | Create companies and contacts | Yes | Yes | Yes | No |
-| Create and test automations | Yes | Yes | No | No |
 | View workspace settings and SMTP account metadata | Yes | Yes | Yes | Yes |
 | Change workspace settings, SMTP accounts; send SMTP test email | Yes | Yes | No | No |
 | List members and pending invitations | Yes | Yes | No | No |
@@ -155,24 +154,15 @@ Organization-owned resources use the organization UUID in the URL:
 ```text
 /api/v1/organizations/<organization_id>/companies/
 /api/v1/organizations/<organization_id>/contacts/
-/api/v1/organizations/<organization_id>/automations/
 ```
 
 The server resolves that organization through the authenticated user's membership
 and required capability. The client does not choose ownership by sending an
-`organization` field in JSON. `organization` is read-only in company, contact,
-and automation serializers.
+`organization` field in JSON. `organization` is read-only in company and contact serializers.
 
 Queries are always filtered by the resolved organization. A missing membership or
 insufficient capability normally returns `404 Not Found`; this avoids revealing
 whether an inaccessible organization exists.
-
-## Automation Access
-
-Automation access uses these same boundaries: members can read rules and run
-history; owners/admins can create rules and invoke the manual action test.
-That test performs the action even for an inactive rule. It is not a permission
-preview or dry run. See [Automations](automations.md) for current behavior.
 
 ## Membership Operations
 

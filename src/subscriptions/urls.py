@@ -9,6 +9,7 @@ from .views import (
     SubscriptionListCreateAPIView,
     SubscriptionCancelAPIView,
     SubscriptionOverviewAPIView,
+    SubscriptionPauseAPIView,
     SubscriptionResumeAPIView,
 )
 
@@ -18,6 +19,8 @@ urlpatterns = [
     path("subscriptions/", SubscriptionListCreateAPIView.as_view(), name="subscription-list"),
     path("subscriptions/<uuid:subscription_id>/", SubscriptionDetailAPIView.as_view(), name="subscription-detail"),
     path("subscriptions/<uuid:subscription_id>/cancel/", SubscriptionCancelAPIView.as_view(), name="subscription-cancel"),
+    path("subscriptions/<uuid:subscription_id>/end/", SubscriptionCancelAPIView.as_view(), name="subscription-end"),
+    path("subscriptions/<uuid:subscription_id>/pause/", SubscriptionPauseAPIView.as_view(), name="subscription-pause"),
     path("subscriptions/<uuid:subscription_id>/resume/", SubscriptionResumeAPIView.as_view(), name="subscription-resume"),
     path("overview/", SubscriptionOverviewAPIView.as_view(), name="subscription-overview"),
     path("charges/", ChargeListAPIView.as_view(), name="charge-list"),

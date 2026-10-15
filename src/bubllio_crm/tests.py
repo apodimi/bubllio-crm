@@ -1,11 +1,12 @@
 import logging
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import OperationalError
 from django.test import SimpleTestCase, TestCase
-from django.urls import reverse
+from django.urls import Resolver404, resolve, reverse
 
 from .database import get_database_config
 from .logging_security import SensitivePathFilter, redact_sensitive_paths
@@ -100,7 +101,11 @@ class HealthCheckTests(TestCase):
         response = self.client.get(reverse("health-check"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "ok"})
+        payload = response.json()
+        self.assertEqual(payload["status"], "ok")
+        self.assertIn("version", payload)
+        self.assertIn("commit_sha", payload)
+        self.assertEqual(payload["schema"], f"bubllio-crm-{payload['version']}")
         self.assertIn("no-store", response["Cache-Control"])
 
     @patch("bubllio_crm.health.connection.cursor", side_effect=OperationalError)
@@ -109,3 +114,21 @@ class HealthCheckTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {"status": "unavailable"})
+
+    @patch("bubllio_crm.health.MigrationExecutor")
+    def test_health_check_reports_unavailable_when_migrations_are_pending(self, executor):
+        executor.return_value.loader.graph.leaf_nodes.return_value = [("companies", "9999_next")]
+        executor.return_value.migration_plan.return_value = [object()]
+
+        response = self.client.get(reverse("health-check"))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"status": "unavailable"})
+
+
+class RemovedFeatureRouteTests(SimpleTestCase):
+    def test_automation_api_is_not_routable(self):
+        path = f"/api/v1/organizations/{uuid.uuid4()}/automations/"
+
+        with self.assertRaises(Resolver404):
+            resolve(path)

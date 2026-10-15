@@ -4,8 +4,8 @@
 
 # Bubllio CRM
 
-An open-source, self-hosted CRM for companies, contacts, sales, follow-ups,
-services, billing, and workspace automation.
+A source-available, self-hosted CRM for companies, contacts, sales, follow-ups,
+services, and billing.
 
 Bubllio combines a Django REST API with a React frontend. Each workspace is an
 isolated tenant with its own members, permissions, CRM records, and settings.
@@ -59,7 +59,7 @@ Installation access and workspace access are separate.
 | Installation administrator | Installation | Operates the server and grants workspace creation access. |
 | Workspace creator | Installation | Creates a workspace and nominates its first owner. |
 | Owner | Workspace | Controls ownership, administrators, settings, and data. |
-| Admin | Workspace | Manages members, settings, automation, and CRM data. |
+| Admin | Workspace | Manages members, settings, and CRM data. |
 | Member | Workspace | Reads and adds CRM data. |
 | Viewer | Workspace | Has read-only access. |
 
@@ -85,7 +85,9 @@ and the in-app installation checks before onboarding real data.
 
 New versions are published through GitHub Releases. See the
 [update guide](docs/development/updating.md) for backup, upgrade, and rollback
-steps.
+steps. After the one-time v0.2.0 bootstrap, the optional independent Update
+Agent can install signed, `online_safe` releases from Account settings without
+giving deployment credentials to the CRM.
 
 ## Project status
 
@@ -95,3 +97,9 @@ roadmap and must not be treated as an existing feature.
 
 Start at the [documentation home](docs/README.md) instead of reading every page
 in order.
+
+## License
+
+Bubllio CRM and the Bubllio Update Agent are licensed under the
+[Elastic License 2.0](LICENSE.md). The source is available for self-hosting and
+modification subject to that license, including its managed-service limitation.
