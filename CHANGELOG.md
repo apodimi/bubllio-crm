@@ -3,7 +3,7 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
-## 0.2.1 — 2026-10-15
+## 0.2.2 — 2026-10-15
 
 ### Added
 
@@ -31,6 +31,8 @@ Versioning and correspond to published GitHub Releases.
 
 - release verification now runs portably on Linux, including updater temporary
   directories, packaged license metadata, and isolated encryption-key tests.
+- release image promotion now preserves the exact verified OCI manifest digest
+  instead of converting it through the local Docker image store.
 
 ### Removed
 

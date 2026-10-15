@@ -279,9 +279,10 @@ jobs:
           promote() {
             repository="$1"
             digest="$2"
-            docker pull "${repository}@${digest}"
-            docker tag "${repository}@${digest}" "${repository}:${RELEASE_VERSION}"
-            docker push "${repository}:${RELEASE_VERSION}"
+            docker buildx imagetools create \
+              --prefer-index=false \
+              --tag "${repository}:${RELEASE_VERSION}" \
+              "${repository}@${digest}"
             published_digest=$(
               docker buildx imagetools inspect "${repository}:${RELEASE_VERSION}" |
                 awk '$1 == "Digest:" {print $2; exit}'
