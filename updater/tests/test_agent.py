@@ -189,7 +189,7 @@ class ReleaseRedirectTests(unittest.TestCase):
 
 class ConfigTests(unittest.TestCase):
     def test_config_rejects_paths_outside_compose_project(self) -> None:
-        with tempfile.TemporaryDirectory(dir="/private/tmp") as directory:
+        with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             private_key = Ed25519PrivateKey.generate()
             public = private_key.public_key().public_bytes(
@@ -249,7 +249,7 @@ class ConfigTests(unittest.TestCase):
 
 class UnixSocketTests(unittest.TestCase):
     def test_server_creates_private_socket_and_removes_it_on_close(self) -> None:
-        with tempfile.TemporaryDirectory(dir="/private/tmp") as directory:
+        with tempfile.TemporaryDirectory() as directory:
             socket_path = Path(directory) / "agent.sock"
             config = SimpleNamespace(
                 unix_socket_path=socket_path,
@@ -279,7 +279,7 @@ class UnixSocketTests(unittest.TestCase):
             self.assertEqual(socket_path.read_text(encoding="utf-8"), "operator data")
 
     def test_second_server_never_unlinks_a_live_socket(self) -> None:
-        with tempfile.TemporaryDirectory(dir="/private/tmp") as directory:
+        with tempfile.TemporaryDirectory() as directory:
             socket_path = Path(directory) / "agent.sock"
             config = SimpleNamespace(unix_socket_path=socket_path, socket_group_gid=None)
             try:
@@ -294,7 +294,7 @@ class UnixSocketTests(unittest.TestCase):
                 first.server_close()
 
     def test_server_close_never_unlinks_a_replacement_socket(self) -> None:
-        with tempfile.TemporaryDirectory(dir="/private/tmp") as directory:
+        with tempfile.TemporaryDirectory() as directory:
             socket_path = Path(directory) / "agent.sock"
             config = SimpleNamespace(unix_socket_path=socket_path, socket_group_gid=None)
             try:

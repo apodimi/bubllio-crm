@@ -14,7 +14,7 @@ ENV BUBLLIO_RELEASE_VERSION=${BUBLLIO_RELEASE_VERSION} \
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE.md ./
 RUN uv sync --frozen --no-dev --extra postgres --no-install-project
 
 COPY src ./src
