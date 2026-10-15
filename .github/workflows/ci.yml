@@ -63,6 +63,8 @@ jobs:
           docker compose -f compose.production.yaml config --quiet
           docker compose -f compose.production.yaml -f compose.update-agent.yaml config --quiet
           docker compose -f compose.dokploy.yaml config --quiet
+          python scripts/check_compose_build_outputs.py \
+            compose.production.yaml compose.dokploy.yaml
       - uses: astral-sh/setup-uv@v6
         with:
           version: latest

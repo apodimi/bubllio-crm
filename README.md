@@ -85,7 +85,7 @@ and the in-app installation checks before onboarding real data.
 
 New versions are published through GitHub Releases. See the
 [update guide](docs/development/updating.md) for backup, upgrade, and rollback
-steps. After the one-time v0.2.2 bootstrap, the optional independent Update
+steps. After the one-time v0.2.3 bootstrap, the optional independent Update
 Agent can install signed, `online_safe` releases from Account settings without
 giving deployment credentials to the CRM.
 

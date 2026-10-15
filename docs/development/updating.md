@@ -6,7 +6,7 @@ privileges stay in the independent Bubllio Update Agent; the browser and Django
 never receive Docker access, provider credentials, arbitrary commands, or
 arbitrary download URLs.
 
-The agent is provider-agnostic at its boundary. Version 0.2.2 includes the
+The agent is provider-agnostic at its boundary. Version 0.2.3 includes the
 generic Docker Compose adapter. A native Dokploy adapter and other providers can
 implement the same adapter contract without changing the CRM API.
 
@@ -29,11 +29,11 @@ implement the same adapter contract without changing the CRM API.
 `maintenance` and `irreversible` releases remain operator-managed. The UI links
 to their release notes instead of bypassing the safety classification.
 
-## Bootstrap 0.2.2 manually
+## Bootstrap 0.2.3 manually
 
-Version 0.2.2 introduces the Update Center and contains migrations that require
+Version 0.2.3 introduces the Update Center and contains migrations that require
 a maintenance window. An older CRM cannot safely trigger a service it does not
-yet know about, so **0.2.2 is a manual bootstrap release**.
+yet know about, so **0.2.3 is a manual bootstrap release**.
 
 Before upgrading:
 
@@ -49,7 +49,7 @@ The first Automations removal release deliberately retains legacy automation
 tables and ignored outbox rows. Do not drop them in this deployment. Their
 physical deletion requires a later, separately approved irreversible release.
 
-After 0.2.2 is healthy, install the agent outside the CRM lifecycle by following
+After 0.2.3 is healthy, install the agent outside the CRM lifecycle by following
 [`updater/README.md`](../../updater/README.md). Its machine account is a
 deployment administrator: Docker access is effectively root-equivalent, so do
 not mount the Docker socket into Django and do not run the agent inside the
@@ -154,7 +154,7 @@ application rollback compatible.
 3. Run `uv run python scripts/check_release_version.py` and all backend,
    PostgreSQL, frontend, browser, migration, image, and security gates.
 4. Commit the exact release tree and create the matching immutable tag, such as
-   `v0.2.2`.
+   `v0.2.3`.
 5. Push the commit and tag. `.github/workflows/release.yml` publishes the two
    GHCR images, build attestations, updater wheel, canonical manifest, Sigstore
    bundle, and GitHub Release notes extracted from `CHANGELOG.md`.

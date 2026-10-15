@@ -76,11 +76,6 @@ services:
 
   worker:
     image: ${BUBLLIO_BACKEND_IMAGE:-bubllio-crm-backend:local}
-    build:
-      context: .
-      args:
-        BUBLLIO_RELEASE_VERSION: ${BUBLLIO_RELEASE_VERSION:-}
-        BUBLLIO_RELEASE_SHA: ${BUBLLIO_RELEASE_SHA:-}
     restart: unless-stopped
     entrypoint: []
     command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "worker", "--loglevel=INFO"]
@@ -104,11 +99,6 @@ services:
 
   beat:
     image: ${BUBLLIO_BACKEND_IMAGE:-bubllio-crm-backend:local}
-    build:
-      context: .
-      args:
-        BUBLLIO_RELEASE_VERSION: ${BUBLLIO_RELEASE_VERSION:-}
-        BUBLLIO_RELEASE_SHA: ${BUBLLIO_RELEASE_SHA:-}
     restart: unless-stopped
     entrypoint: []
     command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "beat", "--loglevel=INFO", "--schedule=/tmp/celerybeat-schedule"]
