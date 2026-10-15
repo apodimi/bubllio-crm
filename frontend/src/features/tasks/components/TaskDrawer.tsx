@@ -37,10 +37,15 @@ const tomorrowMorning = () => {
   return toLocalInput(date.toISOString())
 }
 
-const taskValues = (task: CrmTask | undefined, currentUserId: number | null): TaskFormValues => ({
-  company: task?.company ?? '',
+const taskValues = (
+  task: CrmTask | undefined,
+  currentUserId: number | null,
+  initialCompanyId?: string,
+  initialDealId?: string,
+): TaskFormValues => ({
+  company: task?.company ?? initialCompanyId ?? '',
   contact: task?.contact ?? null,
-  deal: task?.deal ?? null,
+  deal: task?.deal ?? initialDealId ?? null,
   assigned_to: task?.assigned_to ?? currentUserId,
   title: task?.title ?? '',
   kind: task?.kind ?? 'task',
@@ -55,11 +60,15 @@ export function TaskDrawer({
   organizationId,
   companies,
   task,
+  initialCompanyId,
+  initialDealId,
   onClose,
 }: {
   organizationId: string
   companies: Company[]
   task?: CrmTask
+  initialCompanyId?: string
+  initialDealId?: string
   onClose: () => void
 }) {
   const create = useCreateTask(organizationId)
@@ -81,7 +90,7 @@ export function TaskDrawer({
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: taskValues(task, currentUserId),
+    defaultValues: taskValues(task, currentUserId, initialCompanyId, initialDealId),
   })
   const companyId = useWatch({ control, name: 'company' })
   const companyContacts = (contacts.data ?? []).filter((contact) => contact.company === companyId)

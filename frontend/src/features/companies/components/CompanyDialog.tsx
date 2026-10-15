@@ -17,6 +17,9 @@ import {
   Typography,
 } from '@mui/material'
 import { Controller, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+
+import { canCreateRecords, useWorkspace } from '../../organizations'
 import type { Company } from '../../../types/company.types'
 import { companySchema } from '../companySchema'
 import type { CompanyFormValues } from '../companySchema'
@@ -31,6 +34,8 @@ type FieldProps = {
 }
 
 function MoreDetails({ control, disabled, errors }: FieldProps) {
+  const { t } = useTranslation()
+
   return (
     <Accordion
       disableGutters
@@ -46,9 +51,9 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
     >
       <AccordionSummary expandIcon={<ExpandMoreRounded />} sx={{ px: 0 }}>
         <Box>
-          <Typography variant="subtitle2">More details</Typography>
+          <Typography variant="subtitle2">{t('crm.companies.form.moreDetails')}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Industry, website, address, and internal notes
+            {t('crm.companies.form.moreDetailsHint')}
           </Typography>
         </Box>
       </AccordionSummary>
@@ -61,9 +66,13 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Industry"
+                  label={t('crm.companies.profileContent.industry')}
                   error={Boolean(errors.industry)}
-                  helperText={errors.industry?.message}
+                  helperText={
+                    errors.industry
+                      ? t('crm.companies.form.maxCharacters', { count: 120 })
+                      : undefined
+                  }
                   disabled={disabled}
                   sx={{ flex: 1 }}
                 />
@@ -75,10 +84,10 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Website"
+                  label={t('crm.companies.profileContent.website')}
                   type="url"
                   error={Boolean(errors.website)}
-                  helperText={errors.website?.message}
+                  helperText={errors.website ? t('crm.companies.form.invalidUrl') : undefined}
                   disabled={disabled}
                   sx={{ flex: 1 }}
                 />
@@ -86,16 +95,20 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
             />
           </Stack>
           <Divider />
-          <Typography variant="subtitle2">Business address</Typography>
+          <Typography variant="subtitle2">{t('crm.companies.form.businessAddress')}</Typography>
           <Controller
             name="address_line_1"
             control={control}
             render={({ field }) => (
               <TextField
                 {...field}
-                label="Address"
+                label={t('crm.companies.profileContent.address')}
                 error={Boolean(errors.address_line_1)}
-                helperText={errors.address_line_1?.message}
+                helperText={
+                  errors.address_line_1
+                    ? t('crm.companies.form.maxCharacters', { count: 255 })
+                    : undefined
+                }
                 disabled={disabled}
               />
             )}
@@ -106,9 +119,13 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
             render={({ field }) => (
               <TextField
                 {...field}
-                label="Address line 2"
+                label={t('crm.companies.form.addressLine2')}
                 error={Boolean(errors.address_line_2)}
-                helperText={errors.address_line_2?.message}
+                helperText={
+                  errors.address_line_2
+                    ? t('crm.companies.form.maxCharacters', { count: 255 })
+                    : undefined
+                }
                 disabled={disabled}
               />
             )}
@@ -120,9 +137,11 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="City"
+                  label={t('crm.companies.form.city')}
                   error={Boolean(errors.city)}
-                  helperText={errors.city?.message}
+                  helperText={
+                    errors.city ? t('crm.companies.form.maxCharacters', { count: 120 }) : undefined
+                  }
                   disabled={disabled}
                   sx={{ flex: 1 }}
                 />
@@ -134,9 +153,13 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Postal code"
+                  label={t('crm.companies.form.postalCode')}
                   error={Boolean(errors.postal_code)}
-                  helperText={errors.postal_code?.message}
+                  helperText={
+                    errors.postal_code
+                      ? t('crm.companies.form.maxCharacters', { count: 32 })
+                      : undefined
+                  }
                   disabled={disabled}
                   sx={{ flex: 1 }}
                 />
@@ -148,10 +171,10 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Country"
+                  label={t('crm.companies.form.country')}
                   placeholder="GR"
                   error={Boolean(errors.country)}
-                  helperText={errors.country?.message}
+                  helperText={errors.country ? t('crm.companies.form.countryCode') : undefined}
                   disabled={disabled}
                   slotProps={{ htmlInput: { maxLength: 2 } }}
                   sx={{ flex: 0.7 }}
@@ -166,11 +189,15 @@ function MoreDetails({ control, disabled, errors }: FieldProps) {
             render={({ field }) => (
               <TextField
                 {...field}
-                label="Internal notes"
+                label={t('crm.companies.profileContent.internalNotes')}
                 multiline
                 minRows={4}
                 error={Boolean(errors.notes)}
-                helperText={errors.notes?.message ?? 'Visible only inside this workspace.'}
+                helperText={
+                  errors.notes
+                    ? t('crm.companies.form.maxCharacters', { count: 5000 })
+                    : t('crm.companies.form.notesHint')
+                }
                 disabled={disabled}
               />
             )}
@@ -190,10 +217,13 @@ export function CompanyDialog({
   company?: Company
   onClose: () => void
 }) {
+  const { t } = useTranslation()
+  const workspace = useWorkspace()
+  const canManage = workspace.id === organizationId && canCreateRecords(workspace)
   const create = useCreateCompany(organizationId)
   const update = useUpdateCompany(organizationId, company?.id ?? '')
   const mutation = company ? update : create
-  const members = useCompanyAssignees(organizationId)
+  const members = useCompanyAssignees(organizationId, canManage)
   const {
     control,
     handleSubmit,
@@ -226,6 +256,26 @@ export function CompanyDialog({
       // React Query exposes the normalized API error in the drawer.
     }
   })
+
+  if (!canManage) {
+    return null
+  }
+
+  let submitLabel = t('crm.companies.form.create')
+  if (mutation.isPending) {
+    submitLabel = t('crm.companies.form.saving')
+  } else if (company) {
+    submitLabel = t('crm.companies.form.saveChanges')
+  }
+
+  let nameError: string | undefined
+  if (errors.name) {
+    if (errors.name.message === 'Company name is required.') {
+      nameError = t('crm.companies.form.nameRequired')
+    } else {
+      nameError = t('crm.companies.form.maxCharacters', { count: 255 })
+    }
+  }
 
   return (
     <Drawer
@@ -261,15 +311,15 @@ export function CompanyDialog({
             sx={{ justifyContent: 'space-between', alignItems: 'center' }}
           >
             <Box>
-              <Typography variant="h5">{company ? 'Edit company' : 'Add company'}</Typography>
+              <Typography variant="h5">
+                {company ? t('crm.companies.form.editTitle') : t('crm.companies.form.addTitle')}
+              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {company
-                  ? 'Keep the client record accurate and useful.'
-                  : 'Start with the essentials. Add the rest when you need it.'}
+                {company ? t('crm.companies.form.editHint') : t('crm.companies.form.addHint')}
               </Typography>
             </Box>
             <IconButton
-              aria-label="Close company form"
+              aria-label={t('crm.companies.form.close')}
               onClick={onClose}
               disabled={mutation.isPending}
             >
@@ -286,10 +336,10 @@ export function CompanyDialog({
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Company name"
+                  label={t('crm.companies.form.name')}
                   required
                   error={Boolean(errors.name)}
-                  helperText={errors.name?.message}
+                  helperText={nameError}
                   disabled={mutation.isPending}
                   autoFocus
                 />
@@ -302,7 +352,7 @@ export function CompanyDialog({
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Stage"
+                    label={t('crm.companies.form.stage')}
                     select
                     required
                     disabled={mutation.isPending}
@@ -310,7 +360,7 @@ export function CompanyDialog({
                   >
                     {stages.map((stage) => (
                       <MenuItem key={stage} value={stage}>
-                        {stage[0].toUpperCase() + stage.slice(1)}
+                        {t(`crm.companies.stages.${stage}`)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -322,9 +372,13 @@ export function CompanyDialog({
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Tax / VAT ID"
+                    label={t('crm.companies.profileContent.taxId')}
                     error={Boolean(errors.tax_id)}
-                    helperText={errors.tax_id?.message}
+                    helperText={
+                      errors.tax_id
+                        ? t('crm.companies.form.maxCharacters', { count: 64 })
+                        : undefined
+                    }
                     disabled={mutation.isPending}
                     sx={{ flex: 1 }}
                   />
@@ -337,18 +391,18 @@ export function CompanyDialog({
               render={({ field }) => (
                 <TextField
                   select
-                  label="Account owner"
+                  label={t('crm.companies.profileContent.accountOwner')}
                   value={field.value ?? ''}
                   onChange={(event) =>
                     field.onChange(event.target.value === '' ? null : Number(event.target.value))
                   }
                   disabled={mutation.isPending || members.isPending}
-                  helperText="The teammate responsible for this relationship."
+                  helperText={t('crm.companies.form.ownerHint')}
                 >
-                  <MenuItem value="">Unassigned</MenuItem>
+                  <MenuItem value="">{t('crm.companies.unassigned')}</MenuItem>
                   {(members.data ?? []).map((member) => (
                     <MenuItem key={member.id} value={Number(member.id)}>
-                      {member.name} · {member.role}
+                      {member.name}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -360,10 +414,10 @@ export function CompanyDialog({
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Email"
+                  label={t('crm.companies.profileContent.email')}
                   type="email"
                   error={Boolean(errors.email)}
-                  helperText={errors.email?.message}
+                  helperText={errors.email ? t('crm.companies.form.invalidEmail') : undefined}
                   disabled={mutation.isPending}
                 />
               )}
@@ -374,9 +428,13 @@ export function CompanyDialog({
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Phone"
+                  label={t('crm.companies.profileContent.phone')}
                   error={Boolean(errors.phone_number)}
-                  helperText={errors.phone_number?.message}
+                  helperText={
+                    errors.phone_number
+                      ? t('crm.companies.form.maxCharacters', { count: 20 })
+                      : undefined
+                  }
                   disabled={mutation.isPending}
                 />
               )}
@@ -397,10 +455,10 @@ export function CompanyDialog({
           }}
         >
           <Button onClick={onClose} disabled={mutation.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : company ? 'Save changes' : 'Create company'}
+            {submitLabel}
           </Button>
         </Stack>
       </Box>

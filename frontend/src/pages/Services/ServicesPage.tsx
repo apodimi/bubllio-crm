@@ -31,6 +31,7 @@ import type {
 import { CatalogDrawer, PaymentDrawer, SubscriptionDrawer } from './ServiceDrawers'
 
 type ServicesView = 'customer-services' | 'billing' | 'catalog'
+type Translate = (key: string, options?: Record<string, unknown>) => string
 const intervalLabels = {
   one_off: 'One-off',
   monthly: 'Monthly',
@@ -62,6 +63,7 @@ const date = (value: string) =>
 
 function ServicesPage({ view }: { view: ServicesView }) {
   const { t } = useTranslation()
+  const translate: Translate = (key, options) => String(t(key as never, options as never))
   const organization = useWorkspace()
   const canManage = canCreateRecords(organization)
   const [catalogDrawer, setCatalogDrawer] = useState<ServiceCatalogItem | true | null>(null)
@@ -175,21 +177,21 @@ function ServicesPage({ view }: { view: ServicesView }) {
             rows={subscriptions.data ?? []}
             canManage={canManage}
             onEdit={setSubscriptionDrawer}
-            t={t}
+            t={translate}
           />
         ) : view === 'billing' ? (
           <ChargesTable
             rows={charges.data ?? []}
             canManage={canManage}
             onPayment={setPaymentCharge}
-            t={t}
+            t={translate}
           />
         ) : (
           <CatalogTable
             rows={catalog.data ?? []}
             canManage={canManage}
             onEdit={setCatalogDrawer}
-            t={t}
+            t={translate}
           />
         )}
       </Paper>
@@ -256,7 +258,7 @@ function SubscriptionsTable({
   rows: CustomerSubscription[]
   canManage: boolean
   onEdit: (row: CustomerSubscription) => void
-  t: ReturnType<typeof useTranslation>['t']
+  t: Translate
 }) {
   if (!rows.length)
     return (
@@ -337,7 +339,7 @@ function ChargesTable({
   rows: Charge[]
   canManage: boolean
   onPayment: (row: Charge) => void
-  t: ReturnType<typeof useTranslation>['t']
+  t: Translate
 }) {
   if (!rows.length)
     return (
@@ -422,7 +424,7 @@ function CatalogTable({
   rows: ServiceCatalogItem[]
   canManage: boolean
   onEdit: (row: ServiceCatalogItem) => void
-  t: ReturnType<typeof useTranslation>['t']
+  t: Translate
 }) {
   if (!rows.length)
     return (

@@ -1,553 +1,240 @@
-import { useState } from 'react'
-import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import { useListPage } from '../../hooks/useListPage'
-import { ListPagination } from '../../components/common/ListPagination'
-import type { MouseEvent } from 'react'
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-  Stack,
-  MenuItem,
-  Menu,
-  ListItemText,
-} from '@mui/material'
-import AddRounded from '@mui/icons-material/AddRounded'
-import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
-import RestoreRounded from '@mui/icons-material/RestoreRounded'
-import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
-import EditRounded from '@mui/icons-material/EditRounded'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
+import plusIcon from '@iconify-icons/keyline-icons/plus'
+import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
+
+import { AppIcon } from '../../components/common/AppIcon'
+import { ListPagination } from '../../components/common/ListPagination'
 import {
-  useArchiveCompany,
-  useCompanyPage,
-  useCompanyAssignees,
-  useQuickUpdateCompany,
-  useRestoreCompany,
-} from '../../features/companies'
-import { useAuthStore } from '../../features/auth/store/authStore'
-import { useWorkspace, canCreateRecords } from '../../features/organizations'
-import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
+  ActiveCompanyFilters,
+  CompanyListToolbar,
+  CompanyViewTabs,
+} from '../../features/companies/components/CompanyListControls'
+import { CompanyListContent } from '../../features/companies/components/CompanyListContent'
+import {
+  ArchiveCompanyDialog,
+  CompanyActionsMenu,
+  CompanyFiltersPopover,
+  CompanyInlineEditMenu,
+} from '../../features/companies/components/CompanyListOverlays'
 import { CompanyDialog } from '../../features/companies/components/CompanyDialog'
 import { CompanyPreviewDrawer } from '../../features/companies/components/CompanyPreviewDrawer'
-import type { Company } from '../../types/company.types'
+import { useCompanyListController } from '../../features/companies/hooks/useCompanyListController'
 
 export function CompaniesPage() {
   const { t } = useTranslation()
-  const org = useWorkspace()
-  const navigate = useNavigate({ from: '/organizations/$organizationId/companies' })
-  const routeSearch = useSearch({ from: '/organizations/$organizationId/companies' })
-  const [search, setSearch] = useState('')
-  const [stage, setStage] = useState<Company['lifecycle_stage'] | ''>('')
-  const [visibility, setVisibility] = useState<'active' | 'archived' | 'all'>('all')
-  const [owner, setOwner] = useState<number | 'unassigned' | ''>('')
-  const currentUserId = useAuthStore((state) => state.user?.id)
-  const deferredSearch = useDebouncedValue(search)
-  const { page, setPage } = useListPage(
-    JSON.stringify([org.id, deferredSearch, stage, visibility, owner]),
-  )
-  const query = useCompanyPage(
-    org.id,
-    {
-      search: deferredSearch,
-      lifecycleStage: stage,
-      archived: visibility,
-      assignedTo: owner,
-    },
+  const {
+    org,
+    routeSearch,
+    currentUserId,
+    canManage,
+    view,
+    stage,
+    owner,
+    ordering,
     page,
-  )
-  const [create, setCreate] = useState(routeSearch.create === true)
-  const [editing, setEditing] = useState<Company | null>(null)
-  const [archiving, setArchiving] = useState<Company | null>(null)
-  const archive = useArchiveCompany(org.id)
-  const restore = useRestoreCompany(org.id)
-  const quickUpdate = useQuickUpdateCompany(org.id)
-  const assignees = useCompanyAssignees(org.id)
-  const [inlineEdit, setInlineEdit] = useState<{
-    anchor: HTMLElement
-    company: Company
-    field: 'stage' | 'owner'
-  } | null>(null)
-  const canManage = canCreateRecords(org)
-  const rows = query.data ?? []
+    search,
+    query,
+    rows,
+    dateFormatter,
+    advancedFilterCount,
+    hasFilters,
+    create,
+    editing,
+    archiving,
+    filtersAnchor,
+    inlineEdit,
+    actionsMenu,
+    archive,
+    restore,
+    quickUpdate,
+    assignees,
+    updateSearch,
+    clearFilters,
+    selectView,
+    openInlineEdit,
+    updateInline,
+    ownerLabel,
+    changeOwner,
+    closeCreate,
+    setCreate,
+    setEditing,
+    setArchiving,
+    setFiltersAnchor,
+    setInlineEdit,
+    setActionsMenu,
+  } = useCompanyListController()
 
-  function openCompany(company: Company) {
-    void navigate({ search: { company: company.customer_code } })
-  }
-
-  function closeCompany() {
-    void navigate({ search: { company: undefined } })
-  }
-
-  function openInlineEdit(
-    event: MouseEvent<HTMLElement>,
-    company: Company,
-    field: 'stage' | 'owner',
-  ) {
-    event.stopPropagation()
-    setInlineEdit({ anchor: event.currentTarget, company, field })
-  }
-
-  function updateInline(body: Partial<Pick<Company, 'lifecycle_stage' | 'assigned_to'>>) {
-    if (!inlineEdit) return
-    quickUpdate.mutate(
-      { companyId: inlineEdit.company.id, body },
-      { onSuccess: () => setInlineEdit(null) },
+  let emptyAction: ReactNode = null
+  if (hasFilters) {
+    emptyAction = (
+      <Button variant="outlined" onClick={clearFilters}>
+        {t('crm.companies.noMatchesAction')}
+      </Button>
+    )
+  } else if (canManage) {
+    emptyAction = (
+      <Button
+        variant="contained"
+        startIcon={<AppIcon icon={plusIcon} />}
+        onClick={() => setCreate(true)}
+      >
+        {t('crm.companies.noDataAction')}
+      </Button>
     )
   }
+
   return (
     <>
-      <PageHeading
-        title={t('crm.companies.title')}
-        description={t('crm.companies.description')}
-        action={
-          canCreateRecords(org) && (
-            <Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreate(true)}>
-              {t('crm.companies.add')}
-            </Button>
-          )
-        }
-      />
-      <Paper
-        component="section"
-        aria-label={t('crm.companies.filters')}
-        variant="outlined"
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
         sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(2, minmax(0, 1fr))',
-            lg: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr))',
-          },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'center' },
           gap: 2,
-          p: { xs: 2, md: 2.5 },
-          mb: 3,
+          mb: 2.5,
         }}
       >
-        <TextField
-          label={t('crm.companies.search')}
-          placeholder={t('crm.companies.searchPlaceholder')}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          sx={{ gridColumn: { xs: '1 / -1', lg: 'auto' }, minWidth: 0 }}
+        <Box sx={{ minWidth: 0 }}>
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <Typography variant="h2" component="h1">
+              {t('crm.companies.title')}
+            </Typography>
+            {!query.isPending ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {t('crm.companies.count', { count: query.count })}
+              </Typography>
+            ) : null}
+          </Stack>
+          <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: '60ch' }}>
+            {t('crm.companies.description')}
+          </Typography>
+        </Box>
+        {canManage ? (
+          <Button
+            variant="contained"
+            startIcon={<AppIcon icon={plusIcon} />}
+            aria-label={t('crm.companies.add')}
+            onClick={() => setCreate(true)}
+            sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
+          >
+            {t('crm.companies.add')}
+          </Button>
+        ) : null}
+      </Stack>
+
+      <Box component="section" aria-label={t('crm.companies.title')} sx={{ minWidth: 0 }}>
+        <CompanyViewTabs currentUserId={currentUserId} value={view} onChange={selectView} />
+        <CompanyListToolbar
+          search={search}
+          advancedFilterCount={advancedFilterCount}
+          filtersOpen={Boolean(filtersAnchor)}
+          onSearchChange={(value) => updateSearch({ q: value || undefined, page: undefined })}
+          onOpenFilters={setFiltersAnchor}
         />
-        <TextField
-          select
-          label={t('crm.companies.stage')}
-          slotProps={{ select: { displayEmpty: true } }}
-          value={stage}
-          onChange={(event) => setStage(event.target.value as Company['lifecycle_stage'] | '')}
-        >
-          <MenuItem value="">{t('crm.companies.allStages')}</MenuItem>
-          <MenuItem value="lead">{t('crm.companies.lead')}</MenuItem>
-          <MenuItem value="prospect">{t('crm.companies.prospect')}</MenuItem>
-          <MenuItem value="customer">{t('crm.companies.customerStage')}</MenuItem>
-          <MenuItem value="inactive">{t('crm.companies.inactive')}</MenuItem>
-        </TextField>
-        <TextField
-          select
-          label={t('crm.companies.ownership')}
-          slotProps={{ select: { displayEmpty: true } }}
-          value={owner}
-          onChange={(event) => {
-            const value = event.target.value
-            setOwner(value === 'unassigned' ? value : value ? Number(value) : '')
-          }}
-        >
-          <MenuItem value="">{t('crm.companies.allOwners')}</MenuItem>
-          {currentUserId ? (
-            <MenuItem value={currentUserId}>{t('crm.companies.mine')}</MenuItem>
+
+        <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+          <ActiveCompanyFilters
+            stage={stage}
+            owner={owner}
+            ordering={ordering}
+            hasExplicitSort={Boolean(routeSearch.sort)}
+            ownerLabel={ownerLabel}
+            onClearStage={() => updateSearch({ stage: undefined, page: undefined })}
+            onClearOwner={() => updateSearch({ owner: undefined, page: undefined })}
+            onClearSort={() => updateSearch({ sort: undefined, page: undefined })}
+            onClearAll={clearFilters}
+          />
+          {quickUpdate.isError || restore.isError ? (
+            <Alert severity="error" sx={{ borderRadius: 0 }}>
+              {(quickUpdate.error || restore.error)?.message}
+            </Alert>
           ) : null}
-          <MenuItem value="unassigned">{t('crm.companies.unassigned')}</MenuItem>
-        </TextField>
-        <TextField
-          select
-          label={t('crm.companies.records')}
-          value={visibility}
-          onChange={(event) => setVisibility(event.target.value as 'active' | 'archived' | 'all')}
-        >
-          <MenuItem value="active">{t('crm.companies.active')}</MenuItem>
-          <MenuItem value="archived">{t('crm.companies.archived')}</MenuItem>
-          <MenuItem value="all">{t('crm.companies.allRecords')}</MenuItem>
-        </TextField>
-      </Paper>
-      {quickUpdate.isError ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {quickUpdate.error.message}
-        </Alert>
-      ) : null}
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} retry={() => void query.refetch()} />
-      ) : (
-        <Paper variant="outlined">
-          {rows.length === 0 ? (
-            <Empty
-              title={
-                search || stage || owner || visibility !== 'active'
-                  ? t('crm.companies.noMatches')
-                  : t('crm.companies.empty')
-              }
-              description={
-                search || stage || owner || visibility !== 'active'
-                  ? t('crm.companies.noMatchesDescription')
-                  : t('crm.companies.emptyDescription')
-              }
-            />
-          ) : (
-            <>
-              <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
-                <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />}>
-                  {rows.map((company) => (
-                    <Box
-                      key={company.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open ${company.name}`}
-                      onClick={() => openCompany(company)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          openCompany(company)
-                        }
-                      }}
-                      sx={{ p: 2.5, cursor: 'pointer', '&:active': { bgcolor: 'action.selected' } }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={2}
-                        sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
-                      >
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {company.customer_code} · {company.assigned_to_name || 'Unassigned'}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            {company.email || company.phone_number || 'No contact details'}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', mt: 1.25 }}
-                          >
-                            {[company.industry, company.city, company.country]
-                              .filter(Boolean)
-                              .join(' · ') || 'Business profile not completed'}
-                          </Typography>
-                        </Box>
-                        <Chip
-                          size="small"
-                          label={company.lifecycle_stage}
-                          color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
-                          variant="outlined"
-                        />
-                      </Stack>
-                      {canManage ? (
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          sx={{ mt: 1.5, justifyContent: 'flex-end' }}
-                        >
-                          <IconButton
-                            size="small"
-                            aria-label={`Edit ${company.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setEditing(company)
-                            }}
-                          >
-                            <EditRounded fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            aria-label={`${company.archived_at ? 'Restore' : 'Archive'} ${company.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              if (company.archived_at) restore.mutate(company.id)
-                              else setArchiving(company)
-                            }}
-                          >
-                            {company.archived_at ? (
-                              <RestoreRounded fontSize="small" />
-                            ) : (
-                              <ArchiveOutlined fontSize="small" />
-                            )}
-                          </IconButton>
-                        </Stack>
-                      ) : null}
-                    </Box>
-                  ))}
-                </Stack>
-              </Box>
-              <TableContainer sx={{ display: { xs: 'none', sm: 'block' } }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ width: 112 }}>{t('crm.companies.code')}</TableCell>
-                      <TableCell>{t('crm.companies.company')}</TableCell>
-                      <TableCell>{t('crm.companies.profile')}</TableCell>
-                      <TableCell>{t('crm.companies.location')}</TableCell>
-                      <TableCell>{t('crm.companies.owner')}</TableCell>
-                      <TableCell>{t('crm.companies.stage')}</TableCell>
-                      {canManage && (
-                        <TableCell align="right">{t('crm.companies.actions')}</TableCell>
-                      )}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((company) => (
-                      <TableRow
-                        key={company.id}
-                        hover
-                        tabIndex={0}
-                        aria-label={`Open ${company.name}`}
-                        onClick={() => openCompany(company)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            openCompany(company)
-                          }
-                        }}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            color="primary.dark"
-                            sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
-                          >
-                            {company.customer_code}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography sx={{ fontWeight: 700 }}>{company.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {company.email || company.phone_number || 'No contact details'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">{company.industry || '—'}</Typography>
-                          {company.tax_id && (
-                            <Typography variant="caption" color="text.secondary">
-                              Tax ID: {company.tax_id}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {[company.city, company.country].filter(Boolean).join(', ') || '—'}
-                        </TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <Button
-                              size="small"
-                              color="inherit"
-                              endIcon={<KeyboardArrowDownRounded sx={{ fontSize: 16 }} />}
-                              disabled={quickUpdate.isPending}
-                              onClick={(event) => openInlineEdit(event, company, 'owner')}
-                              sx={{
-                                minWidth: 0,
-                                px: 0.75,
-                                py: 0.5,
-                                color: company.assigned_to_name ? 'text.primary' : 'text.secondary',
-                                bgcolor: 'action.hover',
-                              }}
-                            >
-                              <Avatar
-                                sx={{
-                                  width: 24,
-                                  height: 24,
-                                  mr: 0.75,
-                                  fontSize: 11,
-                                  bgcolor: company.assigned_to_name
-                                    ? 'primary.main'
-                                    : 'action.disabledBackground',
-                                }}
-                              >
-                                {company.assigned_to_name?.slice(0, 1).toUpperCase() || '–'}
-                              </Avatar>
-                              {company.assigned_to_name || 'Unassigned'}
-                            </Button>
-                          ) : (
-                            company.assigned_to_name || 'Unassigned'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <Button
-                              size="small"
-                              color={company.lifecycle_stage === 'customer' ? 'primary' : 'inherit'}
-                              endIcon={<KeyboardArrowDownRounded sx={{ fontSize: 16 }} />}
-                              disabled={quickUpdate.isPending}
-                              aria-label={`Change stage for ${company.name}`}
-                              onClick={(event) => openInlineEdit(event, company, 'stage')}
-                              sx={{
-                                px: 1,
-                                py: 0.5,
-                                minWidth: 0,
-                                bgcolor: 'action.hover',
-                                textTransform: 'capitalize',
-                              }}
-                            >
-                              {company.lifecycle_stage}
-                            </Button>
-                          ) : (
-                            <Chip
-                              size="small"
-                              label={company.lifecycle_stage}
-                              color={company.lifecycle_stage === 'customer' ? 'primary' : 'default'}
-                              variant="outlined"
-                              aria-label={`${company.name} stage: ${company.lifecycle_stage}`}
-                              sx={{ textTransform: 'capitalize' }}
-                            />
-                          )}
-                        </TableCell>
-                        {canManage && (
-                          <TableCell align="right">
-                            <Tooltip title={t('crm.companies.edit')}>
-                              <IconButton
-                                aria-label={`Edit ${company.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  setEditing(company)
-                                }}
-                              >
-                                <EditRounded />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip
-                              title={company.archived_at ? 'Restore company' : 'Archive company'}
-                            >
-                              <IconButton
-                                aria-label={`${company.archived_at ? 'Restore' : 'Archive'} ${company.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  if (company.archived_at) restore.mutate(company.id)
-                                  else setArchiving(company)
-                                }}
-                              >
-                                {company.archived_at ? <RestoreRounded /> : <ArchiveOutlined />}
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </>
-          )}
+          <CompanyListContent
+            rows={rows}
+            canManage={canManage}
+            hasFilters={hasFilters}
+            isPending={query.isPending}
+            isError={query.isError}
+            error={query.error}
+            quickUpdatePending={quickUpdate.isPending}
+            dateFormatter={dateFormatter}
+            emptyAction={emptyAction}
+            onRetry={() => void query.refetch()}
+            onOpenCompany={(company) => updateSearch({ company: company.customer_code })}
+            onEditOwner={(event, company) => openInlineEdit(event, company, 'owner')}
+            onEditStage={(event, company) => openInlineEdit(event, company, 'stage')}
+            onOpenActions={(anchor, company) => setActionsMenu({ anchor, company })}
+          />
         </Paper>
-      )}
-      {create && (
-        <CompanyDialog
-          organizationId={org.id}
-          onClose={() => {
-            setCreate(false)
-            if (routeSearch.create) {
-              void navigate({ search: { company: routeSearch.company, create: undefined } })
-            }
-          }}
+      </Box>
+
+      {query.data ? (
+        <ListPagination
+          count={query.count}
+          page={page - 1}
+          onChange={(nextPage) => updateSearch({ page: nextPage ? nextPage + 1 : undefined })}
         />
-      )}
-      {editing && (
+      ) : null}
+
+      <CompanyFiltersPopover
+        anchor={filtersAnchor}
+        stage={stage}
+        owner={owner}
+        ordering={ordering}
+        currentUserId={currentUserId}
+        assignees={assignees.data ?? []}
+        onClose={() => setFiltersAnchor(null)}
+        onStageChange={(nextStage) => updateSearch({ stage: nextStage, page: undefined })}
+        onOwnerChange={changeOwner}
+        onSortChange={(nextSort) => updateSearch({ sort: nextSort, page: undefined })}
+      />
+      <CompanyInlineEditMenu
+        edit={inlineEdit}
+        assignees={assignees.data ?? []}
+        onClose={() => setInlineEdit(null)}
+        onUpdate={updateInline}
+      />
+      <CompanyActionsMenu
+        state={actionsMenu}
+        onClose={() => setActionsMenu(null)}
+        onEdit={(company) => {
+          setEditing(company)
+          setActionsMenu(null)
+        }}
+        onArchive={(company) => {
+          setArchiving(company)
+          setActionsMenu(null)
+        }}
+        onRestore={(company) => {
+          setActionsMenu(null)
+          restore.mutate(company.id)
+        }}
+      />
+
+      {create ? <CompanyDialog organizationId={org.id} onClose={closeCreate} /> : null}
+      {editing ? (
         <CompanyDialog organizationId={org.id} company={editing} onClose={() => setEditing(null)} />
-      )}
+      ) : null}
       {routeSearch.company ? (
         <CompanyPreviewDrawer
           organizationId={org.id}
           companyId={routeSearch.company}
-          onClose={closeCompany}
+          onClose={() => updateSearch({ company: undefined })}
         />
       ) : null}
-      <Menu
-        anchorEl={inlineEdit?.anchor ?? null}
-        open={Boolean(inlineEdit)}
-        onClose={() => setInlineEdit(null)}
-        slotProps={{ paper: { sx: { minWidth: 190, mt: 0.75 } } }}
-      >
-        {inlineEdit
-          ? inlineEdit.field === 'stage'
-            ? (['lead', 'prospect', 'customer', 'inactive'] as const).map((item) => (
-                <MenuItem
-                  key={item}
-                  selected={inlineEdit.company.lifecycle_stage === item}
-                  onClick={() => updateInline({ lifecycle_stage: item })}
-                >
-                  <ListItemText sx={{ textTransform: 'capitalize' }}>{item}</ListItemText>
-                </MenuItem>
-              ))
-            : [
-                <MenuItem
-                  key="unassigned"
-                  selected={inlineEdit?.company.assigned_to === null}
-                  onClick={() => updateInline({ assigned_to: null })}
-                >
-                  <ListItemText>{t('crm.companies.unassigned')}</ListItemText>
-                </MenuItem>,
-                ...(assignees.data ?? []).map((member) => (
-                  <MenuItem
-                    key={member.id}
-                    selected={inlineEdit?.company.assigned_to === member.id}
-                    onClick={() => updateInline({ assigned_to: member.id })}
-                  >
-                    <ListItemText primary={member.name} secondary={member.role} />
-                  </MenuItem>
-                )),
-              ]
-          : null}
-      </Menu>
-      {query.data ? <ListPagination count={query.count} page={page} onChange={setPage} /> : null}
-      <Dialog
-        open={Boolean(archiving)}
-        onClose={archive.isPending ? undefined : () => setArchiving(null)}
-      >
-        <DialogTitle>{t('crm.companies.archiveTitle')}</DialogTitle>
-        <DialogContent>
-          {archive.isError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {archive.error.message}
-            </Alert>
-          )}
-          <Typography>
-            {t('crm.companies.archiveDescription', { name: archiving?.name })}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setArchiving(null)} disabled={archive.isPending}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            variant="contained"
-            disabled={archive.isPending}
-            onClick={() => {
-              if (!archiving) return
-              archive.mutate(archiving.id, { onSuccess: () => setArchiving(null) })
-            }}
-          >
-            {archive.isPending ? t('crm.companies.archiving') : t('crm.companies.archive')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+
+      <ArchiveCompanyDialog
+        company={archiving}
+        pending={archive.isPending}
+        error={archive.error}
+        onClose={() => setArchiving(null)}
+        onConfirm={(company) => archive.mutate(company.id, { onSuccess: () => setArchiving(null) })}
+      />
     </>
   )
 }

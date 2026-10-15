@@ -217,6 +217,11 @@ Company pages sort by name/UUID and contact pages by last name/first name/UUID
 for deterministic page boundaries. Invalid page parameters return HTTP 400;
 a page beyond the final result returns an empty `results` array.
 
+Company collections accept `ordering` with `name`, `updated_at`, `created_at`,
+or `lifecycle_stage`. Prefix a field with `-` for descending order. Any other
+value returns HTTP 400. The company UUID is always the stable secondary order,
+so pagination cannot produce ambiguous boundaries when primary values match.
+
 `GET /api/v1/organizations/<organization_id>/companies/summary/` returns
 `companies` and `contacts` counts for the authorized workspace. It excludes archived records,
 allowing the dashboard to show totals without downloading all records.

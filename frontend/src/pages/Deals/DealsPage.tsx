@@ -1,197 +1,337 @@
-import { useMemo, useState } from 'react'
-import AddRounded from '@mui/icons-material/AddRounded'
-import {
-  closestCorners,
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { Alert, Box, Button, Chip, Drawer, Stack } from '@mui/material'
-import { useNavigate, useSearch } from '@tanstack/react-router'
-import { Empty, Failure, Loading, PageHeading } from '../../components/common/Feedback'
-import { useCompanies } from '../../features/companies'
-import { useDeal, useDeals, useMoveDeal } from '../../features/deals'
-import { canCreateRecords, useWorkspace } from '../../features/organizations'
-import { useTasks } from '../../features/tasks'
-import type { Deal, DealStage } from '../../types/deal.types'
-import { DealDragPreview } from './DealCard'
-import { DealDrawer } from './DealDrawer'
-import { DealLane } from './DealLane'
+import { useEffect, useRef, type ReactNode } from 'react'
+import plusIcon from '@iconify-icons/keyline-icons/plus'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { Alert, Box, Button, Drawer, Stack, Typography } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 
-const stages: Array<{ value: DealStage; label: string; accent: string }> = [
-  { value: 'lead', label: 'Lead', accent: '#6b7a90' },
-  { value: 'qualified', label: 'Qualified', accent: '#005bef' },
-  { value: 'proposal', label: 'Proposal', accent: '#4f46e5' },
-  { value: 'negotiation', label: 'Negotiation', accent: '#d97706' },
-  { value: 'won', label: 'Won', accent: '#16845b' },
-  { value: 'lost', label: 'Lost', accent: '#c24157' },
-]
-const money = (value: string, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(value))
+import { AppIcon } from '../../components/common/AppIcon'
+import { Failure, Loading } from '../../components/common/Feedback'
+import {
+  ActiveDealFilters,
+  DealBoardToolbar,
+  DealFiltersPopover,
+  DealViewTabs,
+} from '../../features/deals/components/DealBoardControls'
+import {
+  DealActionsMenu,
+  DeleteDealDialog,
+} from '../../features/deals/components/DealBoardOverlays'
+import { DealDragPreview } from '../../features/deals/components/DealCard'
+import { DealLane } from '../../features/deals/components/DealLane'
+import { useDealBoardController } from '../../features/deals/hooks/useDealBoardController'
+import { TaskDrawer } from '../../features/tasks/components/TaskDrawer'
+import { DealDrawer } from './DealDrawer'
+
+interface ForecastSummary {
+  open: unknown[]
+  withoutNextAction: number
+  totals: Array<{ currency: string; total: number; weighted: number }>
+}
+
+function DealBoardSummary({ forecast }: { forecast: ForecastSummary }) {
+  const { t, i18n } = useTranslation()
+  return (
+    <Stack
+      direction="row"
+      spacing={{ xs: 1.5, sm: 2.5 }}
+      useFlexGap
+      sx={{ flexWrap: 'wrap', alignItems: 'center', mb: 2.5 }}
+    >
+      <Typography variant="body2" color="text.secondary">
+        <Box component="span" sx={{ color: 'text.primary', fontWeight: 750 }}>
+          {forecast.open.length}
+        </Box>{' '}
+        {t('crm.deals.openDeals')}
+      </Typography>
+      <Typography
+        variant="body2"
+        color={forecast.withoutNextAction ? 'warning.main' : 'text.secondary'}
+      >
+        <Box component="span" sx={{ fontWeight: 750 }}>
+          {forecast.withoutNextAction}
+        </Box>{' '}
+        {t('crm.deals.withoutNextAction')}
+      </Typography>
+      {forecast.totals.map((item) => {
+        const money = new Intl.NumberFormat(i18n.resolvedLanguage, {
+          style: 'currency',
+          currency: item.currency,
+          maximumFractionDigits: 0,
+        })
+        return (
+          <Stack key={item.currency} direction="row" spacing={1.5} useFlexGap>
+            <Typography variant="body2" color="text.secondary">
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 750 }}>
+                {money.format(item.total)}
+              </Box>{' '}
+              {t('crm.deals.netPipeline')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 750 }}>
+                {money.format(item.weighted)}
+              </Box>{' '}
+              {t('crm.deals.weightedForecast')}
+            </Typography>
+          </Stack>
+        )
+      })}
+    </Stack>
+  )
+}
 
 export function DealsPage() {
-  const org = useWorkspace()
-  const navigate = useNavigate({ from: '/organizations/$organizationId/deals' })
-  const routeSearch = useSearch({ from: '/organizations/$organizationId/deals' })
-  const routeDeal = useDeal(org.id, routeSearch.deal ?? '')
-  const deals = useDeals(org.id)
-  const companies = useCompanies(org.id, { archived: 'active' })
-  const tasks = useTasks(org.id, { bucket: 'open' })
-  const move = useMoveDeal(org.id)
-  const [drawer, setDrawer] = useState<{ deal?: Deal; initialStage?: DealStage } | null>(null)
-  const [activeDeal, setActiveDeal] = useState<Deal | null>(null)
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-  const rows = deals.data ?? []
-  const open = rows.filter((deal) => !['won', 'lost'].includes(deal.stage))
-  const forecasts = Object.values(
-    open.reduce<Record<string, { currency: string; total: number; weighted: number }>>(
-      (totals, deal) => {
-        const current = totals[deal.currency] ?? { currency: deal.currency, total: 0, weighted: 0 }
-        current.total += Number(deal.net_value)
-        current.weighted += (Number(deal.net_value) * deal.probability) / 100
-        totals[deal.currency] = current
-        return totals
-      },
-      {},
-    ),
-  )
-  const laneDeals = (stage: DealStage) =>
-    rows.filter((deal) => deal.stage === stage).sort((a, b) => a.sort_order - b.sort_order)
-  const taskRows = tasks.data
-  const nextActionByDeal = useMemo(() => {
-    const result = new Map<string, NonNullable<typeof taskRows>[number]>()
-    for (const task of taskRows ?? []) {
-      if (task.deal && !result.has(task.deal)) result.set(task.deal, task)
-    }
-    return result
-  }, [taskRows])
+  const { t } = useTranslation()
+  const boardRef = useRef<HTMLDivElement | null>(null)
+  const {
+    org,
+    routeSearch,
+    canManage,
+    view,
+    search,
+    stage,
+    deals,
+    companies,
+    tasks,
+    routeDeal,
+    move,
+    archive,
+    remove,
+    rows,
+    canMove,
+    visibleStages,
+    hasFilters,
+    nextActionByDeal,
+    forecasts,
+    drawer,
+    activeDeal,
+    filtersAnchor,
+    actionsMenu,
+    deleting,
+    nextActionDrawer,
+    sensors,
+    collisionDetection,
+    updateSearch,
+    clearFilters,
+    selectView,
+    laneDeals,
+    dragStart,
+    dragEnd,
+    closeActions,
+    toggleArchive,
+    setDrawer,
+    setActiveDeal,
+    setFiltersAnchor,
+    setActionsMenu,
+    setDeleting,
+    setNextActionDrawer,
+  } = useDealBoardController()
+  const error = deals.error || companies.error || tasks.error
+  const isPending = deals.isPending || companies.isPending || tasks.isPending
 
-  function dragEnd(event: DragEndEvent) {
-    setActiveDeal(null)
-    const deal = event.active.data.current?.deal as Deal | undefined
-    const stage = event.over?.data.current?.stage as DealStage | undefined
-    if (!deal || !stage || !event.over) return
-    const targetLane = laneDeals(stage)
-    const destination = targetLane.filter((item) => item.id !== deal.id)
-    const overDeal = event.over.data.current?.deal as Deal | undefined
-    if (overDeal?.id === deal.id) return
-    const targetIndex = overDeal
-      ? targetLane.findIndex((item) => item.id === overDeal.id)
-      : destination.length
-    if (stage === 'lost' && !deal.lost_reason) {
-      setDrawer({ deal, initialStage: 'lost' })
+  useEffect(() => {
+    const board = boardRef.current
+    if (!board || !rows.length || !window.matchMedia('(max-width: 899px)').matches) {
       return
     }
-    move.mutate({
-      id: deal.id,
-      stage,
-      position: targetIndex < 0 ? destination.length : targetIndex,
+    const frame = window.requestAnimationFrame(() => {
+      const firstPopulatedLane = board.querySelector<HTMLElement>('[data-has-deals="true"]')
+      if (firstPopulatedLane) {
+        board.scrollTo({ left: firstPopulatedLane.offsetLeft - board.offsetLeft })
+      }
     })
+    return () => window.cancelAnimationFrame(frame)
+  }, [rows])
+
+  let emptyAction: ReactNode = null
+  if (hasFilters) {
+    emptyAction = (
+      <Button variant="outlined" onClick={clearFilters}>
+        {t('crm.deals.clearFilters')}
+      </Button>
+    )
+  } else if (canManage && companies.data?.length) {
+    emptyAction = (
+      <Button
+        variant="contained"
+        startIcon={<AppIcon icon={plusIcon} />}
+        onClick={() => updateSearch({ create: true })}
+      >
+        {t('crm.deals.add')}
+      </Button>
+    )
   }
 
-  function dragStart(event: DragStartEvent) {
-    setActiveDeal((event.active.data.current?.deal as Deal | undefined) ?? null)
-  }
-
-  const mutationError = move.error
   return (
     <>
-      <PageHeading
-        title="Sales pipeline"
-        description="Turn active conversations into predictable revenue. Drag a deal by its handle to move it."
-        action={
-          canCreateRecords(org) ? (
-            <Button
-              variant="contained"
-              startIcon={<AddRounded />}
-              disabled={!companies.data?.length}
-              onClick={() => setDrawer({})}
-            >
-              Add deal
-            </Button>
-          ) : null
-        }
-      />
-      <Stack direction="row" spacing={1.5} useFlexGap sx={{ mb: 3, flexWrap: 'wrap' }}>
-        <Chip label={`${open.length} open deals`} variant="outlined" />
-        <Chip
-          label={`${open.filter((deal) => !nextActionByDeal.has(deal.id)).length} without next action`}
-          color={open.some((deal) => !nextActionByDeal.has(deal.id)) ? 'warning' : 'default'}
-          variant="outlined"
-        />
-        {forecasts.map((forecast) => (
-          <Box key={forecast.currency} sx={{ display: 'contents' }}>
-            <Chip
-              label={`${money(String(forecast.total), forecast.currency)} net pipeline`}
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={`${money(String(forecast.weighted), forecast.currency)} weighted forecast`}
-              variant="outlined"
-            />
-          </Box>
-        ))}
-      </Stack>
-      {mutationError ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {mutationError.message}
-        </Alert>
-      ) : null}
-      {deals.isPending || companies.isPending || tasks.isPending ? (
-        <Loading />
-      ) : deals.isError ? (
-        <Failure error={deals.error} retry={() => void deals.refetch()} />
-      ) : rows.length === 0 ? (
-        <Empty
-          title="Build your first pipeline"
-          description="Add an opportunity and move it forward as the conversation develops."
-        />
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={dragStart}
-          onDragCancel={() => setActiveDeal(null)}
-          onDragEnd={dragEnd}
-        >
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'repeat(6,minmax(280px,1fr))',
-                lg: 'repeat(6,minmax(252px,1fr))',
-              },
-              gap: 2,
-              overflowX: 'auto',
-              pb: 2,
-            }}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: 2,
+          mb: 2.5,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <Typography variant="h2" component="h1">
+              {t('crm.deals.title')}
+            </Typography>
+            {!deals.isPending ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {t('crm.deals.count', { count: rows.length })}
+              </Typography>
+            ) : null}
+          </Stack>
+          <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: '68ch' }}>
+            {t('crm.deals.description')}
+          </Typography>
+        </Box>
+        {canManage ? (
+          <Button
+            variant="contained"
+            startIcon={<AppIcon icon={plusIcon} />}
+            disabled={!companies.data?.length}
+            onClick={() => updateSearch({ create: true })}
+            sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
           >
-            {stages.map((stage) => (
-              <DealLane
-                key={stage.value}
-                stage={stage.value}
-                label={stage.label}
-                accent={stage.accent}
-                deals={laneDeals(stage.value)}
-                nextActionByDeal={nextActionByDeal}
-                onEdit={(deal) => setDrawer({ deal })}
-              />
-            ))}
-          </Box>
-          <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
-            {activeDeal ? <DealDragPreview deal={activeDeal} /> : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+            {t('crm.deals.add')}
+          </Button>
+        ) : null}
+      </Stack>
+
+      <Box component="section" aria-label={t('crm.deals.title')} sx={{ minWidth: 0 }}>
+        <DealViewTabs value={view} onChange={selectView} />
+        <DealBoardToolbar
+          search={search}
+          filterCount={Number(Boolean(stage))}
+          filtersOpen={Boolean(filtersAnchor)}
+          onSearchChange={(value) => updateSearch({ q: value || undefined })}
+          onOpenFilters={setFiltersAnchor}
+        />
+        <ActiveDealFilters
+          stage={stage}
+          onClearStage={() => updateSearch({ stage: undefined })}
+          onClearAll={clearFilters}
+        />
+
+        {move.isError || archive.isError ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {(move.error || archive.error)?.message}
+          </Alert>
+        ) : null}
+        {isPending ? (
+          <Loading />
+        ) : error ? (
+          <Failure
+            error={error}
+            retry={() => {
+              void deals.refetch()
+              void companies.refetch()
+              void tasks.refetch()
+            }}
+          />
+        ) : rows.length === 0 ? (
+          <Stack
+            spacing={1.5}
+            sx={{ px: 3, py: { xs: 5, md: 7 }, textAlign: 'center', alignItems: 'center' }}
+          >
+            <Typography variant="h6">
+              {hasFilters ? t('crm.deals.noMatches') : t('crm.deals.empty')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '65ch' }}>
+              {hasFilters ? t('crm.deals.noMatchesDescription') : t('crm.deals.emptyDescription')}
+            </Typography>
+            {emptyAction}
+          </Stack>
+        ) : (
+          <>
+            <DealBoardSummary forecast={forecasts} />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={collisionDetection}
+              onDragStart={dragStart}
+              onDragCancel={() => setActiveDeal(null)}
+              onDragEnd={dragEnd}
+            >
+              <Box
+                ref={boardRef}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: `repeat(${visibleStages.length}, minmax(276px, 1fr))`,
+                    lg: `repeat(${visibleStages.length}, minmax(252px, 1fr))`,
+                  },
+                  gap: 1.5,
+                  overflowX: 'auto',
+                  overscrollBehaviorInline: 'contain',
+                  scrollSnapType: { xs: 'x proximity', lg: 'none' },
+                  pb: 2,
+                  '& > *': { scrollSnapAlign: 'start' },
+                }}
+              >
+                {visibleStages.map((item) => (
+                  <DealLane
+                    key={item}
+                    stage={item}
+                    deals={laneDeals(item)}
+                    nextActionByDeal={nextActionByDeal}
+                    draggable={canMove}
+                    onOpen={(deal) => updateSearch({ deal: deal.id })}
+                    onOpenActions={(anchor, deal) => setActionsMenu({ anchor, deal })}
+                    onOpenNextAction={
+                      canManage
+                        ? (deal, nextAction) => setNextActionDrawer({ deal, task: nextAction })
+                        : undefined
+                    }
+                  />
+                ))}
+              </Box>
+              <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
+                {activeDeal ? (
+                  <DealDragPreview
+                    deal={activeDeal}
+                    nextAction={nextActionByDeal.get(activeDeal.id)}
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          </>
+        )}
+      </Box>
+
+      <DealFiltersPopover
+        anchor={filtersAnchor}
+        stage={stage}
+        onClose={() => setFiltersAnchor(null)}
+        onStageChange={(nextStage) => updateSearch({ stage: nextStage })}
+      />
+      <DealActionsMenu
+        state={actionsMenu}
+        archivePending={archive.isPending}
+        onClose={closeActions}
+        onEdit={(deal) => {
+          updateSearch({ deal: deal.id })
+          closeActions()
+        }}
+        onToggleArchive={toggleArchive}
+        onDelete={(deal) => {
+          setDeleting(deal)
+          closeActions()
+        }}
+      />
+
+      {routeSearch.create && companies.data ? (
+        <DealDrawer
+          organizationId={org.id}
+          companies={companies.data}
+          onClose={() => updateSearch({ create: undefined })}
+        />
+      ) : null}
       {drawer && companies.data ? (
         <DealDrawer
           organizationId={org.id}
@@ -206,14 +346,14 @@ export function DealsPage() {
           organizationId={org.id}
           companies={companies.data}
           deal={routeDeal.data}
-          onClose={() => void navigate({ search: { deal: undefined } })}
+          onClose={() => updateSearch({ deal: undefined })}
         />
       ) : null}
       {routeSearch.deal && (routeDeal.isPending || routeDeal.isError) ? (
         <Drawer
           anchor="right"
           open
-          onClose={() => void navigate({ search: { deal: undefined } })}
+          onClose={() => updateSearch({ deal: undefined })}
           sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 600 }, maxWidth: '100vw' } }}
         >
           {routeDeal.isPending ? (
@@ -223,6 +363,24 @@ export function DealsPage() {
           )}
         </Drawer>
       ) : null}
+      {nextActionDrawer && companies.data ? (
+        <TaskDrawer
+          organizationId={org.id}
+          companies={companies.data}
+          task={nextActionDrawer.task}
+          initialCompanyId={nextActionDrawer.deal.company}
+          initialDealId={nextActionDrawer.deal.id}
+          onClose={() => setNextActionDrawer(null)}
+        />
+      ) : null}
+
+      <DeleteDealDialog
+        deal={deleting}
+        pending={remove.isPending}
+        error={remove.error}
+        onClose={() => setDeleting(null)}
+        onConfirm={(deal) => remove.mutate(deal.id, { onSuccess: () => setDeleting(null) })}
+      />
     </>
   )
 }

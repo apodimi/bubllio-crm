@@ -4,7 +4,10 @@ import EditRounded from '@mui/icons-material/EditRounded'
 import OpenInNewRounded from '@mui/icons-material/OpenInNewRounded'
 import { Box, Button, Chip, Drawer, IconButton, Stack, Typography } from '@mui/material'
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+
 import { Failure, Loading } from '../../../components/common/Feedback'
+import { canCreateRecords, useWorkspace } from '../../organizations'
 import { useContacts } from '../../contacts'
 import { useCompany } from '../hooks/useCompanies'
 import { CompanyProfileContent } from './CompanyProfileContent'
@@ -19,6 +22,9 @@ export function CompanyPreviewDrawer({
   companyId: string
   onClose: () => void
 }) {
+  const { t } = useTranslation()
+  const workspace = useWorkspace()
+  const canManage = workspace.id === organizationId && canCreateRecords(workspace)
   const [editing, setEditing] = useState(false)
   const company = useCompany(organizationId, companyId)
   const contacts = useContacts(organizationId, { company: company.data?.id ?? '' })
@@ -62,33 +68,41 @@ export function CompanyPreviewDrawer({
             >
               <Box sx={{ minWidth: 0 }}>
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.75 }}>
-                  <Chip size="small" label={company.data.lifecycle_stage} variant="outlined" />
+                  <Chip
+                    size="small"
+                    label={t(`crm.companies.stages.${company.data.lifecycle_stage}`)}
+                    variant="outlined"
+                  />
                   <Typography variant="caption" color="text.secondary">
-                    {companyContacts.length} {companyContacts.length === 1 ? 'contact' : 'contacts'}
+                    {t('crm.companies.preview.contactCount', {
+                      count: companyContacts.length,
+                    })}
                   </Typography>
                 </Stack>
                 <Typography variant="h5" sx={{ wordBreak: 'break-word' }}>
                   {company.data.name}
                 </Typography>
               </Box>
-              <IconButton aria-label="Close company preview" onClick={onClose}>
+              <IconButton aria-label={t('crm.companies.preview.close')} onClick={onClose}>
                 <CloseRounded />
               </IconButton>
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ mt: 2.5 }}>
-              <Button
-                variant="contained"
-                startIcon={<EditRounded />}
-                onClick={() => setEditing(true)}
-              >
-                Edit company
-              </Button>
+              {canManage ? (
+                <Button
+                  variant="contained"
+                  startIcon={<EditRounded />}
+                  onClick={() => setEditing(true)}
+                >
+                  {t('crm.companies.edit')}
+                </Button>
+              ) : null}
               <Link
                 to="/organizations/$organizationId/companies/$companyId"
                 params={{ organizationId, companyId: company.data.customer_code }}
               >
                 <Button component="span" variant="outlined" startIcon={<OpenInNewRounded />}>
-                  Open full profile
+                  {t('crm.companies.preview.openFullProfile')}
                 </Button>
               </Link>
             </Stack>
@@ -98,7 +112,7 @@ export function CompanyPreviewDrawer({
           </Box>
         </>
       )}
-      {editing && company.data ? (
+      {canManage && editing && company.data ? (
         <CompanyDialog
           organizationId={organizationId}
           company={company.data}

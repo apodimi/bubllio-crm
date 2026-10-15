@@ -10,6 +10,9 @@ import { Button, Stack, Typography } from '@mui/material'
 import { RootLayout, WorkspaceLayout } from '../components/layout/AppLayout'
 import { useAuthStore } from '../features/auth'
 import { useTranslation } from 'react-i18next'
+import { parseCompanySearch } from '../features/companies/companyListConfig'
+import { parseContactSearch } from '../features/contacts/contactListConfig'
+import { parseDealSearch } from '../features/deals/dealBoardConfig'
 
 function NotFoundPage() {
   const { t } = useTranslation()
@@ -97,10 +100,7 @@ const overview = createRoute({
 const companies = createRoute({
   getParentRoute: () => workspace,
   path: '/companies',
-  validateSearch: (search: Record<string, unknown>) => ({
-    ...(typeof search.company === 'string' ? { company: search.company } : {}),
-    ...(search.create === true || search.create === 'true' ? { create: true as const } : {}),
-  }),
+  validateSearch: parseCompanySearch,
   component: lazyRouteComponent(() => import('../pages/Companies/CompaniesPage'), 'CompaniesPage'),
 })
 const companyDetail = createRoute({
@@ -114,17 +114,13 @@ const companyDetail = createRoute({
 const contacts = createRoute({
   getParentRoute: () => workspace,
   path: '/contacts',
-  validateSearch: (search: Record<string, unknown>) => ({
-    ...(typeof search.contact === 'string' ? { contact: search.contact } : {}),
-  }),
+  validateSearch: parseContactSearch,
   component: lazyRouteComponent(() => import('../pages/Contacts/ContactsPage'), 'ContactsPage'),
 })
 const deals = createRoute({
   getParentRoute: () => workspace,
   path: '/deals',
-  validateSearch: (search: Record<string, unknown>) => ({
-    ...(typeof search.deal === 'string' ? { deal: search.deal } : {}),
-  }),
+  validateSearch: parseDealSearch,
   component: lazyRouteComponent(() => import('../pages/Deals/DealsPage'), 'DealsPage'),
 })
 const tasks = createRoute({

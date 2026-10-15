@@ -4,7 +4,6 @@ import cloudDownload from '@iconify-icons/keyline-icons/cloud-download'
 import historyIcon from '@iconify-icons/keyline-icons/history'
 import serverIcon from '@iconify-icons/keyline-icons/server'
 import shieldCheck from '@iconify-icons/keyline-icons/shield-check'
-import { Icon, type IconifyIcon } from '@iconify/react'
 import {
   Alert,
   Box,
@@ -25,6 +24,7 @@ import {
 import { alpha } from '@mui/material/styles'
 import { useTranslation } from 'react-i18next'
 
+import { AppIcon } from '../../../components/common/AppIcon'
 import type {
   InstallationUpdateRun,
   UpdateCheck,
@@ -57,10 +57,6 @@ const EVENT_LABEL_KEYS = {
 
 function eventLabelKey(action: string) {
   return EVENT_LABEL_KEYS[action as keyof typeof EVENT_LABEL_KEYS] ?? 'updates.event_unknown'
-}
-
-function KIcon({ icon, size = 20 }: { icon: IconifyIcon; size?: number }) {
-  return <Icon aria-hidden icon={icon} width={size} height={size} />
 }
 
 function policyColor(policy: UpdateMigrationPolicy): 'success' | 'warning' | 'error' {
@@ -127,7 +123,7 @@ function UpdateProgress({ run }: { run: InstallationUpdateRun }) {
       </Box>
       <Box>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1 }}>
-          <KIcon icon={historyIcon} size={18} />
+          <AppIcon icon={historyIcon} size={18} />
           <Typography variant="subtitle2">{t('updates.history')}</Typography>
         </Stack>
         {run.events.length === 0 ? (
@@ -250,7 +246,7 @@ export function UpdateCenter() {
                 color: 'primary.main',
               }}
             >
-              <KIcon icon={cloudDownload} size={22} />
+              <AppIcon icon={cloudDownload} size={22} />
             </Box>
             <Box>
               <Typography variant="h6" component="h2">
@@ -263,7 +259,7 @@ export function UpdateCenter() {
           </Stack>
           {status.data && (
             <Chip
-              icon={<KIcon icon={serverIcon} size={17} />}
+              icon={<AppIcon icon={serverIcon} size={17} />}
               size="small"
               color={status.data.connected ? 'success' : 'error'}
               variant="outlined"
@@ -341,7 +337,7 @@ export function UpdateCenter() {
             </Stack>
 
             {!status.data.update_available && !run && (
-              <Alert severity="success" icon={<KIcon icon={checkCircle} />}>
+              <Alert severity="success" icon={<AppIcon icon={checkCircle} />}>
                 {t('updates.upToDate')}
               </Alert>
             )}
@@ -360,7 +356,7 @@ export function UpdateCenter() {
               >
                 <Stack direction="row" sx={{ gap: 1.25, alignItems: 'flex-start' }}>
                   <Box sx={{ color: 'primary.main', mt: 0.25 }}>
-                    <KIcon icon={shieldCheck} size={21} />
+                    <AppIcon icon={shieldCheck} size={21} />
                   </Box>
                   <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 750 }}>

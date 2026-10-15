@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
-import CloseRounded from '@mui/icons-material/CloseRounded'
+import closeIcon from '@iconify-icons/keyline-icons/x'
 import {
   Alert,
   Box,
@@ -12,20 +12,15 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { useTranslation } from 'react-i18next'
+import { AppIcon } from '../../components/common/AppIcon'
 import { useCompanyAssignees } from '../../features/companies'
 import { useContacts } from '../../features/contacts'
+import { DEAL_STAGES } from '../../features/deals/dealBoardConfig'
 import { useCreateDeal, useUpdateDealRecord } from '../../features/deals'
 import type { Company } from '../../types/company.types'
 import type { Deal, DealInput, DealStage } from '../../types/deal.types'
 
-const stages: Array<{ value: DealStage; label: string }> = [
-  { value: 'lead', label: 'Lead' },
-  { value: 'qualified', label: 'Qualified' },
-  { value: 'proposal', label: 'Proposal' },
-  { value: 'negotiation', label: 'Negotiation' },
-  { value: 'won', label: 'Won' },
-  { value: 'lost', label: 'Lost' },
-]
 const emptyDeal: DealInput = {
   company: '',
   contact: null,
@@ -55,6 +50,7 @@ export function DealDrawer({
   initialStage?: DealStage
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const create = useCreateDeal(organizationId)
   const update = useUpdateDealRecord(organizationId, deal?.id ?? '')
   const mutation = deal ? update : create
@@ -86,6 +82,12 @@ export function DealDrawer({
     !values.contact || companyContacts.some((contact) => contact.id === values.contact)
   const selectedAssigneeAvailable =
     !values.assigned_to || (assignees.data ?? []).some((person) => person.id === values.assigned_to)
+  let submitLabel = t('crm.deals.drawer.create')
+  if (mutation.isPending) {
+    submitLabel = t('crm.deals.drawer.saving')
+  } else if (deal) {
+    submitLabel = t('crm.deals.drawer.saveChanges')
+  }
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -132,15 +134,19 @@ export function DealDrawer({
           }}
         >
           <Box>
-            <Typography variant="h5">{deal ? 'Edit deal' : 'Add deal'}</Typography>
+            <Typography variant="h5">
+              {deal ? t('crm.deals.drawer.editTitle') : t('crm.deals.drawer.addTitle')}
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {deal
-                ? 'Update the opportunity, value and next sales milestone.'
-                : 'Capture a qualified opportunity in the sales pipeline.'}
+              {deal ? t('crm.deals.drawer.editDescription') : t('crm.deals.drawer.addDescription')}
             </Typography>
           </Box>
-          <IconButton aria-label="Close deal form" onClick={onClose} disabled={mutation.isPending}>
-            <CloseRounded />
+          <IconButton
+            aria-label={t('crm.deals.drawer.close')}
+            onClick={onClose}
+            disabled={mutation.isPending}
+          >
+            <AppIcon icon={closeIcon} />
           </IconButton>
         </Stack>
         <Stack spacing={2.5} sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, sm: 4 }, py: 4 }}>
@@ -148,7 +154,7 @@ export function DealDrawer({
           <TextField
             required
             autoFocus
-            label="Deal title"
+            label={t('crm.deals.drawer.title')}
             value={values.title}
             onChange={(event) => set('title', event.target.value)}
             disabled={mutation.isPending}
@@ -156,7 +162,7 @@ export function DealDrawer({
           <TextField
             select
             required
-            label="Company"
+            label={t('crm.deals.drawer.company')}
             value={values.company}
             onChange={(event) => {
               setValues((current) => ({ ...current, company: event.target.value, contact: null }))
@@ -172,16 +178,16 @@ export function DealDrawer({
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               select
-              label="Contact"
+              label={t('crm.deals.drawer.contact')}
               value={values.contact ?? ''}
               onChange={(event) => set('contact', event.target.value || null)}
               disabled={!values.company || mutation.isPending}
               sx={{ flex: 1 }}
             >
-              <MenuItem value="">No contact</MenuItem>
+              <MenuItem value="">{t('crm.deals.drawer.noContact')}</MenuItem>
               {!selectedContactAvailable && values.contact ? (
                 <MenuItem value={values.contact}>
-                  {deal?.contact_name || 'Selected contact'}
+                  {deal?.contact_name || t('crm.deals.drawer.selectedContact')}
                 </MenuItem>
               ) : null}
               {companyContacts.map((contact) => (
@@ -192,7 +198,7 @@ export function DealDrawer({
             </TextField>
             <TextField
               select
-              label="Owner"
+              label={t('crm.deals.drawer.owner')}
               value={values.assigned_to ?? ''}
               onChange={(event) =>
                 set('assigned_to', event.target.value ? Number(event.target.value) : null)
@@ -200,10 +206,10 @@ export function DealDrawer({
               disabled={mutation.isPending}
               sx={{ flex: 1 }}
             >
-              <MenuItem value="">Unassigned</MenuItem>
+              <MenuItem value="">{t('crm.deals.drawer.unassigned')}</MenuItem>
               {!selectedAssigneeAvailable && values.assigned_to ? (
                 <MenuItem value={values.assigned_to}>
-                  {deal?.assigned_to_name || 'Selected owner'}
+                  {deal?.assigned_to_name || t('crm.deals.drawer.selectedOwner')}
                 </MenuItem>
               ) : null}
               {(assignees.data ?? []).map((person) => (
@@ -217,7 +223,7 @@ export function DealDrawer({
             <TextField
               required
               type="number"
-              label="Amount"
+              label={t('crm.deals.drawer.amount')}
               value={values.value}
               onChange={(event) => set('value', event.target.value)}
               disabled={mutation.isPending}
@@ -226,7 +232,7 @@ export function DealDrawer({
             />
             <TextField
               select
-              label="Currency"
+              label={t('crm.deals.drawer.currency')}
               value={values.currency}
               onChange={(event) => set('currency', event.target.value)}
               disabled={mutation.isPending}
@@ -242,7 +248,7 @@ export function DealDrawer({
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               type="number"
-              label="VAT rate %"
+              label={t('crm.deals.drawer.taxRate')}
               value={values.tax_rate}
               onChange={(event) => set('tax_rate', event.target.value)}
               disabled={mutation.isPending}
@@ -251,34 +257,34 @@ export function DealDrawer({
             />
             <TextField
               select
-              label="Amount basis"
+              label={t('crm.deals.drawer.amountBasis')}
               value={values.amount_includes_tax ? 'gross' : 'net'}
               onChange={(event) => set('amount_includes_tax', event.target.value === 'gross')}
               disabled={mutation.isPending}
               sx={{ flex: 1 }}
             >
-              <MenuItem value="net">Net — VAT excluded</MenuItem>
-              <MenuItem value="gross">Gross — VAT included</MenuItem>
+              <MenuItem value="net">{t('crm.deals.drawer.netBasis')}</MenuItem>
+              <MenuItem value="gross">{t('crm.deals.drawer.grossBasis')}</MenuItem>
             </TextField>
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               select
-              label="Status"
+              label={t('crm.deals.stage')}
               value={values.stage}
               onChange={(event) => set('stage', event.target.value as DealStage)}
               disabled={mutation.isPending}
               sx={{ flex: 1 }}
             >
-              {stages.map((stage) => (
-                <MenuItem key={stage.value} value={stage.value}>
-                  {stage.label}
+              {DEAL_STAGES.map((stage) => (
+                <MenuItem key={stage} value={stage}>
+                  {t(`crm.deals.stageLabels.${stage}`)}
                 </MenuItem>
               ))}
             </TextField>
             <TextField
               type="number"
-              label="Win probability %"
+              label={t('crm.deals.drawer.probability')}
               value={values.probability}
               onChange={(event) => set('probability', Number(event.target.value))}
               disabled={mutation.isPending}
@@ -288,7 +294,7 @@ export function DealDrawer({
           </Stack>
           <TextField
             type="date"
-            label="Expected close date"
+            label={t('crm.deals.drawer.expectedClose')}
             value={values.expected_close_date ?? ''}
             onChange={(event) => set('expected_close_date', event.target.value || null)}
             disabled={mutation.isPending}
@@ -297,17 +303,17 @@ export function DealDrawer({
           {values.stage === 'lost' ? (
             <TextField
               required
-              label="Lost reason"
+              label={t('crm.deals.drawer.lostReason')}
               value={values.lost_reason}
               onChange={(event) => set('lost_reason', event.target.value)}
               disabled={mutation.isPending}
-              helperText="Capture why the opportunity was lost."
+              helperText={t('crm.deals.drawer.lostReasonHelp')}
             />
           ) : null}
           <TextField
             multiline
             minRows={4}
-            label="Internal notes"
+            label={t('crm.deals.drawer.notes')}
             value={values.notes}
             onChange={(event) => set('notes', event.target.value)}
             disabled={mutation.isPending}
@@ -326,10 +332,10 @@ export function DealDrawer({
           }}
         >
           <Button onClick={onClose} disabled={mutation.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : deal ? 'Save changes' : 'Create deal'}
+            {submitLabel}
           </Button>
         </Stack>
       </Box>

@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
-import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
-import RestoreRounded from '@mui/icons-material/RestoreRounded'
 import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded'
 import PhoneOutlined from '@mui/icons-material/PhoneOutlined'
+import RestoreRounded from '@mui/icons-material/RestoreRounded'
 import {
   Box,
   Button,
@@ -17,6 +16,9 @@ import {
   Typography,
 } from '@mui/material'
 import { Link, useParams } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { Failure, Loading } from '../../components/common/Feedback'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
 import { useArchiveCompany, useCompany, useRestoreCompany } from '../../features/companies'
@@ -25,12 +27,24 @@ import { CompanyProfileContent } from '../../features/companies/components/Compa
 import { CompanyTimeline } from '../../features/companies/components/CompanyTimeline'
 import { useContacts } from '../../features/contacts'
 import { useSubscriptions } from '../../features/subscriptions'
+import type { SubscriptionStatus } from '../../types/subscription.types'
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value))
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(value))
+}
+
+function subscriptionStatusColor(status: SubscriptionStatus): 'success' | 'warning' | 'default' {
+  if (status === 'active') {
+    return 'success'
+  }
+  if (status === 'cancelling') {
+    return 'warning'
+  }
+  return 'default'
 }
 
 export function CompanyDetailPage() {
+  const { t, i18n } = useTranslation()
   const organization = useWorkspace()
   const { companyId } = useParams({
     from: '/organizations/$organizationId/companies/$companyId',
@@ -59,12 +73,12 @@ export function CompanyDetailPage() {
         search={{ company: undefined }}
       >
         <Button component="span" startIcon={<ArrowBackRounded />} sx={{ mb: 2 }}>
-          Back to companies
+          {t('crm.companies.detail.back')}
         </Button>
       </Link>
       {company.data.archived_at ? (
         <Alert severity="info" sx={{ mb: 3 }}>
-          This company is archived. Its profile and history remain available.
+          {t('crm.companies.detail.archivedNotice')}
         </Alert>
       ) : null}
       <Stack
@@ -80,7 +94,7 @@ export function CompanyDetailPage() {
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
             <Chip
               size="small"
-              label={company.data.lifecycle_stage}
+              label={t(`crm.companies.stages.${company.data.lifecycle_stage}`)}
               color="primary"
               variant="outlined"
             />
@@ -92,8 +106,10 @@ export function CompanyDetailPage() {
           </Stack>
           <Typography variant="h3">{company.data.name}</Typography>
           <Typography color="text.secondary" sx={{ mt: 1 }}>
-            Client since {formatDate(company.data.created_at)} · Updated{' '}
-            {formatDate(company.data.updated_at)}
+            {t('crm.companies.detail.addedUpdated', {
+              added: formatDate(company.data.created_at, i18n.resolvedLanguage ?? i18n.language),
+              updated: formatDate(company.data.updated_at, i18n.resolvedLanguage ?? i18n.language),
+            })}
           </Typography>
         </Box>
         {canManage ? (
@@ -103,7 +119,7 @@ export function CompanyDetailPage() {
               startIcon={<EditRounded />}
               onClick={() => setEditing(true)}
             >
-              Edit company
+              {t('crm.companies.edit')}
             </Button>
             <Button
               variant="outlined"
@@ -113,7 +129,9 @@ export function CompanyDetailPage() {
                 company.data.archived_at ? restore.mutate(companyId) : archive.mutate(companyId)
               }
             >
-              {company.data.archived_at ? 'Restore' : 'Archive'}
+              {company.data.archived_at
+                ? t('crm.companies.detail.restore')
+                : t('crm.companies.detail.archive')}
             </Button>
           </Stack>
         ) : null}
@@ -129,16 +147,16 @@ export function CompanyDetailPage() {
       >
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 4 } }}>
           <Typography variant="h6" sx={{ mb: 3 }}>
-            Company profile
+            {t('crm.companies.detail.profileTitle')}
           </Typography>
           <CompanyProfileContent company={company.data} />
         </Paper>
 
         <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
           <Box sx={{ px: 3, py: 2.5 }}>
-            <Typography variant="h6">Contacts</Typography>
+            <Typography variant="h6">{t('crm.companies.detail.contactsTitle')}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              People connected to this company
+              {t('crm.companies.detail.contactsDescription')}
             </Typography>
           </Box>
           <Divider />
@@ -153,7 +171,7 @@ export function CompanyDetailPage() {
           ) : companyContacts.length === 0 ? (
             <Box sx={{ p: 3 }}>
               <Typography variant="body2" color="text.secondary">
-                No contacts have been connected to this company yet.
+                {t('crm.companies.detail.noContacts')}
               </Typography>
             </Box>
           ) : (
@@ -165,7 +183,7 @@ export function CompanyDetailPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {[contact.job_title, contact.department].filter(Boolean).join(' · ') ||
-                      'Contact'}
+                      t('crm.companies.detail.contactFallback')}
                   </Typography>
                   <Stack spacing={0.75} sx={{ mt: 1.5 }}>
                     {contact.email ? (
@@ -206,16 +224,16 @@ export function CompanyDetailPage() {
             }}
           >
             <Box>
-              <Typography variant="h6">Services & billing</Typography>
+              <Typography variant="h6">{t('crm.companies.detail.servicesTitle')}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Customer subscriptions, renewal dates, and agreed amounts
+                {t('crm.companies.detail.servicesDescription')}
               </Typography>
             </Box>
             <Link
               to="/organizations/$organizationId/services"
               params={{ organizationId: organization.id }}
             >
-              <Button component="span">Open billing</Button>
+              <Button component="span">{t('crm.companies.detail.openBilling')}</Button>
             </Link>
           </Stack>
           <Divider />
@@ -227,7 +245,7 @@ export function CompanyDetailPage() {
             </Box>
           ) : companySubscriptions.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>
-              No services are connected to this company yet.
+              {t('crm.companies.detail.noServices')}
             </Typography>
           ) : (
             <Stack divider={<Divider />}>
@@ -242,31 +260,37 @@ export function CompanyDetailPage() {
                     <Typography variant="body2" color="text.secondary">
                       {subscription.effective_status === 'cancelling' &&
                       subscription.cancellation_effective_date
-                        ? `Active through ${formatDate(subscription.cancellation_effective_date)}`
-                        : `Next charge ${formatDate(subscription.next_billing_date)}`}{' '}
-                      · {subscription.billing_interval.replace('_', ' ')}
+                        ? t('crm.companies.detail.activeThrough', {
+                            date: formatDate(
+                              subscription.cancellation_effective_date,
+                              i18n.resolvedLanguage ?? i18n.language,
+                            ),
+                          })
+                        : t('crm.companies.detail.nextCharge', {
+                            date: formatDate(
+                              subscription.next_billing_date,
+                              i18n.resolvedLanguage ?? i18n.language,
+                            ),
+                          })}{' '}
+                      ·{' '}
+                      {t(`crm.companies.detail.billingIntervals.${subscription.billing_interval}`)}
                     </Typography>
                   </Box>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                     <Chip
                       size="small"
-                      label={
-                        subscription.effective_status === 'cancelling'
-                          ? 'ending'
-                          : subscription.effective_status
-                      }
-                      color={
-                        subscription.effective_status === 'active'
-                          ? 'success'
-                          : subscription.effective_status === 'cancelling'
-                            ? 'warning'
-                            : 'default'
-                      }
+                      label={t(
+                        `crm.companies.detail.subscriptionStatuses.${subscription.effective_status}`,
+                      )}
+                      color={subscriptionStatusColor(subscription.effective_status)}
                     />
                     <Typography sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                      {Number(subscription.gross_price).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}{' '}
+                      {Number(subscription.gross_price).toLocaleString(
+                        i18n.resolvedLanguage ?? i18n.language,
+                        {
+                          minimumFractionDigits: 2,
+                        },
+                      )}{' '}
                       {subscription.currency}
                     </Typography>
                   </Stack>

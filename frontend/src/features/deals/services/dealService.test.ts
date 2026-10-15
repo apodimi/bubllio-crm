@@ -15,4 +15,27 @@ describe('dealService', () => {
 
     expect(request).toHaveBeenCalledWith('/organizations/org-a/deals/deal%2Fa/', { signal })
   })
+
+  it('serializes supported pipeline filters', async () => {
+    const signal = new AbortController().signal
+
+    await dealService.list(
+      'org-a',
+      { search: ' Renewal ', stage: 'proposal', archived: 'archived' },
+      signal,
+    )
+
+    expect(request).toHaveBeenCalledWith(
+      '/organizations/org-a/deals/?search=Renewal&stage=proposal&archived=archived',
+      { signal },
+    )
+  })
+
+  it('archives through the tenant-scoped deal action', async () => {
+    await dealService.archive('org-a', 'deal/a')
+
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/deals/deal%2Fa/archive/', {
+      method: 'POST',
+    })
+  })
 })

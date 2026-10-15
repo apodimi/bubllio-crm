@@ -87,10 +87,10 @@ Owners and administrators can also view a tenant-scoped activity history and
 download a portable JSON export for their workspace. Neither endpoint exposes
 another workspace, SMTP passwords, authentication secrets, or invitation tokens.
 
-The table describes current endpoints; it is not a promise of per-record CRUD.
-For example, the current API can create/list companies and contacts, but has no
-company/contact update or delete endpoint. Account-level profile/password
-settings belong to the authenticated individual, independently of workspace role.
+The table describes current endpoints. Companies and contacts support tenant-scoped
+create, list, detail, update, archive/restore, and guarded permanent deletion.
+Account-level profile/password settings belong to the authenticated individual,
+independently of workspace role.
 
 Authorization is expressed as capabilities in
 `src/access/permissions.py`. This avoids scattering role comparisons
@@ -172,6 +172,11 @@ Only owners and administrators can list memberships:
 GET /api/v1/organizations/<organization_id>/members/
 ```
 
+Roles with `manage_crm` may retrieve the narrower company-assignment choices at
+`GET /api/v1/organizations/<organization_id>/companies/assignees/`. That endpoint
+returns only user IDs and display names required by the company owner selector;
+it does not expose membership roles or other membership-management metadata.
+
 Direct `POST` to the members endpoint is unavailable. Membership creation
 requires the email invitation and acceptance flow below.
 
@@ -229,6 +234,10 @@ Remove a membership:
 ```text
 DELETE /api/v1/organizations/<organization_id>/members/<membership_id>/
 ```
+
+Removing a member also clears that user's company account-owner assignments in
+the selected workspace and records the reassignment in company activity and
+timeline history. Assignments in any other workspace are left unchanged.
 
 ## Superusers
 

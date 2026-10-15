@@ -101,10 +101,11 @@ export const useAddCompanyTimelineNote = (organizationId: string, companyId: str
   })
 }
 
-export const useCompanyAssignees = (organizationId: string) =>
+export const useCompanyAssignees = (organizationId: string, enabled = true) =>
   useQuery({
     queryKey: [...companyKeys.byOrganization(organizationId), 'assignees'],
     queryFn: ({ signal }) => companyService.assignees(organizationId, signal),
+    enabled,
   })
 
 const useCompanyMutation = (organizationId: string) => {

@@ -153,6 +153,7 @@ Companies and contacts:
 GET  /api/v1/organizations/<organization_id>/companies/
 GET  /api/v1/organizations/<organization_id>/companies/?search=<term>
 GET  /api/v1/organizations/<organization_id>/companies/?lifecycle_stage=<stage>
+GET  /api/v1/organizations/<organization_id>/companies/?ordering=-updated_at
 POST /api/v1/organizations/<organization_id>/companies/
 GET  /api/v1/organizations/<organization_id>/companies/<company_id>/
 PATCH /api/v1/organizations/<organization_id>/companies/<company_id>/

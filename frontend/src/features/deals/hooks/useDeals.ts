@@ -1,12 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Deal, DealInput } from '../../../types/deal.types'
-import { dealService } from '../services/dealService'
+import { dealService, type DealFilters } from '../services/dealService'
 export const dealKeys = {
-  list: (org: string) => ['organizations', org, 'deals'] as const,
-  detail: (org: string, id: string) => [...dealKeys.list(org), id] as const,
+  byOrganization: (org: string) => ['organizations', org, 'deals'] as const,
+  list: (org: string, filters: DealFilters = {}) =>
+    [...dealKeys.byOrganization(org), 'list', filters] as const,
+  detail: (org: string, id: string) => [...dealKeys.byOrganization(org), 'detail', id] as const,
 }
-export const useDeals = (org: string) =>
-  useQuery({ queryKey: dealKeys.list(org), queryFn: ({ signal }) => dealService.list(org, signal) })
+export const useDeals = (org: string, filters: DealFilters = {}) =>
+  useQuery({
+    queryKey: dealKeys.list(org, filters),
+    queryFn: ({ signal }) => dealService.list(org, filters, signal),
+  })
 export const useDeal = (org: string, id: string) =>
   useQuery({
     queryKey: dealKeys.detail(org, id),
@@ -18,42 +23,47 @@ export const useUpdateDeal = (org: string) => {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: Partial<Deal> }) =>
       dealService.update(org, id, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.list(org) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
   })
 }
 export const useCreateDeal = (org: string) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (body: DealInput) => dealService.create(org, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.list(org) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
   })
 }
 export const useUpdateDealRecord = (org: string, id: string) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (body: Partial<DealInput>) => dealService.update(org, id, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.list(org) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
   })
 }
-export const useMoveDeal = (org: string) => {
+export const useMoveDeal = (org: string, filters: DealFilters = {}) => {
   const client = useQueryClient()
+  const listKey = dealKeys.list(org, filters)
   return useMutation({
     mutationFn: ({ id, stage, position }: { id: string; stage: Deal['stage']; position: number }) =>
       dealService.move(org, id, stage, position),
     onMutate: async ({ id, stage, position }) => {
-      await client.cancelQueries({ queryKey: dealKeys.list(org) })
-      const previous = client.getQueryData<Deal[]>(dealKeys.list(org))
+      await client.cancelQueries({ queryKey: listKey })
+      const previous = client.getQueryData<Deal[]>(listKey)
       if (previous) {
         const moving = previous.find((deal) => deal.id === id)
         if (moving) {
           const others = previous.filter((deal) => deal.id !== id)
+          if (filters.stage && filters.stage !== stage) {
+            client.setQueryData<Deal[]>(listKey, others)
+            return { previous }
+          }
           const destination = others
             .filter((deal) => deal.stage === stage)
             .sort((a, b) => a.sort_order - b.sort_order)
           destination.splice(Math.min(position, destination.length), 0, { ...moving, stage })
           const positions = new Map(destination.map((deal, index) => [deal.id, index]))
           client.setQueryData<Deal[]>(
-            dealKeys.list(org),
+            listKey,
             others.concat(
               destination.map((deal) => ({
                 ...deal,
@@ -65,8 +75,23 @@ export const useMoveDeal = (org: string) => {
       }
       return { previous }
     },
-    onError: (_error, _variables, context) =>
-      client.setQueryData(dealKeys.list(org), context?.previous),
-    onSettled: () => client.invalidateQueries({ queryKey: dealKeys.list(org) }),
+    onError: (_error, _variables, context) => client.setQueryData(listKey, context?.previous),
+    onSettled: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+  })
+}
+
+export const useArchiveDeal = (org: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => dealService.archive(org, id),
+    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+  })
+}
+
+export const useDeleteDeal = (org: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => dealService.remove(org, id),
+    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
   })
 }

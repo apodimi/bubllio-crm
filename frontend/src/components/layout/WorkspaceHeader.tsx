@@ -141,47 +141,96 @@ export function WorkspaceHeader({
             onClose={() => setWorkspaceAnchor(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ paper: { sx: { minWidth: 260, mt: 0.75, p: 0.5 } } }}
+            slotProps={{
+              paper: {
+                elevation: 3,
+                sx: {
+                  width: 288,
+                  maxWidth: 'calc(100vw - 24px)',
+                  maxHeight: 'min(420px, calc(100dvh - 24px))',
+                  mt: 0.75,
+                  p: 0.75,
+                  borderRadius: 1.5,
+                },
+              },
+            }}
           >
             {organizations.map((organization) => (
               <MenuItem
                 key={organization.id}
-                selected={organization.id === organizationId}
+                aria-current={organization.id === organizationId ? 'page' : undefined}
                 onClick={() => {
                   setWorkspaceAnchor(null)
                   onOrganizationChange(organization.id)
                 }}
-                sx={{ borderRadius: 1 }}
+                sx={{
+                  minHeight: 44,
+                  px: 1,
+                  borderRadius: 1,
+                  color: organization.id === organizationId ? 'text.primary' : 'text.secondary',
+                  '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
+                }}
               >
                 <Avatar
                   sx={{
-                    width: 28,
-                    height: 28,
+                    width: 30,
+                    height: 30,
                     mr: 1.25,
-                    bgcolor: 'action.selected',
-                    color: 'primary.main',
+                    borderRadius: 1,
+                    bgcolor: organization.id === organizationId ? 'text.primary' : 'action.hover',
+                    color:
+                      organization.id === organizationId ? 'background.paper' : 'text.secondary',
                     fontSize: 11,
                     fontWeight: 800,
                   }}
                 >
                   {organizationInitials(organization.name)}
                 </Avatar>
-                <Typography variant="body2" noWrap sx={{ flex: 1, fontWeight: 600 }}>
+                <Typography
+                  variant="body2"
+                  noWrap
+                  sx={{
+                    flex: 1,
+                    fontWeight: organization.id === organizationId ? 700 : 550,
+                  }}
+                >
                   {organization.name}
                 </Typography>
                 {organization.id === organizationId ? (
-                  <CheckRounded color="primary" fontSize="small" />
+                  <CheckRounded color="primary" sx={{ ml: 1, fontSize: 19 }} />
                 ) : null}
               </MenuItem>
             ))}
-            <Divider sx={{ my: 0.5 }} />
+            <Divider sx={{ my: 0.75 }} />
             <MenuItem
               component={Link}
               to="/"
               onClick={() => setWorkspaceAnchor(null)}
-              sx={{ borderRadius: 1 }}
+              sx={{
+                minHeight: 44,
+                px: 1,
+                borderRadius: 1,
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
+              }}
             >
-              {t('common.allWorkspaces')}
+              <Box
+                sx={{
+                  display: 'grid',
+                  width: 30,
+                  height: 30,
+                  mr: 1.25,
+                  placeItems: 'center',
+                  borderRadius: 1,
+                  bgcolor: 'action.hover',
+                }}
+              >
+                <BusinessRounded sx={{ fontSize: 17 }} />
+              </Box>
+              <Typography variant="body2" sx={{ flex: 1, fontWeight: 600 }}>
+                {t('common.allWorkspaces')}
+              </Typography>
+              <KeyboardArrowRightRounded sx={{ ml: 1, fontSize: 19 }} />
             </MenuItem>
           </Menu>
         </Stack>

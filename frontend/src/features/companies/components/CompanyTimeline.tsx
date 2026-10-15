@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
 import AssignmentTurnedInRounded from '@mui/icons-material/AssignmentTurnedInRounded'
 import BusinessRounded from '@mui/icons-material/BusinessRounded'
 import HandshakeRounded from '@mui/icons-material/HandshakeRounded'
@@ -21,21 +20,24 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
+import type { TFunction } from 'i18next'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 import { Failure } from '../../../components/common/Feedback'
 import type { CompanyTimelineCategory, CompanyTimelineEvent } from '../../../types/company.types'
 import { timelineNoteSchema, type TimelineNoteFormValues } from '../companySchema'
 import { useAddCompanyTimelineNote, useCompanyTimeline } from '../hooks/useCompanies'
 
-const filters: Array<{ value: 'all' | CompanyTimelineCategory; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'note', label: 'Notes' },
-  { value: 'task', label: 'Tasks' },
-  { value: 'deal', label: 'Deals' },
-  { value: 'contact', label: 'Contacts' },
-  { value: 'service', label: 'Services' },
-  { value: 'payment', label: 'Payments' },
+const filters: Array<'all' | CompanyTimelineCategory> = [
+  'all',
+  'note',
+  'task',
+  'deal',
+  'contact',
+  'service',
+  'payment',
 ]
 
 function timelineIcon(category: CompanyTimelineCategory) {
@@ -61,84 +63,208 @@ function humanize(value?: string) {
   return value?.replaceAll('_', ' ') ?? ''
 }
 
-function eventCopy(event: CompanyTimelineEvent): { title: string; detail?: string } {
+function translatedValue(value: string | undefined, t: TFunction) {
+  const normalized = value ?? ''
+  const knownValues: Record<string, string> = {
+    lead: t('crm.companies.timeline.values.lead'),
+    qualified: t('crm.companies.timeline.values.qualified'),
+    proposal: t('crm.companies.timeline.values.proposal'),
+    negotiation: t('crm.companies.timeline.values.negotiation'),
+    won: t('crm.companies.timeline.values.won'),
+    lost: t('crm.companies.timeline.values.lost'),
+    todo: t('crm.companies.timeline.values.todo'),
+    in_progress: t('crm.companies.timeline.values.inProgress'),
+    waiting: t('crm.companies.timeline.values.waiting'),
+    completed: t('crm.companies.timeline.values.completed'),
+    active: t('crm.companies.timeline.values.active'),
+    paused: t('crm.companies.timeline.values.paused'),
+    cancelling: t('crm.companies.timeline.values.cancelling'),
+    cancelled: t('crm.companies.timeline.values.cancelled'),
+    expired: t('crm.companies.timeline.values.expired'),
+  }
+  return knownValues[normalized] ?? humanize(normalized)
+}
+
+function translatedField(value: string, t: TFunction) {
+  const knownFields: Record<string, string> = {
+    name: t('crm.companies.form.name'),
+    tax_id: t('crm.companies.profileContent.taxId'),
+    industry: t('crm.companies.profileContent.industry'),
+    email: t('crm.companies.profileContent.email'),
+    phone_number: t('crm.companies.profileContent.phone'),
+    website: t('crm.companies.profileContent.website'),
+    address_line_1: t('crm.companies.profileContent.address'),
+    address_line_2: t('crm.companies.form.addressLine2'),
+    city: t('crm.companies.form.city'),
+    postal_code: t('crm.companies.form.postalCode'),
+    country: t('crm.companies.form.country'),
+    notes: t('crm.companies.profileContent.internalNotes'),
+    lifecycle_stage: t('crm.companies.form.stage'),
+    assigned_to: t('crm.companies.profileContent.accountOwner'),
+  }
+  return knownFields[value] ?? humanize(value)
+}
+
+function eventCopy(
+  event: CompanyTimelineEvent,
+  t: TFunction,
+  locale: string,
+): { title: string; detail?: string } {
   const details = event.details
   switch (event.event_type) {
     case 'company.created':
-      return { title: 'Company added' }
+      return { title: t('crm.companies.timeline.events.companyAdded') }
     case 'company.updated':
       return {
-        title: 'Company details updated',
-        detail: details.fields?.map(humanize).join(', '),
+        title: t('crm.companies.timeline.events.companyUpdated'),
+        detail: details.fields?.map((field) => translatedField(field, t)).join(', '),
       }
     case 'company.assigned':
-      return { title: 'Account owner changed' }
+      return { title: t('crm.companies.timeline.events.ownerChanged') }
     case 'company.archived':
-      return { title: 'Company archived' }
+      return { title: t('crm.companies.timeline.events.companyArchived') }
     case 'company.restored':
-      return { title: 'Company restored' }
+      return { title: t('crm.companies.timeline.events.companyRestored') }
     case 'contact.created':
-      return { title: `Contact added${details.contact_name ? `: ${details.contact_name}` : ''}` }
+      return {
+        title: t('crm.companies.timeline.events.contactAdded', {
+          name: details.contact_name ?? t('crm.companies.detail.contactFallback'),
+        }),
+      }
     case 'contact.updated':
-      return { title: `Contact updated: ${details.contact_name ?? 'Contact'}` }
+      return {
+        title: t('crm.companies.timeline.events.contactUpdated', {
+          name: details.contact_name ?? t('crm.companies.detail.contactFallback'),
+        }),
+      }
     case 'contact.assigned':
-      return { title: `Contact owner changed: ${details.contact_name ?? 'Contact'}` }
+      return {
+        title: t('crm.companies.timeline.events.contactOwnerChanged', {
+          name: details.contact_name ?? t('crm.companies.detail.contactFallback'),
+        }),
+      }
     case 'contact.archived':
-      return { title: `Contact archived: ${details.contact_name ?? 'Contact'}` }
+      return {
+        title: t('crm.companies.timeline.events.contactArchived', {
+          name: details.contact_name ?? t('crm.companies.detail.contactFallback'),
+        }),
+      }
     case 'contact.restored':
-      return { title: `Contact restored: ${details.contact_name ?? 'Contact'}` }
+      return {
+        title: t('crm.companies.timeline.events.contactRestored', {
+          name: details.contact_name ?? t('crm.companies.detail.contactFallback'),
+        }),
+      }
     case 'deal.created':
-      return { title: `Deal added: ${details.deal_title ?? 'Deal'}` }
+      return {
+        title: t('crm.companies.timeline.events.dealAdded', {
+          name: details.deal_title ?? t('crm.companies.timeline.dealFallback'),
+        }),
+      }
     case 'deal.updated':
-      return { title: `Deal updated: ${details.deal_title ?? 'Deal'}` }
+      return {
+        title: t('crm.companies.timeline.events.dealUpdated', {
+          name: details.deal_title ?? t('crm.companies.timeline.dealFallback'),
+        }),
+      }
     case 'deal.stage_changed':
       return {
-        title: `Deal moved: ${details.deal_title ?? 'Deal'}`,
-        detail: `${humanize(details.from_stage)} → ${humanize(details.to_stage)}`,
+        title: t('crm.companies.timeline.events.dealMoved', {
+          name: details.deal_title ?? t('crm.companies.timeline.dealFallback'),
+        }),
+        detail: t('crm.companies.timeline.transition', {
+          from: translatedValue(details.from_stage, t),
+          to: translatedValue(details.to_stage, t),
+        }),
       }
     case 'deal.archived':
-      return { title: `Deal archived: ${details.deal_title ?? 'Deal'}` }
+      return {
+        title: t('crm.companies.timeline.events.dealArchived', {
+          name: details.deal_title ?? t('crm.companies.timeline.dealFallback'),
+        }),
+      }
     case 'deal.restored':
-      return { title: `Deal restored: ${details.deal_title ?? 'Deal'}` }
+      return {
+        title: t('crm.companies.timeline.events.dealRestored', {
+          name: details.deal_title ?? t('crm.companies.timeline.dealFallback'),
+        }),
+      }
     case 'task.created':
-      return { title: `Task added: ${details.task_title ?? 'Task'}` }
+      return {
+        title: t('crm.companies.timeline.events.taskAdded', {
+          name: details.task_title ?? t('crm.companies.timeline.taskFallback'),
+        }),
+      }
     case 'task.updated':
-      return { title: `Task updated: ${details.task_title ?? 'Task'}` }
+      return {
+        title: t('crm.companies.timeline.events.taskUpdated', {
+          name: details.task_title ?? t('crm.companies.timeline.taskFallback'),
+        }),
+      }
     case 'task.completed':
-      return { title: `Task completed: ${details.task_title ?? 'Task'}` }
+      return {
+        title: t('crm.companies.timeline.events.taskCompleted', {
+          name: details.task_title ?? t('crm.companies.timeline.taskFallback'),
+        }),
+      }
     case 'task.reopened':
-      return { title: `Task reopened: ${details.task_title ?? 'Task'}` }
+      return {
+        title: t('crm.companies.timeline.events.taskReopened', {
+          name: details.task_title ?? t('crm.companies.timeline.taskFallback'),
+        }),
+      }
     case 'task.status_changed':
       return {
-        title: `Task status changed: ${details.task_title ?? 'Task'}`,
-        detail: `${humanize(details.from_status)} → ${humanize(details.to_status)}`,
+        title: t('crm.companies.timeline.events.taskStatusChanged', {
+          name: details.task_title ?? t('crm.companies.timeline.taskFallback'),
+        }),
+        detail: t('crm.companies.timeline.transition', {
+          from: translatedValue(details.from_status, t),
+          to: translatedValue(details.to_status, t),
+        }),
       }
     case 'service.created':
-      return { title: `Service started: ${details.subscription_name ?? 'Customer service'}` }
+      return {
+        title: t('crm.companies.timeline.events.serviceStarted', {
+          name: details.subscription_name ?? t('crm.companies.timeline.serviceFallback'),
+        }),
+      }
     case 'service.updated':
-      return { title: `Service updated: ${details.subscription_name ?? 'Customer service'}` }
+      return {
+        title: t('crm.companies.timeline.events.serviceUpdated', {
+          name: details.subscription_name ?? t('crm.companies.timeline.serviceFallback'),
+        }),
+      }
     case 'service.status_changed':
       return {
-        title: `Service status changed: ${details.subscription_name ?? 'Customer service'}`,
-        detail: humanize(details.to_status),
+        title: t('crm.companies.timeline.events.serviceStatusChanged', {
+          name: details.subscription_name ?? t('crm.companies.timeline.serviceFallback'),
+        }),
+        detail: translatedValue(details.to_status, t),
       }
     case 'payment.recorded': {
       const amount = Number(details.amount)
       const formatted = Number.isFinite(amount)
-        ? amount.toLocaleString(undefined, {
+        ? amount.toLocaleString(locale, {
             style: 'currency',
             currency: details.currency ?? 'EUR',
           })
         : details.amount
       return {
-        title: `Payment recorded${formatted ? `: ${formatted}` : ''}`,
+        title: formatted
+          ? t('crm.companies.timeline.events.paymentRecorded', { amount: formatted })
+          : t('crm.companies.timeline.events.paymentRecordedNoAmount'),
         detail: details.subscription_name,
       }
     }
     case 'note.added':
-      return { title: 'Note added' }
+      return { title: t('crm.companies.timeline.events.noteAdded') }
     default:
-      return { title: humanize(event.event_type) }
+      return {
+        title: t('crm.companies.timeline.events.unknown', {
+          event: humanize(event.event_type),
+        }),
+      }
   }
 }
 
@@ -167,6 +293,7 @@ export function CompanyTimeline({
   companyId: string
   canManage: boolean
 }) {
+  const { t, i18n } = useTranslation()
   const [category, setCategory] = useState<CompanyTimelineCategory | undefined>()
   const timeline = useCompanyTimeline(organizationId, companyId, category)
   const addNote = useAddCompanyTimelineNote(organizationId, companyId)
@@ -194,9 +321,9 @@ export function CompanyTimeline({
         }}
       >
         <Box>
-          <Typography variant="h6">Customer timeline</Typography>
+          <Typography variant="h6">{t('crm.companies.timeline.title')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Notes, relationship changes, follow-ups, deals, services, and payments
+            {t('crm.companies.timeline.description')}
           </Typography>
         </Box>
         <Box sx={{ display: { xs: 'none', sm: 'block' }, maxWidth: '100%' }}>
@@ -204,14 +331,14 @@ export function CompanyTimeline({
             exclusive
             size="small"
             value={category ?? 'all'}
-            aria-label="Filter customer timeline"
+            aria-label={t('crm.companies.timeline.filterAria')}
             onChange={(_, value: 'all' | CompanyTimelineCategory | null) => {
               if (value) setCategory(value === 'all' ? undefined : value)
             }}
           >
             {filters.map((filter) => (
-              <ToggleButton key={filter.value} value={filter.value} sx={{ whiteSpace: 'nowrap' }}>
-                {filter.label}
+              <ToggleButton key={filter} value={filter} sx={{ whiteSpace: 'nowrap' }}>
+                {t(`crm.companies.timeline.filters.${filter}`)}
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
@@ -219,7 +346,7 @@ export function CompanyTimeline({
         <TextField
           select
           size="small"
-          label="Timeline filter"
+          label={t('crm.companies.timeline.filterLabel')}
           value={category ?? 'all'}
           onChange={(event) => {
             const value = event.target.value as 'all' | CompanyTimelineCategory
@@ -228,8 +355,8 @@ export function CompanyTimeline({
           sx={{ display: { xs: 'flex', sm: 'none' } }}
         >
           {filters.map((filter) => (
-            <MenuItem key={filter.value} value={filter.value}>
-              {filter.label}
+            <MenuItem key={filter} value={filter}>
+              {t(`crm.companies.timeline.filters.${filter}`)}
             </MenuItem>
           ))}
         </TextField>
@@ -250,10 +377,14 @@ export function CompanyTimeline({
                 fullWidth
                 multiline
                 minRows={2}
-                label="Add a note"
-                placeholder="Record a decision, conversation, or customer context…"
+                label={t('crm.companies.timeline.addNote')}
+                placeholder={t('crm.companies.timeline.notePlaceholder')}
                 error={Boolean(fieldState.error)}
-                helperText={fieldState.error?.message ?? 'Visible to everyone in this workspace.'}
+                helperText={
+                  fieldState.error
+                    ? t('crm.companies.timeline.noteRequired')
+                    : t('crm.companies.timeline.noteHint')
+                }
                 disabled={addNote.isPending}
               />
             )}
@@ -265,7 +396,9 @@ export function CompanyTimeline({
           ) : null}
           <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: 1.5 }}>
             <Button type="submit" variant="contained" disabled={addNote.isPending}>
-              {addNote.isPending ? 'Adding…' : 'Add note'}
+              {addNote.isPending
+                ? t('crm.companies.timeline.addingNote')
+                : t('crm.companies.timeline.addNoteAction')}
             </Button>
           </Stack>
         </Box>
@@ -279,18 +412,19 @@ export function CompanyTimeline({
       ) : null}
       {timeline.isSuccess && events.length === 0 ? (
         <Box sx={{ px: 3, py: 5, textAlign: 'center' }}>
-          <Typography sx={{ fontWeight: 700 }}>No timeline entries yet</Typography>
+          <Typography sx={{ fontWeight: 700 }}>{t('crm.companies.timeline.emptyTitle')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {category
-              ? 'Choose another filter to see the rest of this customer’s history.'
-              : 'New notes and CRM activity will appear here in chronological order.'}
+              ? t('crm.companies.timeline.emptyFiltered')
+              : t('crm.companies.timeline.emptyDescription')}
           </Typography>
         </Box>
       ) : null}
       {timeline.isSuccess && events.length > 0 ? (
         <Stack divider={<Divider />}>
           {events.map((event) => {
-            const copy = eventCopy(event)
+            const locale = i18n.resolvedLanguage ?? i18n.language
+            const copy = eventCopy(event, t, locale)
             return (
               <Box
                 key={event.id}
@@ -354,7 +488,7 @@ export function CompanyTimeline({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {new Intl.DateTimeFormat(undefined, {
+                  {new Intl.DateTimeFormat(locale, {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   }).format(new Date(event.occurred_at))}
@@ -368,7 +502,9 @@ export function CompanyTimeline({
                 onClick={() => void timeline.fetchNextPage()}
                 disabled={timeline.isFetchingNextPage}
               >
-                {timeline.isFetchingNextPage ? 'Loading…' : 'Load earlier activity'}
+                {timeline.isFetchingNextPage
+                  ? t('common.loading')
+                  : t('crm.companies.timeline.loadEarlier')}
               </Button>
             </Box>
           ) : null}

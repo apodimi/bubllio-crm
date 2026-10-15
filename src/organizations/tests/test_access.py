@@ -7,6 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from companies.models import Company, CompanyActivity, CompanyTimelineEvent
 from ..models import (
     EmailAccount,
     Organization,
@@ -175,6 +176,70 @@ class MembershipManagementTests(APITestCase):
         self.assertEqual(event.target_user, self.member)
         self.assertEqual(event.organization_id, self.organization.id)
         self.assertEqual(event.details, {"role": "member"})
+
+    def test_member_removal_unassigns_only_selected_workspace_companies(self):
+        other = Organization.objects.create(name="Other", slug="other")
+        OrganizationMembership.objects.create(
+            organization=other,
+            user=self.member,
+            role=OrganizationMembership.Role.OWNER,
+        )
+        selected = Company.objects.create(
+            organization=self.organization,
+            name="Selected workspace company",
+            assigned_to=self.member,
+        )
+        untouched = Company.objects.create(
+            organization=other,
+            name="Other workspace company",
+            assigned_to=self.member,
+        )
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.delete(self.detail_url(self.member_membership))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        selected.refresh_from_db()
+        untouched.refresh_from_db()
+        self.assertIsNone(selected.assigned_to)
+        self.assertEqual(untouched.assigned_to, self.member)
+        activity = CompanyActivity.objects.get(
+            company=selected,
+            action=CompanyActivity.Action.ASSIGNED,
+        )
+        self.assertEqual(activity.actor, self.owner)
+        self.assertEqual(
+            activity.details,
+            {"fields": ["assigned_to"], "reason": "membership_removed"},
+        )
+        self.assertTrue(
+            CompanyTimelineEvent.objects.filter(
+                company=selected,
+                event_type=CompanyTimelineEvent.EventType.COMPANY_ASSIGNED,
+            ).exists()
+        )
+        self.assertFalse(CompanyActivity.objects.filter(company=untouched).exists())
+
+    def test_member_removal_rolls_back_when_company_audit_fails(self):
+        company = Company.objects.create(
+            organization=self.organization,
+            name="Assigned company",
+            assigned_to=self.member,
+        )
+        self.client.force_authenticate(self.owner)
+
+        with patch(
+            "companies.services.record_company_activity",
+            side_effect=RuntimeError("audit unavailable"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.delete(self.detail_url(self.member_membership))
+
+        company.refresh_from_db()
+        self.assertEqual(company.assigned_to, self.member)
+        self.assertTrue(
+            OrganizationMembership.objects.filter(pk=self.member_membership.pk).exists()
+        )
 
     def test_admin_cannot_change_or_remove_another_admin(self):
         second_admin = User.objects.create_user(username="second-admin")

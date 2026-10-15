@@ -1,9 +1,12 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from organizations.models import Organization, OrganizationMembership
+from contacts.models import Contact
 
 from .models import Company, CompanyActivity, CompanyTimelineEvent
 
@@ -67,6 +70,12 @@ class CompanyTenantAccessTests(APITestCase):
         return reverse(
             f"company-{action}",
             kwargs={"organization_id": self.organization.id, "company_id": company.id},
+        )
+
+    def assignees_url(self, organization=None):
+        return reverse(
+            "company-assignee-list",
+            kwargs={"organization_id": (organization or self.organization).id},
         )
 
     def test_member_lists_only_companies_in_selected_organization(self):
@@ -187,6 +196,56 @@ class CompanyTenantAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["name"] for item in response.data], ["Current Customer"])
 
+    def test_company_list_supports_strict_stable_ordering(self):
+        Company.objects.create(organization=self.organization, name="Alpha")
+        Company.objects.create(organization=self.organization, name="Zulu")
+        first_tie = Company.objects.create(organization=self.organization, name="Same")
+        second_tie = Company.objects.create(organization=self.organization, name="Same")
+        self.client.force_authenticate(self.user)
+
+        ascending = self.client.get(self.url(), {"ordering": "name"})
+        descending = self.client.get(self.url(), {"ordering": "-name"})
+        by_updated = self.client.get(self.url(), {"ordering": "-updated_at"})
+        invalid = self.client.get(self.url(), {"ordering": "notes"})
+
+        self.assertEqual(
+            [item["name"] for item in ascending.data],
+            ["Alpha", "Same", "Same", "Visible Company", "Zulu"],
+        )
+        self.assertEqual(
+            [item["name"] for item in descending.data],
+            ["Zulu", "Visible Company", "Same", "Same", "Alpha"],
+        )
+        tied_ids = [item["id"] for item in ascending.data if item["name"] == "Same"]
+        self.assertEqual(tied_ids, sorted((str(first_tie.id), str(second_tie.id))))
+        self.assertEqual(by_updated.status_code, status.HTTP_200_OK)
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("ordering", invalid.data)
+
+    def test_assignee_choices_require_manage_crm_and_are_tenant_scoped(self):
+        viewer = User.objects.create_user(username="viewer")
+        OrganizationMembership.objects.create(
+            organization=self.organization,
+            user=viewer,
+            role=OrganizationMembership.Role.VIEWER,
+        )
+        self.client.force_authenticate(viewer)
+        self.assertEqual(
+            self.client.get(self.assignees_url()).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(self.assignees_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {item["id"] for item in response.data},
+            {self.user.id, viewer.id},
+        )
+        self.assertNotIn(self.other_user.id, {item["id"] for item in response.data})
+        self.assertTrue(all("role" not in item for item in response.data))
+
     def test_company_list_rejects_invalid_lifecycle_stage(self):
         self.client.force_authenticate(self.user)
 
@@ -302,6 +361,67 @@ class CompanyTenantAccessTests(APITestCase):
             list(company.activities.values_list("action", flat=True)),
             [CompanyActivity.Action.RESTORED, CompanyActivity.Action.ARCHIVED],
         )
+
+    def test_archiving_company_only_changes_company_record_visibility(self):
+        company = Company.objects.get(name="Visible Company")
+        contact = Contact.objects.create(
+            organization=self.organization,
+            company=company,
+            first_name="Maria",
+        )
+        self.client.force_authenticate(self.user)
+
+        archived = self.client.post(self.action_url(company, "archive"))
+        contacts = self.client.get(
+            reverse(
+                "contact-list",
+                kwargs={"organization_id": self.organization.id},
+            ),
+            {"company": company.id},
+        )
+
+        contact.refresh_from_db()
+        self.assertEqual(archived.status_code, status.HTTP_200_OK)
+        self.assertIsNone(contact.archived_at)
+        self.assertEqual([item["id"] for item in contacts.data], [str(contact.id)])
+
+    def test_company_changes_roll_back_when_audit_recording_fails(self):
+        company = Company.objects.get(name="Visible Company")
+        self.client.force_authenticate(self.user)
+
+        with patch(
+            "companies.services.record_company_activity",
+            side_effect=RuntimeError("audit unavailable"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.patch(
+                    self.detail_url(company),
+                    {"name": "Should roll back"},
+                    format="json",
+                )
+        company.refresh_from_db()
+        self.assertEqual(company.name, "Visible Company")
+
+        with patch(
+            "companies.services.record_company_activity",
+            side_effect=RuntimeError("audit unavailable"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.action_url(company, "archive"))
+        company.refresh_from_db()
+        self.assertIsNone(company.archived_at)
+
+        self.client.post(self.action_url(company, "archive"))
+        company.refresh_from_db()
+        self.assertIsNotNone(company.archived_at)
+        with patch(
+            "companies.services.record_company_activity",
+            side_effect=RuntimeError("audit unavailable"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.action_url(company, "restore"))
+        company.refresh_from_db()
+        self.assertIsNotNone(company.archived_at)
 
     def test_activity_endpoint_records_changed_fields(self):
         company = Company.objects.get(name="Visible Company")

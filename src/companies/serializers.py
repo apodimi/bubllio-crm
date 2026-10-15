@@ -144,4 +144,4 @@ class CompanyAssigneeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrganizationMembership
-        fields = ("id", "name", "role")
+        fields = ("id", "name")

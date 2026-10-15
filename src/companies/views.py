@@ -2,7 +2,6 @@ import uuid
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -20,7 +19,13 @@ from .serializers import (
     CompanyTimelineNoteSerializer,
     CrmSummarySerializer,
 )
-from .services import create_company, record_company_activity, record_company_timeline_event
+from .services import (
+    archive_company,
+    create_company,
+    record_company_timeline_event,
+    restore_company,
+    update_company,
+)
 from .summary import crm_summary
 
 
@@ -99,7 +104,31 @@ class CompanyListCreateAPIView(APIView):
         elif assigned_to:
             companies = companies.filter(assigned_to_id=assigned_to)
 
-        return collection_response(request, companies.order_by("name", "id"), CompanySerializer)
+        ordering = request.query_params.get("ordering", "name")
+        descending = ordering.startswith("-")
+        ordering_field = ordering[1:] if descending else ordering
+        allowed_ordering_fields = {
+            "name",
+            "updated_at",
+            "created_at",
+            "lifecycle_stage",
+        }
+        if ordering_field not in allowed_ordering_fields:
+            return Response(
+                {
+                    "ordering": [
+                        "Choose name, updated_at, created_at, or lifecycle_stage; "
+                        "prefix with - for descending order."
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ordering_expression = f"-{ordering_field}" if descending else ordering_field
+        return collection_response(
+            request,
+            companies.order_by(ordering_expression, "id"),
+            CompanySerializer,
+        )
 
     def post(self, request, organization_id):
         organization = get_organization_for_user(
@@ -123,7 +152,7 @@ class CompanyAssigneeListAPIView(APIView):
         organization = get_organization_for_user(
             user=request.user,
             organization_id=organization_id,
-            capability=Capability.VIEW_CRM,
+            capability=Capability.MANAGE_CRM,
         )
         memberships = organization.memberships.select_related("user").order_by(
             "user__username"
@@ -162,22 +191,12 @@ class CompanyDetailAPIView(APIView):
             context={"organization": organization},
         )
         serializer.is_valid(raise_exception=True)
-        changed_fields = list(serializer.validated_data)
-        assignment_changed = "assigned_to" in changed_fields and (
-            serializer.validated_data["assigned_to"] != company.assigned_to
-        )
-        serializer.save()
-        record_company_activity(
+        company = update_company(
             company=company,
+            serializer=serializer,
             actor=request.user,
-            action=(
-                CompanyActivity.Action.ASSIGNED
-                if assignment_changed
-                else CompanyActivity.Action.UPDATED
-            ),
-            details={"fields": changed_fields},
         )
-        return Response(serializer.data)
+        return Response(CompanySerializer(company).data)
 
     def delete(self, request, organization_id, company_id):
         organization = get_organization_for_user(
@@ -297,14 +316,7 @@ class CompanyArchiveAPIView(APIView):
         company = get_company_by_public_reference(
             organization=organization, reference=company_id
         )
-        if not company.archived_at:
-            company.archived_at = timezone.now()
-            company.save(update_fields=("archived_at", "updated_at"))
-            record_company_activity(
-                company=company,
-                actor=request.user,
-                action=CompanyActivity.Action.ARCHIVED,
-            )
+        company = archive_company(company=company, actor=request.user)
         return Response(CompanySerializer(company).data)
 
 
@@ -320,12 +332,5 @@ class CompanyRestoreAPIView(APIView):
         company = get_company_by_public_reference(
             organization=organization, reference=company_id
         )
-        if company.archived_at:
-            company.archived_at = None
-            company.save(update_fields=("archived_at", "updated_at"))
-            record_company_activity(
-                company=company,
-                actor=request.user,
-                action=CompanyActivity.Action.RESTORED,
-            )
+        company = restore_company(company=company, actor=request.user)
         return Response(CompanySerializer(company).data)

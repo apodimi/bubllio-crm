@@ -22,6 +22,11 @@ export interface Company {
   archived_at: string | null
 }
 
+export interface CompanyAssignee {
+  id: number
+  name: string
+}
+
 export type CompanyInput = Omit<
   Company,
   | 'id'

@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from companies.services import unassign_companies_for_removed_member
 from organizations.models import OrganizationMembership, WorkspaceAccessEvent
 from access.permissions import Capability, get_membership, get_organization_for_user
 from organizations.serializers import OrganizationMembershipSerializer
@@ -40,7 +41,7 @@ class OrganizationMembershipDetailAPIView(APIView):
         )
         requester = get_membership(user=request.user, organization=organization)
         target = get_object_or_404(
-            OrganizationMembership.objects.select_related("user"),
+            OrganizationMembership.objects.select_for_update().select_related("user"),
             id=membership_id,
             organization=organization,
         )
@@ -118,6 +119,11 @@ class OrganizationMembershipDetailAPIView(APIView):
             )
         target_user = target.user
         previous_role = target.role
+        unassign_companies_for_removed_member(
+            organization=organization,
+            user=target_user,
+            actor=request.user,
+        )
         target.delete()
         WorkspaceAccessEvent.objects.create(
             action=WorkspaceAccessEvent.Action.REMOVE_MEMBER,

@@ -3,6 +3,40 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.5 — 2026-10-16
+
+### Added
+
+- reusable, URL-aware list controls for companies and contacts, with clearer
+  loading, empty, filtered, error, and mobile states;
+- a focused task workspace with inline Jira-style status changes, a read-only
+  details drawer, and a separate edit flow;
+- direct company ordering and tenant-scoped assignee choices for faster CRM
+  list workflows.
+
+### Changed
+
+- redesigned the overview, company, contact, deal, and task experiences around
+  compact operational views, clearer hierarchy, and responsive layouts;
+- refined the deals board with more actionable cards, persistent filters, and
+  safer next-action entry;
+- split the browser suite by CRM workflow and added component coverage for the
+  shared list and board configuration.
+
+### Fixed
+
+- company updates, archive/restore actions, and membership-driven assignment
+  cleanup now commit atomically with their audit history;
+- removing a workspace member clears only that member's company assignments in
+  the selected workspace and preserves assignments in every other workspace.
+
+### Upgrade notes
+
+- this release has no database migrations and is eligible for an online update
+  from version 0.2.4;
+- after deployment, verify sign-in, company/contact filtering, deal movement,
+  task status changes, task details, editing, and member removal.
+
 ## 0.2.4 — 2026-10-15
 
 ### Added

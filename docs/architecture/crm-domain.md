@@ -98,6 +98,11 @@ lists hide archived records by default, while explicit filters can show archived
 or all records. Permanent deletion remains an API-level operation for empty
 records only; a company with contacts cannot be deleted.
 
+Archiving changes the company record's visibility only. It does not implicitly
+archive or stop contacts, deals, tasks, customer services, charges, or payments.
+Those records keep their own lifecycle so an operator can finish or retain
+existing work explicitly instead of losing it through a hidden cascade.
+
 `CompanyActivity` records who created, updated, assigned, archived, or restored
 a company. It also records when a contact is added. Activity entries store safe
 metadata such as changed field names rather than previous field values.

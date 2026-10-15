@@ -3,6 +3,7 @@ import { organizationPath } from '../../organizations/services/organizationServi
 import type {
   Company,
   CompanyActivity,
+  CompanyAssignee,
   CompanyInput,
   CompanyTimelineCategory,
   CompanyTimelineEvent,
@@ -15,13 +16,18 @@ export interface CompanyFilters {
   lifecycleStage?: Company['lifecycle_stage'] | ''
   archived?: 'active' | 'archived' | 'all'
   assignedTo?: number | 'unassigned' | ''
+  ordering?: CompanyOrdering
 }
 
-export interface CompanyAssignee {
-  id: number
-  name: string
-  role: 'owner' | 'admin' | 'member' | 'viewer'
-}
+export type CompanyOrdering =
+  | 'name'
+  | '-name'
+  | 'updated_at'
+  | '-updated_at'
+  | 'created_at'
+  | '-created_at'
+  | 'lifecycle_stage'
+  | '-lifecycle_stage'
 
 const companyPath = (organizationId: string, companyId?: string) =>
   organizationPath(organizationId) +
@@ -37,6 +43,7 @@ export const companyService = {
     if (filters.lifecycleStage) params.set('lifecycle_stage', filters.lifecycleStage)
     if (filters.archived) params.set('archived', filters.archived)
     if (filters.assignedTo) params.set('assigned_to', String(filters.assignedTo))
+    if (filters.ordering) params.set('ordering', filters.ordering)
     return request<PageResult<Company>>(companyPath(organizationId) + '?' + params, { signal })
   },
   list: (organizationId: string, filters: CompanyFilters = {}, signal?: AbortSignal) => {
@@ -45,6 +52,7 @@ export const companyService = {
     if (filters.lifecycleStage) params.set('lifecycle_stage', filters.lifecycleStage)
     if (filters.archived) params.set('archived', filters.archived)
     if (filters.assignedTo) params.set('assigned_to', String(filters.assignedTo))
+    if (filters.ordering) params.set('ordering', filters.ordering)
     const query = params.toString()
     return request<Company[]>(companyPath(organizationId) + (query ? `?${query}` : ''), { signal })
   },

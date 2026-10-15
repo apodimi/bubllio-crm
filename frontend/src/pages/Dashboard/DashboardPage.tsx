@@ -10,7 +10,7 @@ import creditCard from '@iconify-icons/keyline-icons/credit-card'
 import listCheck from '@iconify-icons/keyline-icons/list-check'
 import plus from '@iconify-icons/keyline-icons/plus'
 import users from '@iconify-icons/keyline-icons/users'
-import { Icon, type IconifyIcon } from '@iconify/react'
+import type { IconifyIcon } from '@iconify/react'
 import {
   Alert,
   Box,
@@ -26,6 +26,7 @@ import { alpha } from '@mui/material/styles'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { AppIcon } from '../../components/common/AppIcon'
 import { Failure } from '../../components/common/Feedback'
 import { useCrmSummary } from '../../features/companies/hooks/useCompanies'
 import { useInvitations } from '../../features/invitations/hooks/useInvitations'
@@ -42,10 +43,6 @@ type DashboardRoute =
   | '/organizations/$organizationId/services/customer-services'
   | '/organizations/$organizationId/services/billing'
   | '/organizations/$organizationId/members'
-
-const KIcon = ({ icon, size = 20 }: { icon: IconifyIcon; size?: number }) => (
-  <Icon aria-hidden icon={icon} width={size} height={size} />
-)
 
 function Surface({ children, ...props }: ComponentProps<typeof Box> & { component?: ElementType }) {
   return (
@@ -92,7 +89,7 @@ function TextLink({
         }}
       >
         {children}
-        <KIcon icon={arrowRight} size={18} />
+        <AppIcon icon={arrowRight} size={18} />
       </Box>
     </Link>
   )
@@ -141,7 +138,7 @@ function QuickLink({
           '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
         }}
       >
-        <KIcon icon={icon} size={19} />
+        <AppIcon icon={icon} size={19} />
         {children}
       </Box>
     </Link>
@@ -406,7 +403,7 @@ export function DashboardPage() {
             <Typography id="next-action-heading" component="h2" sx={{ fontWeight: 750 }}>
               {t('crm.dashboard.nextAction')}
             </Typography>
-            <KIcon icon={listCheck} size={24} />
+            <AppIcon icon={listCheck} size={24} />
           </Stack>
           {todayTasks.isPending || overdueTasks.isPending ? (
             <Stack spacing={2} sx={{ mt: 8 }}>
@@ -464,7 +461,7 @@ export function DashboardPage() {
                     complete.isPending ? (
                       <CircularProgress size={18} />
                     ) : (
-                      <KIcon icon={checkCircle} />
+                      <AppIcon icon={checkCircle} />
                     )
                   }
                   sx={{ mt: 3, color: 'primary.main', bgcolor: 'primary.contrastText' }}
@@ -475,7 +472,7 @@ export function DashboardPage() {
             </Box>
           ) : (
             <Box sx={{ mt: { xs: 7, md: 9 }, maxWidth: 620 }}>
-              <KIcon icon={checkCircle} size={42} />
+              <AppIcon icon={checkCircle} size={42} />
               <Typography variant="h3" sx={{ mt: 2, color: 'inherit' }}>
                 {t('crm.dashboard.nothingDue')}
               </Typography>
@@ -500,7 +497,7 @@ export function DashboardPage() {
             <Typography id="attention-heading" component="h2" variant="h4">
               {t('crm.dashboard.attention')}
             </Typography>
-            <KIcon icon={bell} size={22} />
+            <AppIcon icon={bell} size={22} />
           </Stack>
           {billing.isPending ? (
             <Stack spacing={1.5} sx={{ mt: 3 }}>
@@ -545,7 +542,7 @@ export function DashboardPage() {
                       color: 'text.secondary',
                     }}
                   >
-                    <KIcon icon={icon as IconifyIcon} size={19} />
+                    <AppIcon icon={icon as IconifyIcon} size={19} />
                   </Box>
                   <Typography sx={{ flex: 1 }} color="text.secondary">
                     {label as ReactNode}
@@ -634,7 +631,7 @@ export function DashboardPage() {
               borderColor: 'divider',
             }}
           >
-            <KIcon icon={checkCircle} size={30} />
+            <AppIcon icon={checkCircle} size={30} />
             <Box>
               <Typography sx={{ fontWeight: 750 }}>{t('crm.dashboard.nothingDue')}</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -679,7 +676,7 @@ export function DashboardPage() {
                 {t('crm.dashboard.businessPulseDescription')}
               </Typography>
             </Box>
-            <KIcon icon={creditCard} size={22} />
+            <AppIcon icon={creditCard} size={22} />
           </Stack>
           {billing.data ? (
             <Box
@@ -769,7 +766,7 @@ export function DashboardPage() {
                       borderColor: 'divider',
                     }}
                   >
-                    <KIcon icon={metric.icon} size={20} />
+                    <AppIcon icon={metric.icon} size={20} />
                     <Typography
                       sx={{
                         mt: 1,
@@ -806,7 +803,7 @@ export function DashboardPage() {
           }}
         >
           <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5 }}>
-            <KIcon icon={users} size={22} />
+            <AppIcon icon={users} size={22} />
             <Box>
               <Typography id="invitations-heading" component="h2" sx={{ fontWeight: 750 }}>
                 {t('crm.dashboard.invitations')}
