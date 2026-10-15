@@ -224,7 +224,13 @@ class OrganizationSettingsAndEmailTests(APITestCase):
         return reverse("email-account-list", kwargs={"organization_id": self.organization.id})
 
     def create_account(self):
-        with patch.dict(os.environ, {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key}):
+        with patch.dict(
+            os.environ,
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key,
+            },
+        ):
             response = self.client.post(
                 self.email_list_url(),
                 {
@@ -325,7 +331,13 @@ class OrganizationSettingsAndEmailTests(APITestCase):
 
     def test_tls_and_ssl_cannot_both_be_enabled(self):
         self.client.force_authenticate(self.owner)
-        with patch.dict(os.environ, {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key}):
+        with patch.dict(
+            os.environ,
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key,
+            },
+        ):
             response = self.client.post(
                 self.email_list_url(),
                 {
@@ -344,7 +356,13 @@ class OrganizationSettingsAndEmailTests(APITestCase):
     def test_setting_another_account_as_default_is_atomic(self):
         self.client.force_authenticate(self.owner)
         first = self.create_account()
-        with patch.dict(os.environ, {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key}):
+        with patch.dict(
+            os.environ,
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key,
+            },
+        ):
             second = self.client.post(
                 self.email_list_url(),
                 {
@@ -402,7 +420,13 @@ class OrganizationSettingsAndEmailTests(APITestCase):
             kwargs={"organization_id": self.organization.id, "account_id": account.id},
         )
         with patch("organizations.api.email_accounts.send_test_email") as send:
-            with patch.dict(os.environ, {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key}):
+            with patch.dict(
+                os.environ,
+                {
+                    "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                    "BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key,
+                },
+            ):
                 tested = self.client.post(test_url, {"recipient": "owner@example.com"}, format="json")
         self.assertEqual(tested.status_code, status.HTTP_200_OK)
         send.assert_called_once_with(account=account, recipient="owner@example.com")
@@ -441,7 +465,13 @@ class OrganizationSettingsAndEmailTests(APITestCase):
             "is_default": False,
             "is_active": True,
         }
-        with patch.dict(os.environ, {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key}):
+        with patch.dict(
+            os.environ,
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": self.encryption_key,
+            },
+        ):
             form = EmailAccountAdminForm(data=form_data)
             self.assertTrue(form.is_valid(), form.errors)
             account = form.save()

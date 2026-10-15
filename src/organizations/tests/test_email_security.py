@@ -18,7 +18,10 @@ class EmailEncryptionRotationTests(TestCase):
     def test_key_ring_decrypts_legacy_value_and_encrypts_with_primary_key(self):
         with patch.dict(
             "os.environ",
-            {"BUBLLIO_EMAIL_ENCRYPTION_KEY": self.old_key},
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": self.old_key,
+            },
             clear=False,
         ):
             legacy_value = encrypt_secret("legacy-secret")

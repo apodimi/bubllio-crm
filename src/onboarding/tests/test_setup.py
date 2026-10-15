@@ -111,7 +111,13 @@ class InstallationSetupTests(APITestCase):
             "use_ssl": False,
             "is_default": True,
         }
-        with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": key}):
+        with patch.dict(
+            "os.environ",
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": key,
+            },
+        ):
             response = self.client.post(self.url, {**self.payload, "smtp": smtp}, format="json")
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             account = EmailAccount.objects.get()
@@ -132,7 +138,13 @@ class InstallationSetupTests(APITestCase):
             "use_ssl": False,
             "is_default": True,
         }
-        with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": key}):
+        with patch.dict(
+            "os.environ",
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": key,
+            },
+        ):
             self.assertEqual(self.client.post(self.url, {**self.payload, "smtp": smtp}, format="json").status_code, 201)
             admin = get_user_model().objects.get(username="first-admin")
             self.client.force_authenticate(admin)
@@ -150,7 +162,13 @@ class InstallationSetupTests(APITestCase):
             self.assertEqual(decrypt_secret(account.encrypted_password), "new-secret")
 
     def test_smtp_without_encryption_key_cannot_create_partial_installation(self):
-        with patch.dict("os.environ", {"BUBLLIO_EMAIL_ENCRYPTION_KEY": ""}):
+        with patch.dict(
+            "os.environ",
+            {
+                "BUBLLIO_EMAIL_ENCRYPTION_KEYS": "",
+                "BUBLLIO_EMAIL_ENCRYPTION_KEY": "",
+            },
+        ):
             response = self.client.post(self.url, {**self.payload, "smtp": {
                 "name": "Primary", "host": "smtp.example.com", "port": 587,
                 "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
