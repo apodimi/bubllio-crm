@@ -8,6 +8,41 @@ scheduler, and the React application. Put a TLS-terminating reverse proxy or
 managed load balancer in front of port 8080. Do not expose PostgreSQL,
 RabbitMQ, or Django directly to the internet.
 
+## Server size and scaling
+
+The supplied defaults target a small but fully functional CRM installation:
+
+| Capacity | Starting point | Intended use |
+| --- | --- | --- |
+| Small production | 2 vCPU, 2 GB RAM | Small team, ordinary CRM use and transactional email |
+| Recommended headroom | 2-4 vCPU, 4 GB RAM | More users, imports, reporting, and safer update headroom |
+
+Use SSD storage and keep enough free disk space for PostgreSQL growth, image
+updates, logs, and temporary backups. A 1 GB host is not a supported production
+target for the complete six-service stack.
+
+The default process settings are three Gunicorn workers and two Celery worker
+processes. They prevent Celery from automatically creating one process per host
+CPU, which wastes memory on large hosts with light email traffic. Operators can
+scale without editing Compose:
+
+```dotenv
+GUNICORN_WORKERS=3
+GUNICORN_TIMEOUT=60
+CELERY_WORKER_CONCURRENCY=2
+```
+
+Increase `GUNICORN_WORKERS` for sustained API concurrency. Increase
+`CELERY_WORKER_CONCURRENCY` only when the email queue remains backed up and the
+SMTP provider permits additional parallel delivery. Change one setting at a
+time and watch memory, CPU, request latency, queue depth, and database load.
+Adding CPU alone does not require increasing either value.
+
+The Compose files intentionally do not impose universal container memory caps:
+an undersized cap can kill PostgreSQL or a worker during imports and upgrades.
+Set host or platform limits from measured workload data, while retaining enough
+headroom for the operating system, backups, and deployments.
+
 ## First deployment
 
 1. Copy `.env.production.example` to `.env.production` on the server.

@@ -19,6 +19,8 @@ The database and backend are intentionally not published on host ports.
 Have these ready:
 
 - a Dokploy server with a public IP;
+- at least 2 vCPU and 2 GB RAM; 4 GB RAM is recommended for operational
+  headroom, imports, and updates;
 - a DNS name such as `crm.example.com` pointing to that IP;
 - access to the Bubllio Git repository;
 - SMTP credentials for invitations and password resets, entered during setup;
@@ -69,10 +71,19 @@ DJANGO_SECURE_HSTS_PRELOAD=false
 BUBLLIO_APP_URL=https://crm.example.com
 BUBLLIO_SETUP_TOKEN=replace-with-a-random-one-time-token-at-least-32-characters
 BUBLLIO_EMAIL_ENCRYPTION_KEYS=replace-with-the-generated-fernet-key
+
+GUNICORN_WORKERS=3
+GUNICORN_TIMEOUT=60
+CELERY_WORKER_CONCURRENCY=2
 ```
 
 If the database password contains reserved URL characters, URL-encode it only in
 `DATABASE_URL`; keep the original value in `POSTGRES_PASSWORD`.
+
+These process counts are conservative production defaults. If request traffic
+or the background-email queue stays saturated, increase the corresponding value
+gradually and verify CPU, memory, latency, and queue depth after each change. Do
+not derive worker counts mechanically from the server's CPU count.
 
 Dokploy writes these values to the Compose `.env` file. The Bubllio Compose file
 references every required value explicitly, so secrets are passed only to the

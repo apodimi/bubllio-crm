@@ -66,6 +66,8 @@ services:
       BUBLLIO_UPDATE_AGENT_TIMEOUT: ${BUBLLIO_UPDATE_AGENT_TIMEOUT:-5}
       BUBLLIO_UPDATE_AGENT_ALLOW_INSECURE_HTTP: ${BUBLLIO_UPDATE_AGENT_ALLOW_INSECURE_HTTP:-false}
       CELERY_BROKER_URL: amqp://bubllio:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}@rabbitmq:5672/bubllio
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,7 +80,7 @@ services:
     image: ${BUBLLIO_BACKEND_IMAGE:-bubllio-crm-backend:local}
     restart: unless-stopped
     entrypoint: []
-    command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "worker", "--loglevel=INFO"]
+    command: [".venv/bin/celery", "--workdir=src", "-A", "bubllio_crm", "worker", "--loglevel=INFO", "--concurrency=${CELERY_WORKER_CONCURRENCY:-2}"]
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
       DJANGO_DEBUG: "false"
