@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { authService } from '../../features/auth/services/authService'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
@@ -9,13 +9,13 @@ import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
 export function ResetPasswordPage() {
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { uid?: string; token?: string }
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  const [resetComplete, setResetComplete] = useState(false)
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -40,8 +40,10 @@ export function ResetPasswordPage() {
     setPending(true)
     try {
       await authService.confirmPasswordReset(params.uid, params.token, password)
+      setPassword('')
+      setConfirmation('')
+      setResetComplete(true)
       setMessage(t('passwordReset.resetSuccess'))
-      setTimeout(() => void navigate({ to: '/' }), 800)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('passwordReset.resetFailed'))
     } finally {
@@ -56,14 +58,26 @@ export function ResetPasswordPage() {
         <Stack component="form" onSubmit={submit} spacing={2.5}>
           <LanguageSwitcher />
           <Typography variant="h4">
-            {hasToken ? t('passwordReset.newTitle') : t('passwordReset.requestTitle')}
+            {resetComplete
+              ? t('passwordReset.completeTitle')
+              : hasToken
+                ? t('passwordReset.newTitle')
+                : t('passwordReset.requestTitle')}
           </Typography>
           <Typography color="text.secondary">
-            {hasToken ? t('passwordReset.newDescription') : t('passwordReset.requestDescription')}
+            {resetComplete
+              ? t('passwordReset.completeDescription')
+              : hasToken
+                ? t('passwordReset.newDescription')
+                : t('passwordReset.requestDescription')}
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           {message && <Alert severity="success">{message}</Alert>}
-          {!hasToken ? (
+          {resetComplete ? (
+            <Button component={Link} to="/" variant="contained">
+              {t('passwordReset.signIn')}
+            </Button>
+          ) : !hasToken ? (
             <TextField
               label={t('passwordReset.email')}
               type="email"
@@ -91,13 +105,15 @@ export function ResetPasswordPage() {
               />
             </>
           )}
-          <Button type="submit" variant="contained" disabled={pending}>
-            {pending
-              ? t('passwordReset.submitting')
-              : hasToken
-                ? t('passwordReset.reset')
-                : t('passwordReset.sendLink')}
-          </Button>
+          {!resetComplete ? (
+            <Button type="submit" variant="contained" disabled={pending}>
+              {pending
+                ? t('passwordReset.submitting')
+                : hasToken
+                  ? t('passwordReset.reset')
+                  : t('passwordReset.sendLink')}
+            </Button>
+          ) : null}
         </Stack>
       </Paper>
     </Stack>

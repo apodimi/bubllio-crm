@@ -49,6 +49,23 @@ class UpdateRunSerializer(serializers.ModelSerializer):
         )
 
 
+class UpdateRunDetailSerializer(UpdateRunSerializer):
+    agent_connected = serializers.SerializerMethodField()
+    state_fresh = serializers.SerializerMethodField()
+
+    class Meta(UpdateRunSerializer.Meta):
+        fields = UpdateRunSerializer.Meta.fields + (
+            "agent_connected",
+            "state_fresh",
+        )
+
+    def get_agent_connected(self, obj) -> bool:
+        return self.context.get("agent_connected", True)
+
+    def get_state_fresh(self, obj) -> bool:
+        return self.context.get("state_fresh", True)
+
+
 class TargetVersionSerializer(serializers.Serializer):
     target_version = serializers.CharField(max_length=32)
 
@@ -168,14 +185,25 @@ class InstallationUpdateStartAPIView(APIView):
 
 class InstallationUpdateDetailAPIView(APIView):
     permission_classes = [IsInstallationAdmin]
-    serializer_class = UpdateRunSerializer
+    serializer_class = UpdateRunDetailSerializer
 
     def get(self, request, run_id):
         run = get_object_or_404(InstallationUpdateRun, pk=run_id)
+        agent_connected = True
+        state_fresh = True
         try:
             run = sync_update_run(run)
         except UpdateAgentUnavailable:
-            pass
-        response = Response(self.serializer_class(run).data)
+            agent_connected = False
+            state_fresh = False
+        response = Response(
+            self.serializer_class(
+                run,
+                context={
+                    "agent_connected": agent_connected,
+                    "state_fresh": state_fresh,
+                },
+            ).data
+        )
         response["Cache-Control"] = "private, no-store"
         return response

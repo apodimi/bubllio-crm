@@ -7,6 +7,7 @@ from .models import Charge, CustomerSubscription, Payment, ServiceCatalogItem
 from .services import (
     ensure_charge,
     record_payment,
+    update_subscription,
 )
 
 
@@ -175,6 +176,15 @@ class CustomerSubscriptionSerializer(serializers.ModelSerializer):
         subscription = super().create(validated_data)
         ensure_charge(subscription)
         return subscription
+
+    def update(self, instance, validated_data):
+        try:
+            return update_subscription(
+                subscription=instance,
+                validated_data=validated_data,
+            )
+        except ValueError as error:
+            raise serializers.ValidationError({"non_field_errors": [str(error)]}) from error
 
 class PaymentSerializer(serializers.ModelSerializer):
     recorded_by_name = serializers.SerializerMethodField()

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
@@ -11,9 +11,30 @@ test('dashboard avoids list downloads and catalog avoids billing requests', asyn
   await openAlpha(page)
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
   expect(requests.filter((path) => /\/(companies|contacts)\/$/.test(path))).toEqual([])
-  await page.goto('/organizations/alpha/services/catalog')
+  await page.goto(`/organizations/${fixtureIds.alphaOrganization}/services/catalog`)
   await expect(page.getByRole('heading', { name: 'Service catalog', exact: true })).toBeVisible()
   expect(requests.filter((path) => /\/services\/(charges|subscriptions)\/$/.test(path))).toEqual([])
+})
+
+test('My work links keep saved task and deal views across reload and back', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+
+  await page.getByRole('link', { name: 'All tasks' }).click()
+  await expect(page).toHaveURL(/\/tasks\?owner=me&view=focus|\/tasks\?view=focus&owner=me/)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible()
+
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible()
+  await page.getByRole('link', { name: 'Open deal' }).click()
+  await expect(page).toHaveURL(/view=no_next_action.*deal=|deal=.*view=no_next_action/)
+  await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
+  await page.goBack()
+  await page.getByRole('link', { name: 'View deals' }).click()
+  await expect(page).toHaveURL(/\/deals\?view=no_next_action/)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'No next action', pressed: true })).toBeVisible()
 })
 
 test('dashboard puts daily work first and supports completion with undo', async ({ page }) => {
@@ -21,8 +42,14 @@ test('dashboard puts daily work first and supports completion with undo', async 
   await openAlpha(page)
   const openTasks = page.getByRole('link', { name: 'Open tasks', exact: true })
   const addCompany = page.getByRole('link', { name: 'Add company', exact: true })
-  await expect(openTasks).toHaveAttribute('href', '/organizations/alpha/tasks?create=true')
-  await expect(addCompany).toHaveAttribute('href', '/organizations/alpha/companies?create=true')
+  await expect(openTasks).toHaveAttribute(
+    'href',
+    `/organizations/${fixtureIds.alphaOrganization}/tasks?create=true`,
+  )
+  await expect(addCompany).toHaveAttribute(
+    'href',
+    `/organizations/${fixtureIds.alphaOrganization}/companies?create=true`,
+  )
   await openTasks.click()
   await expect(page.getByRole('heading', { name: 'Add next action' })).toBeVisible()
   await page.getByLabel('What needs to happen?').fill('Call about renewal')
@@ -31,34 +58,17 @@ test('dashboard puts daily work first and supports completion with undo', async 
   await page.getByRole('combobox', { name: 'Owner' }).click()
   await page.getByRole('option', { name: 'Demo User' }).click()
   await page.getByRole('button', { name: 'Add task', exact: true }).click()
-  await page.getByRole('link', { name: 'Overview', exact: true }).click()
+  await page.getByRole('link', { name: 'My work', exact: true }).click()
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    /Welcome back\.\s*Move one thing forward\./,
-  )
-  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText('Next best action')
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
-    'Next best action',
-    'Needs attention',
-    'My day',
-    'Business pulse',
-    'Workspace at a glance',
-    'Pending invitations',
-  ])
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('My work')
+  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText("Today's tasks")
   await expect(page.getByText('1 people are still waiting to join.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Manage invitations' })).toHaveAttribute(
     'href',
-    '/organizations/alpha/members',
+    `/organizations/${fixtureIds.alphaOrganization}/members`,
   )
-  const desktopNextBox = await page
-    .getByRole('heading', { name: 'Next best action', level: 2 })
-    .boundingBox()
-  const desktopDayBox = await page.getByRole('heading', { name: 'My day', level: 2 }).boundingBox()
-  const desktopPulseBox = await page
-    .getByRole('heading', { name: 'Business pulse', level: 2 })
-    .boundingBox()
-  expect(desktopNextBox?.y).toBeLessThan(desktopDayBox?.y ?? 0)
-  expect(desktopDayBox?.y).toBeLessThan(desktopPulseBox?.y ?? 0)
+  await expect(page.getByRole('heading', { name: "Today's tasks", level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Needs attention', level: 2 })).toBeVisible()
   await page.screenshot({
     path: test.info().outputPath('operations-board-desktop.png'),
     fullPage: true,
@@ -72,23 +82,18 @@ test('dashboard puts daily work first and supports completion with undo', async 
 
   await page.setViewportSize({ width: 320, height: 740 })
   await page.reload()
-  const nextBox = await page
-    .getByRole('heading', { name: 'Next best action', level: 2 })
+  const focusBox = await page
+    .getByRole('heading', { name: "Today's tasks", level: 2 })
     .boundingBox()
   const attentionBox = await page
     .getByRole('heading', { name: 'Needs attention', level: 2 })
     .boundingBox()
-  const dayBox = await page.getByRole('heading', { name: 'My day', level: 2 }).boundingBox()
-  const pulseBox = await page
-    .getByRole('heading', { name: 'Business pulse', level: 2 })
+  const dealsBox = await page
+    .getByRole('heading', { name: 'Deals to move', level: 2 })
     .boundingBox()
-  const overviewBox = await page
-    .getByRole('region', { name: 'Workspace at a glance' })
-    .boundingBox()
-  expect(nextBox?.y).toBeLessThan(attentionBox?.y ?? 0)
-  expect(attentionBox?.y).toBeLessThan(dayBox?.y ?? 0)
-  expect(dayBox?.y).toBeLessThan(pulseBox?.y ?? 0)
-  expect(pulseBox?.y).toBeLessThan(overviewBox?.y ?? 0)
+  expect(focusBox?.y).toBeLessThan(attentionBox?.y ?? 0)
+  expect(focusBox?.y).toBeLessThan(dealsBox?.y ?? 0)
+  expect(dealsBox?.y).toBeLessThan(attentionBox?.y ?? 0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
@@ -117,7 +122,7 @@ test('creates and completes a customer follow-up', async ({ page }) => {
   )
   await page.getByRole('button', { name: 'Add task', exact: true }).click()
   expect((await createRequest).postDataJSON()).toMatchObject({
-    company: 'co-a',
+    company: fixtureIds.acmeCompany,
     title: 'Call about renewal',
     kind: 'call',
     assigned_to: 1,
@@ -129,11 +134,11 @@ test('creates and completes a customer follow-up', async ({ page }) => {
   await page.getByRole('button', { name: 'Open and edit' }).click()
   await page.getByRole('combobox', { name: 'Status' }).click()
   await page.getByRole('option', { name: 'Waiting', exact: true }).click()
-  const moveRequest = page.waitForRequest((request) =>
-    request.url().endsWith('/tasks/task-a/move/'),
+  const updateRequest = page.waitForRequest(
+    (request) => request.method() === 'PATCH' && request.url().endsWith('/tasks/task-a/'),
   )
   await page.getByRole('button', { name: 'Save changes' }).click()
-  expect((await moveRequest).postDataJSON()).toEqual({ workflow_status: 'waiting' })
+  expect((await updateRequest).postDataJSON()).toMatchObject({ workflow_status: 'waiting' })
   await page.screenshot({ path: test.info().outputPath('tasks-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: test.info().outputPath('tasks-mobile.png'), fullPage: true })
@@ -151,12 +156,12 @@ test('creates and completes a customer follow-up', async ({ page }) => {
 
 test('global search scopes results and supports keyboard navigation', async ({ page }) => {
   const scopes: Array<string | null> = []
-  await page.route('**/api/v1/organizations/alpha/contacts/contact-a/', (route) =>
+  await page.route('**/api/v1/organizations/*/contacts/*/', (route) =>
     route.fulfill({
       json: {
-        id: 'contact-a',
-        organization: 'alpha',
-        company: 'co-a',
+        id: fixtureIds.contact,
+        organization: fixtureIds.alphaOrganization,
+        company: fixtureIds.acmeCompany,
         company_name: 'Acme Ltd',
         assigned_to: 1,
         assigned_to_name: 'Demo User',
@@ -174,14 +179,14 @@ test('global search scopes results and supports keyboard navigation', async ({ p
       },
     }),
   )
-  await page.route('**/api/v1/organizations/alpha/deals/deal-a/', (route) =>
+  await page.route('**/api/v1/organizations/*/deals/*/', (route) =>
     route.fulfill({
       json: {
-        id: 'deal-a',
-        organization: 'alpha',
-        company: 'co-a',
+        id: fixtureIds.deal,
+        organization: fixtureIds.alphaOrganization,
+        company: fixtureIds.acmeCompany,
         company_name: 'Acme Ltd',
-        contact: 'contact-a',
+        contact: fixtureIds.contact,
         contact_name: 'Ada Lovelace',
         assigned_to: 1,
         assigned_to_name: 'Demo User',
@@ -217,27 +222,27 @@ test('global search scopes results and supports keyboard navigation', async ({ p
         results: [
           {
             type: 'contact',
-            id: 'contact-a',
+            id: fixtureIds.contact,
             display_name: 'Ada Lovelace',
-            organization: { id: 'alpha', name: 'Alpha Studio' },
-            company: { id: 'co-a', name: 'Acme Ltd' },
+            organization: { id: fixtureIds.alphaOrganization, name: 'Alpha Studio' },
+            company: { id: fixtureIds.acmeCompany, name: 'Acme Ltd' },
             job_title: 'Director',
           },
           {
             type: 'deal',
-            id: 'deal-a',
+            id: fixtureIds.deal,
             display_name: 'Renewal opportunity',
-            organization: { id: 'alpha', name: 'Alpha Studio' },
-            company: { id: 'co-a', name: 'Acme Ltd' },
+            organization: { id: fixtureIds.alphaOrganization, name: 'Alpha Studio' },
+            company: { id: fixtureIds.acmeCompany, name: 'Acme Ltd' },
             stage: 'proposal',
             value: '1000.00',
             currency: 'EUR',
           },
           {
             type: 'company',
-            id: 'co-a',
+            id: fixtureIds.acmeCompany,
             display_name: 'Acme Ltd',
-            organization: { id: 'alpha', name: 'Alpha Studio' },
+            organization: { id: fixtureIds.alphaOrganization, name: 'Alpha Studio' },
             customer_code: 'CUS-00001',
             lifecycle_stage: 'lead',
           },
@@ -257,7 +262,9 @@ test('global search scopes results and supports keyboard navigation', async ({ p
   })
   await input.press('ArrowDown')
   await input.press('Enter')
-  await expect(page).toHaveURL('/organizations/alpha/contacts?contact=contact-a')
+  await expect(page).toHaveURL(
+    `/organizations/${fixtureIds.alphaOrganization}/contacts?contact=${fixtureIds.contact}`,
+  )
   await expect(page.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible()
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
@@ -270,7 +277,9 @@ test('global search scopes results and supports keyboard navigation', async ({ p
   await dealSearch.press('ArrowDown')
   await dealSearch.press('ArrowDown')
   await dealSearch.press('Enter')
-  await expect(page).toHaveURL('/organizations/alpha/deals?deal=deal-a')
+  await expect(page).toHaveURL(
+    `/organizations/${fixtureIds.alphaOrganization}/deals?deal=${fixtureIds.deal}`,
+  )
   await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Deal title' })).toHaveValue('Renewal opportunity')
   await page.goBack()
@@ -297,7 +306,7 @@ test('global search scopes results and supports keyboard navigation', async ({ p
     'true',
   )
   await page.getByRole('combobox', { name: /Search Alpha Studio/ }).fill('ada')
-  await expect.poll(() => scopes.at(-1)).toBe('alpha')
+  await expect.poll(() => scopes.at(-1)).toBe(fixtureIds.alphaOrganization)
   await page.getByRole('button', { name: 'All workspaces' }).click()
   await expect.poll(() => scopes.at(-1)).toBe(null)
 })

@@ -125,8 +125,9 @@ export function DealsPage() {
     setDeleting,
     setNextActionDrawer,
   } = useDealBoardController()
-  const error = deals.error || companies.error || tasks.error
-  const isPending = deals.isPending || companies.isPending || tasks.isPending
+  const needsTaskContext = view === 'active' || view === 'all' || view === 'archived'
+  const error = deals.error || companies.error || (needsTaskContext ? tasks.error : null)
+  const isPending = deals.isPending || companies.isPending || (needsTaskContext && tasks.isPending)
 
   useEffect(() => {
     const board = boardRef.current
@@ -248,6 +249,61 @@ export function DealsPage() {
             </Typography>
             {emptyAction}
           </Stack>
+        ) : view !== 'active' && view !== 'all' && view !== 'archived' ? (
+          <Stack
+            component="ul"
+            sx={{ m: 0, p: 0, listStyle: 'none', borderTop: 1, borderColor: 'divider' }}
+          >
+            {rows.map((deal) => (
+              <Box
+                component="li"
+                key={deal.id}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0,1fr) auto',
+                    md: 'minmax(0,1.5fr) minmax(0,1fr) auto auto',
+                  },
+                  gap: { xs: 1, md: 2 },
+                  alignItems: 'center',
+                  px: { xs: 1.5, sm: 2 },
+                  py: 1.5,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 750 }} noWrap>
+                    {deal.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {deal.company_name}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ display: { xs: 'none', md: 'block' } }}>
+                  {new Intl.NumberFormat(undefined, {
+                    style: 'currency',
+                    currency: deal.currency,
+                    maximumFractionDigits: 0,
+                  }).format(Number(deal.net_value))}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ display: { xs: 'none', md: 'block' } }}
+                >
+                  {deal.expected_close_date
+                    ? new Intl.DateTimeFormat().format(
+                        new Date(`${deal.expected_close_date}T00:00:00`),
+                      )
+                    : '—'}
+                </Typography>
+                <Button onClick={() => updateSearch({ deal: deal.id })}>
+                  {t('crm.deals.openDeal', { title: deal.title })}
+                </Button>
+              </Box>
+            ))}
+          </Stack>
         ) : (
           <>
             <DealBoardSummary forecast={forecasts} />
@@ -346,6 +402,7 @@ export function DealsPage() {
           organizationId={org.id}
           companies={companies.data}
           deal={routeDeal.data}
+          readOnly={!canManage}
           onClose={() => updateSearch({ deal: undefined })}
         />
       ) : null}

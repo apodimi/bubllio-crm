@@ -264,3 +264,32 @@ class InvitationTests(APITestCase):
         created = self.client.post(reverse("organization-list"), {"name": "My Studio", "slug": "my-studio"}, format="json")
         self.assertEqual(created.status_code, 403)
         self.assertEqual(OrganizationMembership.objects.get(organization=self.organization, user__username="new-person").role, "member")
+
+    def test_acceptance_rolls_back_user_and_membership_when_audit_write_fails(self):
+        _, sender = self.invite()
+        token = self.queued_token(sender)
+        self.client.force_authenticate(user=None)
+
+        with patch(
+            "access.services.invitations.WorkspaceAccessEvent.objects.create",
+            side_effect=RuntimeError("audit unavailable"),
+        ), self.assertRaises(RuntimeError):
+            self.client.post(
+                reverse("invitation-accept", kwargs={"token": token}),
+                {
+                    "username": "rolled-back-user",
+                    "password": "a-strong-unique-password-4938",
+                    "display_name": "Rolled Back User",
+                },
+                format="json",
+            )
+
+        invitation = OrganizationInvitation.objects.get(email="new@example.com")
+        self.assertIsNone(invitation.accepted_at)
+        self.assertFalse(User.objects.filter(username="rolled-back-user").exists())
+        self.assertFalse(
+            OrganizationMembership.objects.filter(
+                organization=self.organization,
+                user__username="rolled-back-user",
+            ).exists()
+        )

@@ -7,10 +7,6 @@ import {
   Button,
   Checkbox,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   Paper,
   Stack,
@@ -32,6 +28,7 @@ import { InstallationAuditLog } from '../../features/installation/components/Ins
 import { BackupStatusPanel } from '../../features/installation/components/BackupStatusPanel'
 import { useOrganizations } from '../../features/organizations'
 import { UpdateCenter } from '../../features/updates/components/UpdateCenter'
+import { DeleteAccountDialog } from './DeleteAccountDialog'
 
 export function AccountSettingsPage() {
   const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
@@ -523,44 +520,16 @@ export function AccountSettingsPage() {
       {isSuperuser && <SystemInformationPanel />}
       {isSuperuser && <InstallationAuditLog />}
       {isSuperuser && <BackupStatusPanel />}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Delete account?</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              This is permanent. Transfer workspace ownership first if you own a workspace.
-            </Typography>
-            <TextField
-              label="Current password"
-              type="password"
-              value={deletePassword}
-              onChange={(event) => setDeletePassword(event.target.value)}
-              required
-            />
-            <TextField
-              label="Type DELETE to confirm"
-              value={deleteConfirmation}
-              onChange={(event) => setDeleteConfirmation(event.target.value)}
-              required
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => void deleteAccount()}
-            disabled={
-              deleteConfirmation !== 'DELETE' ||
-              !deletePassword ||
-              accountSettings.deleteAccount.isPending
-            }
-          >
-            Delete account
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteAccountDialog
+        open={deleteOpen}
+        password={deletePassword}
+        confirmation={deleteConfirmation}
+        pending={accountSettings.deleteAccount.isPending}
+        onPasswordChange={setDeletePassword}
+        onConfirmationChange={setDeleteConfirmation}
+        onClose={() => setDeleteOpen(false)}
+        onDelete={() => void deleteAccount()}
+      />
     </Stack>
   )
 }

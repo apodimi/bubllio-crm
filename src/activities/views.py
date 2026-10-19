@@ -13,8 +13,8 @@ from companies.models import CompanyTimelineEvent
 from companies.services import record_company_timeline_event
 
 from .models import Task
-from .serializers import TaskSerializer
-from .services import complete_task, move_task, reopen_task
+from .serializers import TaskSerializer, TaskUpdateSerializer
+from .services import complete_task, move_task, reopen_task, update_task
 
 
 def _task_queryset(organization):
@@ -120,7 +120,7 @@ class TaskListCreateAPIView(APIView):
 
 
 class TaskDetailAPIView(APIView):
-    serializer_class = TaskSerializer
+    serializer_class = TaskUpdateSerializer
 
     def _task(self, request, organization_id, task_id, capability):
         organization = get_organization_for_user(
@@ -143,25 +143,20 @@ class TaskDetailAPIView(APIView):
         organization, task = self._task(
             request, organization_id, task_id, Capability.MANAGE_CRM
         )
-        serializer = TaskSerializer(
+        serializer = TaskUpdateSerializer(
             task,
             data=request.data,
             partial=True,
             context={"organization": organization},
         )
         serializer.is_valid(raise_exception=True)
-        changed_fields = list(serializer.validated_data)
-        task = serializer.save()
-        record_company_timeline_event(
-            company=task.company,
-            actor=request.user,
-            category=CompanyTimelineEvent.Category.TASK,
-            event_type=CompanyTimelineEvent.EventType.TASK_UPDATED,
-            source_type="task",
-            source_id=task.id,
-            details={"task_title": task.title, "fields": changed_fields},
+        task = update_task(
+            task=task,
+            validated_data=serializer.validated_data,
+            organization=organization,
+            user=request.user,
         )
-        return Response(serializer.data)
+        return Response(TaskSerializer(task).data)
 
     def delete(self, request, organization_id, task_id):
         _, task = self._task(

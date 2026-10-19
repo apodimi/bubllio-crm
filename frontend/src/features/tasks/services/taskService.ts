@@ -1,6 +1,12 @@
 import { request } from '../../../services/api'
 import { organizationPath } from '../../organizations'
-import type { CrmTask, TaskInput, TaskKind, TaskWorkflowStatus } from '../../../types/task.types'
+import type {
+  CrmTask,
+  TaskInput,
+  TaskKind,
+  TaskUpdateInput,
+  TaskWorkflowStatus,
+} from '../../../types/task.types'
 
 export type TaskBucket = 'today' | 'upcoming' | 'overdue' | 'open' | 'completed' | 'all'
 export interface TaskFilters {
@@ -31,7 +37,7 @@ export const taskService = {
   },
   create: (organizationId: string, body: TaskInput) =>
     request<CrmTask>(taskPath(organizationId), { body }),
-  update: (organizationId: string, taskId: string, body: Partial<TaskInput>) =>
+  update: (organizationId: string, taskId: string, body: TaskUpdateInput) =>
     request<CrmTask>(taskPath(organizationId, taskId), { method: 'PATCH', body }),
   remove: (organizationId: string, taskId: string) =>
     request<void>(taskPath(organizationId, taskId), { method: 'DELETE' }),

@@ -65,8 +65,11 @@ checks, error report και αναγνωρίσιμο import batch.
 
 ### 4. Saved views και My work
 
-My companies, my deals, closing this month, no next action, overdue follow-ups,
-renewals και archived records.
+**Υλοποιήθηκε η πρώτη έκδοση:** το Overview έγινε My work και συγκεντρώνει τις
+σημερινές εργασίες, τα deals χωρίς επόμενο βήμα και όσα κλείνουν μέσα στον μήνα.
+Τα built-in views για deals και tasks είναι server-filtered, αποθηκεύονται στο URL
+και μπορούν να γίνουν bookmark χωρίς αλλαγή στα υπάρχοντα routes. Custom
+ονομασμένα views, my companies και renewals παραμένουν μελλοντική επέκταση.
 
 ### 5. Deal profile
 
@@ -82,7 +85,9 @@ next action. Το υπάρχον drawer παραμένει το γρήγορο c
 - Advanced forecasting, quotas και territory management.
 - Custom field builder και πλήρως παραμετροποιήσιμα pipelines.
 - Multiple price books και CPQ.
-- Full inbox/calendar synchronization.
+- Unified Inbox / Communication Hub: read-only inbox και threads, σύνδεση με
+  company/contact timeline, ασφαλές send/reply, assignments, reminders και
+  templates. Παραμένει post-pilot TODO και δεν θεωρείται υλοποιημένο.
 - Native mobile εφαρμογή.
 
 Αυτά μπορούν να επανεκτιμηθούν μετά από πραγματικό pilot feedback.

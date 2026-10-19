@@ -3,6 +3,41 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.6 — 2026-10-20
+
+### Added
+
+- a focused My work home with today's tasks, deals missing a next action, deals
+  closing this month, and bookmarkable built-in task and deal views;
+- richer customer timelines with safer follow-up creation and clearer service,
+  billing, invitation, and update progress states;
+- runtime response validation for critical frontend API contracts.
+
+### Changed
+
+- simplified the application shell, navigation, dashboard, company profile,
+  task, deal, service, account, password-reset, and update experiences across
+  desktop and mobile;
+- deal work queues now use tenant-scoped server filters and bounded dashboard
+  results instead of downloading broad lists;
+- split large frontend surfaces into smaller, readable components while keeping
+  existing routes and legacy `view=all` links compatible.
+
+### Fixed
+
+- service balances recalculate consistently after charge edits and accept the
+  numeric API totals returned by the backend;
+- password-reset links are invalidated after first successful use;
+- invitation acceptance, tenant-scoped timeline writes, viewer-only deal
+  access, update-agent reconnect reporting, and mobile navigation edge cases.
+
+### Upgrade notes
+
+- this release has no database migrations and is eligible for an online update
+  from version 0.2.5;
+- after deployment, verify sign-in, password reset, invitation acceptance, My
+  work, deal views, customer timelines, billing edits, and Update Center status.
+
 ## 0.2.5 — 2026-10-16
 
 ### Added

@@ -374,9 +374,32 @@ class InstallationUpdateCenterAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["failure_code"], "update_failed")
+        self.assertTrue(response.data["agent_connected"])
+        self.assertTrue(response.data["state_fresh"])
         serialized = json.dumps(response.data)
         self.assertNotIn("hunter2", serialized)
         self.assertNotIn("token.example", serialized)
+
+    @patch(
+        "onboarding.api.update_center.sync_update_run",
+        side_effect=UpdateAgentUnavailable,
+    )
+    def test_detail_marks_stored_state_as_stale_when_agent_is_unavailable(self, _sync):
+        self.authenticate_admin()
+        run = InstallationUpdateRun.objects.create(
+            target_version="1.2.3",
+            idempotency_key="request-12345678",
+            requested_by=self.admin,
+            status=InstallationUpdateRun.Status.DEPLOYING,
+            agent_job_id="agent-job-1",
+        )
+
+        response = self.client.get(reverse("installation-update-detail", args=(run.pk,)))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["agent_connected"])
+        self.assertFalse(response.data["state_fresh"])
+        self.assertEqual(response.data["status"], "deploying")
 
 
 @override_settings(**AGENT_SETTINGS)

@@ -1,10 +1,12 @@
 {
-  "overview": "Επισκόπηση",
+  "overview": "Η δουλειά μου",
   "companies": "Εταιρείες",
   "contacts": "Επαφές",
   "deals": "Συμφωνίες",
   "tasks": "Εργασίες",
   "services": "Υπηρεσίες",
+  "customers": "Πελάτες",
+  "revenue": "Έσοδα",
   "servicesNavigation": "Πλοήγηση υπηρεσιών",
   "people": "Μέλη",
   "settings": "Ρυθμίσεις",
@@ -24,9 +26,9 @@
   "catalog": "Κατάλογος",
   "groups": {
     "home": "Αρχική",
-    "relationships": "Σχέσεις",
-    "work": "Εργασία",
-    "operations": "Λειτουργίες",
-    "workspace": "Χώρος εργασίας"
+    "customers": "Πελάτες",
+    "sales": "Πωλήσεις",
+    "revenue": "Έσοδα",
+    "administration": "Διαχείριση"
   }
 }

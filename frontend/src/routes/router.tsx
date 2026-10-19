@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { parseCompanySearch } from '../features/companies/companyListConfig'
 import { parseContactSearch } from '../features/contacts/contactListConfig'
 import { parseDealSearch } from '../features/deals/dealBoardConfig'
+import { parseTaskSearch } from '../features/tasks/taskSearchConfig'
 
 function NotFoundPage() {
   const { t } = useTranslation()
@@ -126,9 +127,7 @@ const deals = createRoute({
 const tasks = createRoute({
   getParentRoute: () => workspace,
   path: '/tasks',
-  validateSearch: (search: Record<string, unknown>) => ({
-    ...(search.create === true || search.create === 'true' ? { create: true as const } : {}),
-  }),
+  validateSearch: parseTaskSearch,
   component: lazyRouteComponent(() => import('../pages/Tasks/TasksPage'), 'TasksPage'),
 })
 const services = createRoute({

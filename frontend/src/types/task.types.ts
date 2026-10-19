@@ -42,3 +42,7 @@ export type TaskInput = Pick<
   | 'reminder_at'
   | 'notes'
 >
+
+export type TaskUpdateInput = Partial<TaskInput> & {
+  workflow_status?: TaskWorkflowStatus
+}

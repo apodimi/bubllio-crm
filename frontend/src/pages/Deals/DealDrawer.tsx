@@ -42,12 +42,14 @@ export function DealDrawer({
   companies,
   deal,
   initialStage,
+  readOnly = false,
   onClose,
 }: {
   organizationId: string
   companies: Company[]
   deal?: Deal
   initialStage?: DealStage
+  readOnly?: boolean
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -55,7 +57,7 @@ export function DealDrawer({
   const update = useUpdateDealRecord(organizationId, deal?.id ?? '')
   const mutation = deal ? update : create
   const contacts = useContacts(organizationId, { archived: 'active' })
-  const assignees = useCompanyAssignees(organizationId)
+  const assignees = useCompanyAssignees(organizationId, !readOnly)
   const [values, setValues] = useState<DealInput>(
     deal
       ? {
@@ -91,6 +93,7 @@ export function DealDrawer({
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (readOnly) return
     try {
       await mutation.mutateAsync(values)
       onClose()
@@ -135,10 +138,18 @@ export function DealDrawer({
         >
           <Box>
             <Typography variant="h5">
-              {deal ? t('crm.deals.drawer.editTitle') : t('crm.deals.drawer.addTitle')}
+              {readOnly
+                ? t('crm.deals.drawer.viewTitle')
+                : deal
+                  ? t('crm.deals.drawer.editTitle')
+                  : t('crm.deals.drawer.addTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {deal ? t('crm.deals.drawer.editDescription') : t('crm.deals.drawer.addDescription')}
+              {readOnly
+                ? t('crm.deals.drawer.viewDescription')
+                : deal
+                  ? t('crm.deals.drawer.editDescription')
+                  : t('crm.deals.drawer.addDescription')}
             </Typography>
           </Box>
           <IconButton
@@ -149,11 +160,16 @@ export function DealDrawer({
             <AppIcon icon={closeIcon} />
           </IconButton>
         </Stack>
-        <Stack spacing={2.5} sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, sm: 4 }, py: 4 }}>
+        <Stack
+          component="fieldset"
+          disabled={readOnly || mutation.isPending}
+          spacing={2.5}
+          sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, sm: 4 }, py: 4, m: 0, border: 0 }}
+        >
           {mutation.isError ? <Alert severity="error">{mutation.error.message}</Alert> : null}
           <TextField
             required
-            autoFocus
+            autoFocus={!readOnly}
             label={t('crm.deals.drawer.title')}
             value={values.title}
             onChange={(event) => set('title', event.target.value)}
@@ -332,11 +348,13 @@ export function DealDrawer({
           }}
         >
           <Button onClick={onClose} disabled={mutation.isPending}>
-            {t('common.cancel')}
+            {readOnly ? t('common.close') : t('common.cancel')}
           </Button>
-          <Button type="submit" variant="contained" disabled={mutation.isPending}>
-            {submitLabel}
-          </Button>
+          {!readOnly ? (
+            <Button type="submit" variant="contained" disabled={mutation.isPending}>
+              {submitLabel}
+            </Button>
+          ) : null}
         </Stack>
       </Box>
     </Drawer>

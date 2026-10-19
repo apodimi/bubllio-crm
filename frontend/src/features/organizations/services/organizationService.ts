@@ -1,4 +1,5 @@
 import { apiClient, request } from '../../../services/api'
+import { organizationContract } from '../../../types/api-contract/schemas'
 import type {
   EmailAccount,
   Organization,
@@ -9,7 +10,11 @@ import type {
 export const organizationPath = (id: string) => '/organizations/' + encodeURIComponent(id) + '/'
 
 export const organizationService = {
-  list: (signal?: AbortSignal) => request<Organization[]>('/organizations/', { signal }),
+  list: (signal?: AbortSignal) =>
+    request<Organization[]>('/organizations/', {
+      signal,
+      schema: organizationContract.array(),
+    }),
   createPersonal: () => request<Organization>('/organizations/personal/', { body: {} }),
   personalPolicy: (signal?: AbortSignal) =>
     request<{ allowed: boolean; exists: boolean }>('/organizations/personal/', { signal }),
@@ -45,7 +50,7 @@ export const organizationService = {
   cancelPendingWorkspace: (id: string) =>
     request(`/organizations/provisioning/${encodeURIComponent(id)}/`, { method: 'DELETE' }),
   get: (id: string, signal?: AbortSignal) =>
-    request<Organization>(organizationPath(id), { signal }),
+    request<Organization>(organizationPath(id), { signal, schema: organizationContract }),
   remove: (id: string) => request<void>(organizationPath(id), { method: 'DELETE' }),
   settings: (id: string, signal?: AbortSignal) =>
     request<WorkspaceSettings>(`${organizationPath(id)}settings/`, { signal }),

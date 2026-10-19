@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha, orgs } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
@@ -103,12 +103,12 @@ test('setup sends a real SMTP test request before final confirmation', async ({ 
 
 test('workspace owner can send an invite with a selected role', async ({ page }) => {
   let sent = false
-  await page.route('**/api/v1/organizations/alpha/members/', (route) =>
+  await page.route('**/api/v1/organizations/*/members/', (route) =>
     route.fulfill({
       json: [{ id: 'member-1', username: 'demo', email: 'demo@example.com', role: 'owner' }],
     }),
   )
-  await page.route('**/api/v1/organizations/alpha/invitations/', (route) => {
+  await page.route('**/api/v1/organizations/*/invitations/', (route) => {
     if (route.request().method() === 'POST') {
       expect(route.request().postDataJSON()).toEqual({ email: 'new@example.com', role: 'viewer' })
       sent = true
@@ -157,7 +157,7 @@ test('workspace owner can send an invite with a selected role', async ({ page })
 })
 
 test('workspace owner sees pending invitations on the dashboard', async ({ page }) => {
-  await page.route('**/api/v1/organizations/alpha/invitations/', (route) =>
+  await page.route('**/api/v1/organizations/*/invitations/', (route) =>
     route.fulfill({
       json: [
         {
@@ -181,7 +181,7 @@ test('workspace owner sees pending invitations on the dashboard', async ({ page 
   await expect(page.getByText('1 people are still waiting to join.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Manage invitations' })).toHaveAttribute(
     'href',
-    '/organizations/alpha/members',
+    `/organizations/${fixtureIds.alphaOrganization}/members`,
   )
 })
 
@@ -196,12 +196,12 @@ test('workspace owner can filter, resend, and revoke invitations', async ({ page
     expires_at: '2030-01-01T00:00:00Z',
     accepted_at: null,
   }
-  await page.route('**/api/v1/organizations/alpha/members/', (route) =>
+  await page.route('**/api/v1/organizations/*/members/', (route) =>
     route.fulfill({
       json: [{ id: 'member-1', username: 'demo', email: 'demo@example.com', role: 'owner' }],
     }),
   )
-  await page.route('**/api/v1/organizations/alpha/invitations/', (route) =>
+  await page.route('**/api/v1/organizations/*/invitations/', (route) =>
     route.fulfill({
       json: resent
         ? [
@@ -228,7 +228,7 @@ test('workspace owner can filter, resend, and revoke invitations', async ({ page
           ],
     }),
   )
-  await page.route('**/api/v1/organizations/alpha/invitations/invite-1/resend/', (route) => {
+  await page.route('**/api/v1/organizations/*/invitations/invite-1/resend/', (route) => {
     resent = true
     return route.fulfill({
       status: 201,
@@ -240,7 +240,7 @@ test('workspace owner can filter, resend, and revoke invitations', async ({ page
       },
     })
   })
-  await page.route('**/api/v1/organizations/alpha/invitations/invite-2/', (route) => {
+  await page.route('**/api/v1/organizations/*/invitations/invite-2/', (route) => {
     revoked = true
     return route.fulfill({ status: 204 })
   })
@@ -266,6 +266,7 @@ test('first installation superuser can reach workspace invitations', async ({ pa
         username: 'first-admin',
         email: 'admin@example.com',
         is_superuser: true,
+        can_create_workspaces: true,
         organizations: [{ ...orgs[0], current_user_role: null }],
       },
     }),
@@ -273,10 +274,8 @@ test('first installation superuser can reach workspace invitations', async ({ pa
   await page.route('**/api/v1/organizations/', (route) =>
     route.fulfill({ json: [{ ...orgs[0], current_user_role: null }] }),
   )
-  await page.route('**/api/v1/organizations/alpha/members/', (route) => route.fulfill({ json: [] }))
-  await page.route('**/api/v1/organizations/alpha/invitations/', (route) =>
-    route.fulfill({ json: [] }),
-  )
+  await page.route('**/api/v1/organizations/*/members/', (route) => route.fulfill({ json: [] }))
+  await page.route('**/api/v1/organizations/*/invitations/', (route) => route.fulfill({ json: [] }))
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'People' }).click()
@@ -308,7 +307,7 @@ test('invite-only registration creates an account and opens the invited workspac
     return route.fulfill({
       status: 201,
       json: {
-        organization_id: 'alpha',
+        organization_id: fixtureIds.alphaOrganization,
         role: 'member',
         tokens: { access: 'new-access', refresh: 'new-refresh' },
       },
@@ -320,6 +319,6 @@ test('invite-only registration creates an account and opens the invited workspac
   await page.getByLabel('Username').fill('new-person')
   await page.getByLabel('Password').fill('a-strong-unique-password-4938')
   await page.getByRole('button', { name: 'Create account and join' }).click()
-  await expect(page).toHaveURL('/organizations/alpha')
-  await expect(page.getByRole('heading', { name: /Move one thing forward/ })).toBeVisible()
+  await expect(page).toHaveURL(`/organizations/${fixtureIds.alphaOrganization}`)
+  await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible()
 })

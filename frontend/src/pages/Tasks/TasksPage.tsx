@@ -36,12 +36,11 @@ import { TaskBoard } from '../../features/tasks/components/TaskBoard'
 import { TaskDetailsDrawer } from '../../features/tasks/components/TaskDetailsDrawer'
 import { TaskDrawer } from '../../features/tasks/components/TaskDrawer'
 import { TaskFocusList } from '../../features/tasks/components/TaskFocusList'
-import { filterTasks, groupTasks, type TaskView } from '../../features/tasks/taskListConfig'
+import { filterTasks, groupTasks } from '../../features/tasks/taskListConfig'
+import { TASK_VIEWS, type TaskSearch } from '../../features/tasks/taskSearchConfig'
 import type { CrmTask, TaskKind, TaskWorkflowStatus } from '../../types/task.types'
 
 type TaskLayout = 'list' | 'board'
-const taskViews: TaskView[] = ['focus', 'upcoming', 'all', 'completed']
-
 export function TasksPage() {
   const { t } = useTranslation()
   const organization = useWorkspace()
@@ -56,10 +55,10 @@ export function TasksPage() {
       return 'list'
     }
   })
-  const [view, setView] = useState<TaskView>('focus')
-  const [owner, setOwner] = useState<'me' | 'all' | 'unassigned'>('me')
-  const [kind, setKind] = useState<TaskKind | 'all'>('all')
-  const [query, setQuery] = useState('')
+  const view = routeSearch.view ?? 'focus'
+  const owner = routeSearch.owner ?? 'me'
+  const kind = routeSearch.kind ?? 'all'
+  const query = routeSearch.q ?? ''
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [detailsTask, setDetailsTask] = useState<CrmTask | null>(null)
   const [drawer, setDrawer] = useState<CrmTask | true | null>(
@@ -96,6 +95,10 @@ export function TasksPage() {
   const pendingTaskId = (complete.variables || reopen.variables) as string | undefined
   const activeFilterCount = Number(owner !== 'me') + Number(kind !== 'all')
 
+  function updateSearch(patch: TaskSearch) {
+    void navigate({ replace: true, search: { ...routeSearch, ...patch } })
+  }
+
   function changeLayout(next: TaskLayout) {
     setLayout(next)
     try {
@@ -106,8 +109,7 @@ export function TasksPage() {
   }
 
   function clearFilters() {
-    setOwner('me')
-    setKind('all')
+    updateSearch({ owner: undefined, kind: undefined })
   }
 
   async function toggleComplete(task: CrmTask) {
@@ -209,9 +211,9 @@ export function TasksPage() {
       <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
         <EntityListViewTabs
           label={t('crm.tasks.views')}
-          options={taskViews.map((item) => ({ value: item, label: t(`crm.tasks.view.${item}`) }))}
+          options={TASK_VIEWS.map((item) => ({ value: item, label: t(`crm.tasks.view.${item}`) }))}
           value={view}
-          onChange={setView}
+          onChange={(next) => updateSearch({ view: next === 'focus' ? undefined : next })}
         />
 
         <Stack
@@ -221,7 +223,7 @@ export function TasksPage() {
         >
           <TextField
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => updateSearch({ q: event.target.value || undefined })}
             placeholder={t('crm.tasks.searchPlaceholder')}
             slotProps={{
               htmlInput: { 'aria-label': t('crm.tasks.search') },
@@ -275,7 +277,12 @@ export function TasksPage() {
               select
               label={t('crm.tasks.owner')}
               value={owner}
-              onChange={(event) => setOwner(event.target.value as typeof owner)}
+              onChange={(event) =>
+                updateSearch({
+                  owner:
+                    event.target.value === 'me' ? undefined : (event.target.value as typeof owner),
+                })
+              }
               sx={{ minWidth: { sm: 190 } }}
             >
               <MenuItem value="me">{t('crm.tasks.myTasks')}</MenuItem>
@@ -286,7 +293,11 @@ export function TasksPage() {
               select
               label={t('crm.tasks.activity')}
               value={kind}
-              onChange={(event) => setKind(event.target.value as TaskKind | 'all')}
+              onChange={(event) =>
+                updateSearch({
+                  kind: event.target.value === 'all' ? undefined : (event.target.value as TaskKind),
+                })
+              }
               sx={{ minWidth: { sm: 190 } }}
             >
               <MenuItem value="all">{t('crm.tasks.allActivities')}</MenuItem>
@@ -338,7 +349,7 @@ export function TasksPage() {
           task={drawer === true ? undefined : drawer}
           onClose={() => {
             setDrawer(null)
-            if (routeSearch.create) void navigate({ search: { create: undefined } })
+            if (routeSearch.create) updateSearch({ create: undefined })
           }}
         />
       ) : null}

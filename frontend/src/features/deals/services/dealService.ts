@@ -6,6 +6,11 @@ export interface DealFilters {
   search?: string
   stage?: Deal['stage'] | ''
   archived?: 'active' | 'archived' | 'all'
+  assignedTo?: 'me' | 'unassigned'
+  nextAction?: 'missing' | 'present'
+  expectedCloseFrom?: string
+  expectedCloseTo?: string
+  limit?: number
 }
 
 const path = (org: string, id?: string) =>
@@ -22,6 +27,11 @@ export const dealService = {
     if (filters.archived) {
       params.set('archived', filters.archived)
     }
+    if (filters.assignedTo) params.set('assigned_to', filters.assignedTo)
+    if (filters.nextAction) params.set('next_action', filters.nextAction)
+    if (filters.expectedCloseFrom) params.set('expected_close_from', filters.expectedCloseFrom)
+    if (filters.expectedCloseTo) params.set('expected_close_to', filters.expectedCloseTo)
+    if (filters.limit) params.set('limit', String(filters.limit))
     const query = params.toString()
     return request<Deal[]>(path(org) + (query ? `?${query}` : ''), { signal })
   },

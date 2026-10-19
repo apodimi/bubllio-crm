@@ -3,6 +3,42 @@ from organizations.models import OrganizationMembership
 from .models import Deal
 
 
+class DealListFilterSerializer(serializers.Serializer):
+    assigned_to = serializers.CharField(required=False)
+    next_action = serializers.ChoiceField(
+        choices=("missing", "present"), required=False
+    )
+    expected_close_from = serializers.DateField(required=False)
+    expected_close_to = serializers.DateField(required=False)
+    limit = serializers.IntegerField(required=False, min_value=1, max_value=100)
+
+    def validate_assigned_to(self, value):
+        if value in {"me", "unassigned"}:
+            return value
+        try:
+            user_id = int(value)
+        except (TypeError, ValueError):
+            raise serializers.ValidationError(
+                "Choose me, unassigned, or a workspace member."
+            ) from None
+        if user_id < 1 or not OrganizationMembership.objects.filter(
+            organization=self.context["organization"], user_id=user_id
+        ).exists():
+            raise serializers.ValidationError(
+                "Choose me, unassigned, or a workspace member."
+            )
+        return user_id
+
+    def validate(self, attrs):
+        close_from = attrs.get("expected_close_from")
+        close_to = attrs.get("expected_close_to")
+        if close_from and close_to and close_from > close_to:
+            raise serializers.ValidationError(
+                {"expected_close_to": "Must be on or after expected_close_from."}
+            )
+        return attrs
+
+
 class DealSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     contact_name = serializers.SerializerMethodField()

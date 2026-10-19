@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page)
@@ -36,8 +36,30 @@ test('opens an existing deal from the board', async ({ page }) => {
   await page.getByRole('link', { name: 'Deals', exact: true }).click()
 
   await page.getByRole('button', { name: 'Open Annual platform renewal' }).click()
-  await expect(page).toHaveURL(/deal=deal-a/)
+  await expect(page).toHaveURL(new RegExp(`deal=${fixtureIds.deal}`))
   await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
+})
+
+test('viewer can inspect a deal without mutation controls', async ({ page }) => {
+  await page.route(`**/api/v1/organizations/${fixtureIds.alphaOrganization}/`, async (route) => {
+    await route.fulfill({
+      json: {
+        ...orgs[0],
+        current_user_role: 'viewer',
+      },
+    })
+  })
+  await login(page)
+  await page.goto(
+    `/organizations/${fixtureIds.alphaOrganization}/deals?view=no_next_action&deal=${fixtureIds.deal}`,
+  )
+
+  await expect(page.getByRole('heading', { name: 'Deal details' })).toBeVisible()
+  await expect(page.getByLabel('Deal title')).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Add deal' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Close deal form' }).click()
+  await expect(page.getByRole('heading', { name: 'Deal details' })).toHaveCount(0)
 })
 
 test('starts the next action from the deal card with deal context', async ({ page }) => {
@@ -67,7 +89,7 @@ test('creates a deal for a company in the selected workspace', async ({ page }) 
   )
   await page.getByRole('button', { name: 'Create deal', exact: true }).click()
   expect((await sent).postDataJSON()).toMatchObject({
-    company: 'co-a',
+    company: fixtureIds.acmeCompany,
     title: 'Implementation project',
     value: '4500',
   })

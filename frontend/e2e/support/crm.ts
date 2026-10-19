@@ -1,8 +1,31 @@
 import { expect, type Page } from '@playwright/test'
 
+export const fixtureIds = {
+  alphaOrganization: '00000000-0000-4000-8000-000000000001',
+  betaOrganization: '00000000-0000-4000-8000-000000000002',
+  acmeCompany: '00000000-0000-4000-8000-000000000101',
+  northwindCompany: '00000000-0000-4000-8000-000000000102',
+  subscription: '00000000-0000-4000-8000-000000000201',
+  contact: '00000000-0000-4000-8000-000000000301',
+  deal: '00000000-0000-4000-8000-000000000401',
+  task: '00000000-0000-4000-8000-000000000501',
+} as const
+
 export const orgs = [
-  { id: 'alpha', name: 'Alpha Studio', slug: 'alpha', current_user_role: 'owner' },
-  { id: 'beta', name: 'Beta Studio', slug: 'beta', current_user_role: 'viewer' },
+  {
+    id: fixtureIds.alphaOrganization,
+    name: 'Alpha Studio',
+    slug: 'alpha',
+    is_personal: false,
+    current_user_role: 'owner',
+  },
+  {
+    id: fixtureIds.betaOrganization,
+    name: 'Beta Studio',
+    slug: 'beta',
+    is_personal: false,
+    current_user_role: 'viewer',
+  },
 ]
 export async function mockApi(
   page: Page,
@@ -25,9 +48,9 @@ export async function mockApi(
   ]
   const subscriptions = [
     {
-      id: 'sub-a',
-      organization: 'alpha',
-      company: 'co-a',
+      id: fixtureIds.subscription,
+      organization: fixtureIds.alphaOrganization,
+      company: fixtureIds.acmeCompany,
       company_name: 'Acme Ltd',
       catalog_item: null,
       catalog_item_name: '',
@@ -55,8 +78,8 @@ export async function mockApi(
   ]
   const companies = [
     {
-      id: 'co-a',
-      organization: 'alpha',
+      id: fixtureIds.acmeCompany,
+      organization: fixtureIds.alphaOrganization,
       customer_code: 'CUS-00001',
       assigned_to: 1,
       assigned_to_name: 'Demo User',
@@ -78,8 +101,8 @@ export async function mockApi(
       updated_at: '2030-01-01T00:00:00Z',
     },
     {
-      id: 'co-c',
-      organization: 'alpha',
+      id: fixtureIds.northwindCompany,
+      organization: fixtureIds.alphaOrganization,
       customer_code: 'CUS-00002',
       assigned_to: null,
       assigned_to_name: '',
@@ -103,9 +126,9 @@ export async function mockApi(
   ]
   const contacts = [
     {
-      id: 'contact-a',
-      organization: 'alpha',
-      company: 'co-a',
+      id: fixtureIds.contact,
+      organization: fixtureIds.alphaOrganization,
+      company: fixtureIds.acmeCompany,
       company_name: 'Acme Ltd',
       assigned_to: 1,
       assigned_to_name: 'Demo User',
@@ -124,11 +147,11 @@ export async function mockApi(
   ]
   const deals = [
     {
-      id: 'deal-a',
-      organization: 'alpha',
-      company: 'co-a',
+      id: fixtureIds.deal,
+      organization: fixtureIds.alphaOrganization,
+      company: fixtureIds.acmeCompany,
       company_name: 'Acme Ltd',
-      contact: 'contact-a',
+      contact: fixtureIds.contact,
       contact_name: 'Maria Papadopoulou',
       assigned_to: 1,
       assigned_to_name: 'Demo User',
@@ -166,6 +189,10 @@ export async function mockApi(
   ]
   await page.route('**/api/v1/**', async (route) => {
     const path = new URL(route.request().url()).pathname
+      .replace(`/organizations/${fixtureIds.alphaOrganization}/`, '/organizations/alpha/')
+      .replace(`/organizations/${fixtureIds.betaOrganization}/`, '/organizations/beta/')
+      .replace(`/subscriptions/${fixtureIds.subscription}/`, '/subscriptions/sub-a/')
+      .replace(`/tasks/${fixtureIds.task}/`, '/tasks/task-a/')
     if (path === '/api/v1/setup/' && route.request().method() === 'GET') {
       return route.fulfill({ json: { available: false } })
     }
@@ -179,6 +206,7 @@ export async function mockApi(
           username: 'demo',
           email: 'demo@example.com',
           is_superuser: false,
+          can_create_workspaces: false,
           organizations: orgs,
         },
       })
@@ -350,7 +378,7 @@ export async function mockApi(
         },
       })
     }
-    if (path === '/api/v1/organizations/alpha/companies/co-a/timeline/') {
+    if (path === `/api/v1/organizations/alpha/companies/${fixtureIds.acmeCompany}/timeline/`) {
       if (route.request().method() === 'POST') {
         const event = {
           id: `timeline-note-${timelineEvents.length}`,
@@ -419,12 +447,32 @@ export async function mockApi(
       const search = (params.get('search') ?? '').toLowerCase()
       const archived = params.get('archived') ?? 'active'
       const stage = params.get('stage')
+      const assignedTo = params.get('assigned_to')
+      const nextAction = params.get('next_action')
+      const expectedCloseFrom = params.get('expected_close_from')
+      const expectedCloseTo = params.get('expected_close_to')
       const rows = deals.filter((deal) => {
         const matchesSearch = `${deal.title} ${deal.company_name}`.toLowerCase().includes(search)
         const matchesArchive =
           archived === 'all' ||
           (archived === 'archived' ? Boolean(deal.archived_at) : !deal.archived_at)
-        return matchesSearch && matchesArchive && (!stage || deal.stage === stage)
+        const matchesOwner =
+          !assignedTo || (assignedTo === 'me' ? deal.assigned_to === 1 : deal.assigned_to === null)
+        const hasNextAction = tasks.some((task) => task.deal === deal.id && !task.completed_at)
+        const matchesNextAction =
+          !nextAction || (nextAction === 'missing' ? !hasNextAction : hasNextAction)
+        const closeDate = deal.expected_close_date
+        const matchesClose =
+          (!expectedCloseFrom || (closeDate && closeDate >= expectedCloseFrom)) &&
+          (!expectedCloseTo || (closeDate && closeDate <= expectedCloseTo))
+        return (
+          matchesSearch &&
+          matchesArchive &&
+          (!stage || deal.stage === stage) &&
+          matchesOwner &&
+          matchesNextAction &&
+          matchesClose
+        )
       })
       return route.fulfill({ json: rows })
     }

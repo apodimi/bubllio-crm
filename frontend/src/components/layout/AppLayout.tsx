@@ -1,9 +1,4 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import BusinessRounded from '@mui/icons-material/BusinessRounded'
-import HomeRounded from '@mui/icons-material/HomeRounded'
-import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
-import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
-import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
 import { BottomNavigation, BottomNavigationAction, Box, Drawer, Paper } from '@mui/material'
 import { Outlet, useNavigate, useParams, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -16,6 +11,11 @@ import { UpdateBanner } from '../../features/updates/components/UpdateBanner'
 import { Failure, Loading } from '../common/Feedback'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { WorkspaceSidebar } from './WorkspaceSidebar'
+import {
+  selectedMobileNavigation,
+  workspaceNavigation,
+  type WorkspaceNavigationKey,
+} from './workspaceNavigation'
 
 const LoginPage = lazy(() =>
   import('../../pages/Login/LoginPage').then((module) => ({ default: module.LoginPage })),
@@ -130,55 +130,16 @@ function Shell() {
     (pathname === `/organizations/${organizationId}` ||
       pathname === `/organizations/${organizationId}/`),
   )
-  const mobileNavigationValue = (() => {
-    if (!organizationId) {
-      return false
-    }
-    if (
-      pathname === `/organizations/${organizationId}` ||
-      pathname === `/organizations/${organizationId}/`
-    ) {
-      return 'overview'
-    }
-    if (pathname.startsWith(`/organizations/${organizationId}/companies`)) {
-      return 'companies'
-    }
-    if (pathname.startsWith(`/organizations/${organizationId}/contacts`)) {
-      return 'contacts'
-    }
-    if (pathname.startsWith(`/organizations/${organizationId}/tasks`)) {
-      return 'tasks'
-    }
-    if (pathname.startsWith(`/organizations/${organizationId}/services`)) {
-      return 'services'
-    }
-    return false
-  })()
+  const mobileNavigationValue = selectedMobileNavigation(pathname, organizationId)
+  const mobileNavigationItems = workspaceNavigation.filter((item) => item.mobile)
 
-  function navigateFromMobileDock(value: string) {
+  function navigateFromMobileDock(value: WorkspaceNavigationKey) {
     if (!organizationId) {
       return
     }
-    if (value === 'overview') {
-      void navigate({ to: '/organizations/$organizationId', params: { organizationId } })
-    } else if (value === 'companies') {
-      void navigate({
-        to: '/organizations/$organizationId/companies',
-        params: { organizationId },
-        search: { company: undefined },
-      })
-    } else if (value === 'contacts') {
-      void navigate({
-        to: '/organizations/$organizationId/contacts',
-        params: { organizationId },
-      })
-    } else if (value === 'tasks') {
-      void navigate({ to: '/organizations/$organizationId/tasks', params: { organizationId } })
-    } else if (value === 'services') {
-      void navigate({
-        to: '/organizations/$organizationId/services/customer-services',
-        params: { organizationId },
-      })
+    const item = mobileNavigationItems.find((candidate) => candidate.key === value)
+    if (item) {
+      void navigate({ to: item.route, params: { organizationId } })
     }
   }
 
@@ -308,7 +269,7 @@ function Shell() {
           >
             <BottomNavigation
               value={mobileNavigationValue}
-              onChange={(_event, value: string) => navigateFromMobileDock(value)}
+              onChange={(_event, value: WorkspaceNavigationKey) => navigateFromMobileDock(value)}
               sx={{
                 height: 64,
                 bgcolor: 'background.paper',
@@ -318,45 +279,32 @@ function Shell() {
                   color: 'text.secondary',
                   borderRadius: 1.75,
                   mx: 0.25,
+                  py: 0.75,
                 },
                 '&& .MuiBottomNavigationAction-root.Mui-selected': {
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
                 },
                 '&& .MuiBottomNavigationAction-root.Mui-selected svg': { color: 'inherit' },
-                '& .MuiBottomNavigationAction-label': { display: 'none' },
+                '& .MuiBottomNavigationAction-label': {
+                  display: 'block',
+                  mt: 0.25,
+                  fontSize: '0.625rem',
+                  lineHeight: 1.1,
+                  whiteSpace: 'nowrap',
+                },
+                '& .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.625rem' },
               }}
             >
-              <BottomNavigationAction
-                aria-label={t('navigation.overview')}
-                label={t('navigation.overview')}
-                value="overview"
-                icon={<HomeRounded />}
-              />
-              <BottomNavigationAction
-                aria-label={t('navigation.companies')}
-                label={t('navigation.companies')}
-                value="companies"
-                icon={<BusinessRounded />}
-              />
-              <BottomNavigationAction
-                aria-label={t('navigation.contacts')}
-                label={t('navigation.contacts')}
-                value="contacts"
-                icon={<PeopleAltRounded />}
-              />
-              <BottomNavigationAction
-                aria-label={t('navigation.tasks')}
-                label={t('navigation.tasks')}
-                value="tasks"
-                icon={<TaskAltRounded />}
-              />
-              <BottomNavigationAction
-                aria-label={t('navigation.services')}
-                label={t('navigation.services')}
-                value="services"
-                icon={<SubscriptionsRounded />}
-              />
+              {mobileNavigationItems.map((item) => (
+                <BottomNavigationAction
+                  key={item.key}
+                  aria-label={t(item.mobileLabelKey ?? item.labelKey)}
+                  label={t(item.mobileLabelKey ?? item.labelKey)}
+                  value={item.key}
+                  icon={item.icon}
+                />
+              ))}
             </BottomNavigation>
           </Paper>
         ) : null}

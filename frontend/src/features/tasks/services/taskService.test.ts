@@ -38,4 +38,18 @@ describe('taskService', () => {
       body: { workflow_status: 'waiting' },
     })
   })
+
+  it('updates task fields and workflow status atomically', async () => {
+    vi.mocked(request).mockResolvedValueOnce({})
+
+    await taskService.update('org-a', 'task-a', {
+      title: 'Call the customer',
+      workflow_status: 'in_progress',
+    })
+
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/tasks/task-a/', {
+      method: 'PATCH',
+      body: { title: 'Call the customer', workflow_status: 'in_progress' },
+    })
+  })
 })

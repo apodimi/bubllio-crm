@@ -1,10 +1,12 @@
 {
-  "overview": "Overview",
+  "overview": "My work",
   "companies": "Companies",
   "contacts": "Contacts",
   "deals": "Deals",
   "tasks": "Tasks",
   "services": "Services",
+  "customers": "Customers",
+  "revenue": "Revenue",
   "servicesNavigation": "Services navigation",
   "people": "People",
   "settings": "Settings",
@@ -24,9 +26,9 @@
   "catalog": "Catalog",
   "groups": {
     "home": "Home",
-    "relationships": "Relationships",
-    "work": "Work",
-    "operations": "Operations",
-    "workspace": "Workspace"
+    "customers": "Customers",
+    "sales": "Sales",
+    "revenue": "Revenue",
+    "administration": "Administration"
   }
 }

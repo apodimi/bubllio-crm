@@ -51,6 +51,8 @@ export interface InstallationUpdateRun {
   finished_at: string | null
   updated_at: string
   events: UpdateRunEvent[]
+  agent_connected?: boolean
+  state_fresh?: boolean
 }
 
 export interface UpdateManifestSummary {

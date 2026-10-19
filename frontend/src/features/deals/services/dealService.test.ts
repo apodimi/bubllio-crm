@@ -21,12 +21,21 @@ describe('dealService', () => {
 
     await dealService.list(
       'org-a',
-      { search: ' Renewal ', stage: 'proposal', archived: 'archived' },
+      {
+        search: ' Renewal ',
+        stage: 'proposal',
+        archived: 'active',
+        assignedTo: 'me',
+        nextAction: 'missing',
+        expectedCloseFrom: '2026-10-01',
+        expectedCloseTo: '2026-10-31',
+        limit: 5,
+      },
       signal,
     )
 
     expect(request).toHaveBeenCalledWith(
-      '/organizations/org-a/deals/?search=Renewal&stage=proposal&archived=archived',
+      '/organizations/org-a/deals/?search=Renewal&stage=proposal&archived=active&assigned_to=me&next_action=missing&expected_close_from=2026-10-01&expected_close_to=2026-10-31&limit=5',
       { signal },
     )
   })
@@ -36,6 +45,14 @@ describe('dealService', () => {
 
     expect(request).toHaveBeenCalledWith('/organizations/org-a/deals/deal%2Fa/archive/', {
       method: 'POST',
+    })
+  })
+
+  it('preserves the legacy all-deals request', async () => {
+    await dealService.list('org-a', { archived: 'all' })
+
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/deals/?archived=all', {
+      signal: undefined,
     })
   })
 })

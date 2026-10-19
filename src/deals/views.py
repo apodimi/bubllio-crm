@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -8,8 +8,9 @@ from drf_spectacular.utils import extend_schema
 from access.permissions import Capability, get_organization_for_user
 from companies.models import CompanyTimelineEvent
 from companies.services import record_company_timeline_event
+from activities.models import Task
 from .models import Deal
-from .serializers import DealSerializer
+from .serializers import DealListFilterSerializer, DealSerializer
 from .services import move_deal
 
 
@@ -32,6 +33,41 @@ class DealListCreateAPIView(APIView):
         if request.query_params.get("search"):
             term = request.query_params["search"]
             deals = deals.filter(Q(title__icontains=term) | Q(company__name__icontains=term))
+        filters = DealListFilterSerializer(
+            data=request.query_params,
+            context={"organization": organization},
+        )
+        filters.is_valid(raise_exception=True)
+        assigned_to = filters.validated_data.get("assigned_to")
+        if assigned_to == "me":
+            deals = deals.filter(assigned_to=request.user)
+        elif assigned_to == "unassigned":
+            deals = deals.filter(assigned_to__isnull=True)
+        elif assigned_to is not None:
+            deals = deals.filter(assigned_to_id=assigned_to)
+
+        next_action = filters.validated_data.get("next_action")
+        if next_action:
+            deals = deals.exclude(stage__in=(Deal.Stage.WON, Deal.Stage.LOST))
+            incomplete_tasks = Task.objects.filter(
+                organization=organization,
+                deal_id=OuterRef("pk"),
+                completed_at__isnull=True,
+            )
+            deals = deals.annotate(has_next_action=Exists(incomplete_tasks)).filter(
+                has_next_action=next_action == "present"
+            )
+
+        expected_close_from = filters.validated_data.get("expected_close_from")
+        if expected_close_from:
+            deals = deals.filter(expected_close_date__gte=expected_close_from)
+        expected_close_to = filters.validated_data.get("expected_close_to")
+        if expected_close_to:
+            deals = deals.filter(expected_close_date__lte=expected_close_to)
+        deals = deals.order_by("stage", "sort_order", "created_at", "id")
+        limit = filters.validated_data.get("limit")
+        if limit is not None:
+            deals = deals[:limit]
         return Response(DealSerializer(deals, many=True).data)
 
     def post(self, request, organization_id):

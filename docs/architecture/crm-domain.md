@@ -150,6 +150,11 @@ inside each pipeline stage so drag-and-drop ordering persists. Cross-tenant
 company, contact, and owner references are rejected. See the
 [business pipeline guide](../guides/sales-pipeline.md).
 
+Deal lists support tenant-scoped operational filters for ownership, missing or
+present next actions, expected-close date ranges, archive state, and an optional
+bounded result limit. The built-in My work and deal views compose these filters
+through bookmarkable URLs; they do not create persistent custom-view records.
+
 ## Why Not Use `Customer` As The Main Model?
 
 `Customer` sounds like someone who already bought something.
@@ -228,7 +233,11 @@ changes cannot rewrite customer history.
 Creating a subscription creates its first `Charge`. A charge snapshots net,
 VAT and gross amounts for one coverage period. One or more `Payment` records may
 settle it. The payment status is derived from the received and outstanding
-amounts; it is not a manually maintained boolean.
+amounts; it is not a manually maintained boolean. Editing a customer service's
+price, VAT rate, or currency updates charges that still have an outstanding
+balance. Fully paid charges remain immutable historical snapshots. An edit
+cannot reduce a charge below its recorded payments, and its currency cannot
+change after a payment has been recorded.
 
 When an active recurring subscription with auto-renew enabled is fully paid,
 the service creates exactly one next charge. The database uniqueness constraint

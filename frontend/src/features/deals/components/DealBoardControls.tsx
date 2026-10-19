@@ -18,6 +18,9 @@ export function DealViewTabs({ value, onChange }: DealViewTabsProps) {
   const labels: Record<DealView, string> = {
     active: t('crm.deals.active'),
     all: t('crm.deals.all'),
+    mine: t('crm.deals.mine'),
+    no_next_action: t('crm.deals.noNextActionView'),
+    closing_this_month: t('crm.deals.closingThisMonth'),
     archived: t('crm.deals.archived'),
   }
   return (

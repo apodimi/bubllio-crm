@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha } from './support/crm'
 
 function task(
   id: string,
@@ -10,8 +10,8 @@ function task(
 ) {
   return {
     id,
-    organization: 'alpha',
-    company: 'co-a',
+    organization: fixtureIds.alphaOrganization,
+    company: fixtureIds.acmeCompany,
     company_name: 'Acme Ltd',
     contact: null,
     contact_name: '',
@@ -56,13 +56,19 @@ test('focus view keeps a busy task list scannable', async ({ page }) => {
   await page.getByRole('link', { name: 'Tasks', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Overdue 1/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Today 1/ })).toBeVisible()
+  const overdueCount = today <= now ? 2 : 1
+  const overdueGroup = page.getByRole('button', { name: new RegExp(`Overdue ${overdueCount}`) })
+  await expect(overdueGroup).toBeVisible()
+  if (today <= now) {
+    await expect(page.getByRole('button', { name: /Today/ })).toHaveCount(0)
+  } else {
+    await expect(page.getByRole('button', { name: /Today 1/ })).toBeVisible()
+  }
   await expect(page.getByRole('button', { name: /Upcoming 1/ })).toBeVisible()
 
-  await page.getByRole('button', { name: /Overdue 1/ }).click()
+  await overdueGroup.click()
   await expect(page.getByText('Recover overdue renewal')).toBeHidden()
-  await page.getByRole('button', { name: /Overdue 1/ }).click()
+  await overdueGroup.click()
   await expect(page.getByText('Recover overdue renewal')).toBeVisible()
 
   await page.evaluate(() => window.scrollTo(0, 0))

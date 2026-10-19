@@ -1,6 +1,13 @@
 import type { Deal, DealStage } from '../../types/deal.types'
 
-export const DEAL_VIEWS = ['active', 'all', 'archived'] as const
+export const DEAL_VIEWS = [
+  'active',
+  'all',
+  'mine',
+  'no_next_action',
+  'closing_this_month',
+  'archived',
+] as const
 export const DEAL_STAGES: DealStage[] = [
   'lead',
   'qualified',

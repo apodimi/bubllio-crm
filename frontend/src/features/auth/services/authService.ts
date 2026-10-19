@@ -1,4 +1,5 @@
 import { apiClient, request, type TokenPair } from '../../../services/api'
+import { currentUserContract, tokenPairContract } from '../../../types/api-contract/schemas'
 import type { Organization } from '../../../types/organization.types'
 
 export interface CurrentUser {
@@ -12,8 +13,11 @@ export interface CurrentUser {
 
 export const authService = {
   login: (username: string, password: string) =>
-    request<TokenPair>('/auth/token/', { body: { username, password } }),
-  currentUser: () => request<CurrentUser>('/auth/me/'),
+    request<TokenPair>('/auth/token/', {
+      body: { username, password },
+      schema: tokenPairContract,
+    }),
+  currentUser: () => request<CurrentUser>('/auth/me/', { schema: currentUserContract }),
   logout: (refresh: string) => request('/auth/logout/', { body: { refresh } }),
   accountSettings: (signal?: AbortSignal) =>
     request<{

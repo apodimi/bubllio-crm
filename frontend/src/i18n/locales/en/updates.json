@@ -75,5 +75,6 @@
   "loadError": "We could not load update information. No update was started.",
   "preflightError": "The safety checks could not be completed. Try again after checking the update runner.",
   "startError": "The update did not start. Your current installation was not changed.",
-  "refresh": "Refresh"
+  "refresh": "Refresh",
+  "staleRunStatus": "Live update status is temporarily unavailable. The progress shown below may be stale."
 }

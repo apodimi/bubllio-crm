@@ -56,6 +56,66 @@ def ensure_charge(subscription, due_date=None):
 
 
 @transaction.atomic
+def update_subscription(*, subscription, validated_data):
+    subscription = CustomerSubscription.objects.select_for_update().get(id=subscription.id)
+    commercial_fields = {"net_price", "tax_rate", "currency"}
+    if commercial_fields.isdisjoint(validated_data):
+        for field, value in validated_data.items():
+            setattr(subscription, field, value)
+        subscription.save()
+        return subscription
+
+    editable_charges = []
+    for charge in (
+        subscription.charges.select_for_update()
+        .filter(state=Charge.State.OPEN)
+        .prefetch_related("payments")
+    ):
+        if charge.outstanding_amount > 0:
+            editable_charges.append(charge)
+
+    new_net_price = validated_data.get("net_price", subscription.net_price)
+    new_tax_rate = validated_data.get("tax_rate", subscription.tax_rate)
+    new_currency = validated_data.get("currency", subscription.currency)
+    new_tax_amount = (
+        new_net_price * new_tax_rate / Decimal("100")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    new_gross_amount = new_net_price + new_tax_amount
+
+    for charge in editable_charges:
+        if charge.paid_amount > new_gross_amount:
+            raise ValueError(
+                "The updated total cannot be lower than the amount already paid."
+            )
+        if charge.paid_amount > 0 and charge.currency != new_currency:
+            raise ValueError(
+                "The currency cannot be changed after a payment has been recorded."
+            )
+
+    for field, value in validated_data.items():
+        setattr(subscription, field, value)
+    subscription.save()
+
+    for charge in editable_charges:
+        charge.net_amount = subscription.net_price
+        charge.tax_rate = subscription.tax_rate
+        charge.tax_amount = subscription.tax_amount
+        charge.gross_amount = subscription.gross_price
+        charge.currency = subscription.currency
+        charge.save(
+            update_fields=(
+                "net_amount",
+                "tax_rate",
+                "tax_amount",
+                "gross_amount",
+                "currency",
+                "updated_at",
+            )
+        )
+    return subscription
+
+
+@transaction.atomic
 def record_payment(*, charge, amount, paid_date, payment_method, external_reference, note, recorded_by):
     subscription = CustomerSubscription.objects.select_for_update().get(
         id=charge.subscription_id

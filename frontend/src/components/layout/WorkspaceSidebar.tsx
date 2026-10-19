@@ -1,5 +1,4 @@
-import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import {
   Avatar,
   Box,
@@ -16,23 +15,18 @@ import {
   Typography,
 } from '@mui/material'
 import AppsRounded from '@mui/icons-material/AppsRounded'
-import BusinessRounded from '@mui/icons-material/BusinessRounded'
 import CheckRounded from '@mui/icons-material/CheckRounded'
 import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded'
 import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded'
-import HomeRounded from '@mui/icons-material/HomeRounded'
-import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
 import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded'
-import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
-import SettingsRounded from '@mui/icons-material/SettingsRounded'
-import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
-import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
-import TrendingUpRounded from '@mui/icons-material/TrendingUpRounded'
-import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView'
-import { TreeItem, treeItemClasses } from '@mui/x-tree-view/TreeItem'
 import { useTranslation } from 'react-i18next'
 
 import { BrandLogo } from '../common/BrandLogo'
+import {
+  workspaceNavigation,
+  workspacePath,
+  type WorkspaceNavigationItem,
+} from './workspaceNavigation'
 
 type SidebarProps = {
   organizationId?: string
@@ -49,30 +43,15 @@ type SidebarProps = {
   showWorkspaceSelector?: boolean
 }
 
-type NavigationItem = {
+type NavigationItem = Omit<WorkspaceNavigationItem, 'children'> & {
   text: string
-  to:
-    | '/organizations/$organizationId'
-    | '/organizations/$organizationId/companies'
-    | '/organizations/$organizationId/contacts'
-    | '/organizations/$organizationId/deals'
-    | '/organizations/$organizationId/tasks'
-    | '/organizations/$organizationId/services'
-    | '/organizations/$organizationId/services/customer-services'
-    | '/organizations/$organizationId/services/billing'
-    | '/organizations/$organizationId/services/catalog'
-    | '/organizations/$organizationId/members'
-    | '/organizations/$organizationId/settings'
   path: string
-  icon: ReactNode
-  children?: Array<{
-    text: string
-    to:
-      | '/organizations/$organizationId/services/customer-services'
-      | '/organizations/$organizationId/services/billing'
-      | '/organizations/$organizationId/services/catalog'
-    path: string
-  }>
+  children?: Array<
+    NonNullable<WorkspaceNavigationItem['children']>[number] & {
+      text: string
+      path: string
+    }
+  >
 }
 
 type NavigationGroup = {
@@ -95,10 +74,7 @@ export function WorkspaceSidebar({
   showWorkspaceSelector = true,
 }: SidebarProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [navigationExpansion, setNavigationExpansion] = useState<Record<string, boolean>>({})
   const canManageWorkspace = isSuperuser || currentRole === 'owner' || currentRole === 'admin'
-  const basePath = organizationId ? `/organizations/${organizationId}` : ''
   const selectedOrganization = organizations.find(
     (organization) => organization.id === organizationId,
   )
@@ -109,101 +85,35 @@ export function WorkspaceSidebar({
       .join('')
       .slice(0, 2)
       .toUpperCase()
-  const navigationGroups: NavigationGroup[] = [
-    {
-      label: t('navigation.groups.home'),
-      items: [
-        {
-          text: t('navigation.overview'),
-          to: '/organizations/$organizationId',
-          path: basePath,
-          icon: <HomeRounded />,
-        },
-      ],
-    },
-    {
-      label: t('navigation.groups.relationships'),
-      items: [
-        {
-          text: t('navigation.companies'),
-          to: '/organizations/$organizationId/companies',
-          path: `${basePath}/companies`,
-          icon: <BusinessRounded />,
-        },
-        {
-          text: t('navigation.contacts'),
-          to: '/organizations/$organizationId/contacts',
-          path: `${basePath}/contacts`,
-          icon: <PeopleAltRounded />,
-        },
-      ],
-    },
-    {
-      label: t('navigation.groups.work'),
-      items: [
-        {
-          text: t('navigation.deals'),
-          to: '/organizations/$organizationId/deals',
-          path: `${basePath}/deals`,
-          icon: <TrendingUpRounded />,
-        },
-        {
-          text: t('navigation.tasks'),
-          to: '/organizations/$organizationId/tasks',
-          path: `${basePath}/tasks`,
-          icon: <TaskAltRounded />,
-        },
-      ],
-    },
-    {
-      label: t('navigation.groups.operations'),
-      items: [
-        {
-          text: t('navigation.services'),
-          to: '/organizations/$organizationId/services/customer-services',
-          path: `${basePath}/services`,
-          icon: <SubscriptionsRounded />,
-          children: [
-            {
-              text: t('navigation.customerServices'),
-              to: '/organizations/$organizationId/services/customer-services',
-              path: `${basePath}/services/customer-services`,
-            },
-            {
-              text: t('navigation.billing'),
-              to: '/organizations/$organizationId/services/billing',
-              path: `${basePath}/services/billing`,
-            },
-            {
-              text: t('navigation.catalog'),
-              to: '/organizations/$organizationId/services/catalog',
-              path: `${basePath}/services/catalog`,
-            },
-          ],
-        },
-      ],
-    },
-  ]
-
-  if (canManageWorkspace) {
-    navigationGroups.push({
-      label: t('navigation.groups.workspace'),
-      items: [
-        {
-          text: t('navigation.people'),
-          to: '/organizations/$organizationId/members',
-          path: `${basePath}/members`,
-          icon: <GroupAddRounded />,
-        },
-        {
-          text: t('navigation.settings'),
-          to: '/organizations/$organizationId/settings',
-          path: `${basePath}/settings`,
-          icon: <SettingsRounded />,
-        },
-      ],
-    })
+  const visibleNavigation = workspaceNavigation.filter(
+    (item) => !item.requiresWorkspaceManager || canManageWorkspace,
+  )
+  const navigationGroupLabels = {
+    home: t('navigation.groups.home'),
+    customers: t('navigation.groups.customers'),
+    sales: t('navigation.groups.sales'),
+    revenue: t('navigation.groups.revenue'),
+    administration: t('navigation.groups.administration'),
   }
+  const navigationGroups: NavigationGroup[] = (
+    ['home', 'customers', 'sales', 'revenue', 'administration'] as const
+  )
+    .map((group) => ({
+      label: navigationGroupLabels[group],
+      items: visibleNavigation
+        .filter((item) => item.group === group)
+        .map((item) => ({
+          ...item,
+          text: t(item.labelKey),
+          path: organizationId ? workspacePath(organizationId, item) : '',
+          children: item.children?.map((child) => ({
+            ...child,
+            text: t(child.labelKey),
+            path: organizationId ? `/organizations/${organizationId}${child.relativePath}` : '',
+          })),
+        })),
+    }))
+    .filter((group) => group.items.length > 0)
 
   const navigationLink = (item: NavigationItem) => {
     const selected = item.children
@@ -211,7 +121,7 @@ export function WorkspaceSidebar({
       : currentPath === item.path || currentPath === `${item.path}/`
     const link = (
       <Link
-        to={item.to}
+        to={item.route}
         params={{ organizationId: organizationId ?? '' }}
         aria-label={item.text}
         aria-current={selected ? 'page' : undefined}
@@ -280,185 +190,65 @@ export function WorkspaceSidebar({
     )
   }
 
-  const navigationTree = (item: NavigationItem) => {
-    const selected = currentPath.startsWith(item.path)
-    const selectedChild = item.children?.find(
-      (child) => currentPath === child.path || currentPath === `${child.path}/`,
-    )
-    const selectedItemId = selectedChild?.path ?? (selected ? item.path : null)
-    const treeExpanded = navigationExpansion[item.path] ?? selected
+  const navigationChildren = (item: NavigationItem) =>
+    item.children?.map((child) => {
+      const selected = currentPath === child.path || currentPath === `${child.path}/`
 
-    const navigateToItem = (itemId: string) => {
-      const child = item.children?.find((candidate) => candidate.path === itemId)
-
-      if (child) {
-        void navigate({
-          to: child.to,
-          params: { organizationId: organizationId ?? '' },
-        })
-        onClose()
-        return
-      }
-
-      // Parent rows organize real child routes. Selection expands the MUI tree;
-      // navigation happens only after the user chooses a concrete destination.
-    }
-
-    return (
-      <SimpleTreeView
-        aria-label={item.text}
-        expandedItems={treeExpanded ? [item.path] : []}
-        onExpandedItemsChange={(_event, itemIds) => {
-          const isExpanded = itemIds.includes(item.path)
-          setNavigationExpansion((current) => ({ ...current, [item.path]: isExpanded }))
-        }}
-        selectedItems={selectedItemId}
-        onSelectedItemsChange={(_event, itemId) => {
-          if (itemId) {
-            navigateToItem(itemId)
-          }
-        }}
-        sx={{
-          color: 'inherit',
-          [`& .${treeItemClasses.content}`]: {
-            minHeight: 46,
-            px: 1.25,
-            py: 0.5,
-            borderRadius: 1,
-            color: 'text.secondary',
-            transition: 'background-color 160ms ease, color 160ms ease',
-            '@media (pointer: coarse)': { minHeight: 44 },
-            '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-            '@media (hover: hover) and (pointer: fine)': {
-              '&:hover': {
-                bgcolor: 'transparent',
-                color: 'text.primary',
-              },
-            },
-            '&.Mui-selected, &.Mui-selected:hover, &.Mui-focused': {
-              bgcolor: 'transparent',
-              color: 'primary.main',
-            },
-          },
-          [`& .${treeItemClasses.iconContainer}`]: {
-            width: 20,
-            mr: 1,
-            color: 'inherit',
-          },
-          [`& .${treeItemClasses.label}`]: {
-            fontFamily: 'inherit',
-          },
-          [`& .${treeItemClasses.groupTransition}`]: {
-            ml: 2.25,
-            pl: 0,
-          },
-          [`& .${treeItemClasses.groupTransition} .${treeItemClasses.content}`]: {
-            minHeight: 38,
-            py: 0.25,
-            pr: 1,
-            pl: 4,
-            borderRadius: 0,
-            fontSize: 13,
-            transition: 'none',
-            '&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-focused': {
-              bgcolor: 'transparent',
-            },
-          },
-          [`& .${treeItemClasses.groupTransition} .${treeItemClasses.iconContainer}`]: {
-            display: 'none',
-          },
-        }}
-      >
-        <TreeItem
-          itemId={item.path}
-          sx={{
-            [`& > .${treeItemClasses.content}`]: {
-              bgcolor: 'transparent',
-              '&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-focused': {
-                bgcolor: 'transparent',
-              },
-              [`& > .${treeItemClasses.label}`]: {
-                width: 'auto',
-                minWidth: 0,
-                flexGrow: 1,
-              },
-              [`& > .${treeItemClasses.iconContainer}`]: {
-                order: 1,
-                width: 18,
-                ml: 1.25,
-                mr: 0,
-                flexShrink: 0,
-              },
-            },
-          }}
-          label={
-            <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25 }}>
-              <Box sx={{ display: 'grid', placeItems: 'center', '& svg': { fontSize: 19 } }}>
-                {item.icon}
-              </Box>
-              <Typography variant="body2" sx={{ fontWeight: 650 }}>
-                {item.text}
-              </Typography>
-              {selectedChild && !treeExpanded ? (
-                <Box
-                  component="span"
-                  data-active-submenu-indicator="true"
-                  sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'primary.main' }}
-                />
-              ) : null}
-            </Stack>
-          }
+      const link = (
+        <Link
+          key={child.path}
+          to={child.route}
+          params={{ organizationId: organizationId ?? '' }}
+          aria-label={child.text}
+          aria-current={selected ? 'page' : undefined}
+          onClick={onClose}
+          style={{ color: 'inherit', textDecoration: 'none' }}
         >
-          {item.children?.map((child) => {
-            const childSelected = selectedChild?.path === child.path
+          <Box
+            sx={{
+              display: 'flex',
+              minHeight: 46,
+              alignItems: 'center',
+              justifyContent: expanded ? 'flex-start' : 'center',
+              px: expanded ? 1.25 : 0,
+              borderRadius: 1,
+              color: selected ? 'primary.main' : 'text.secondary',
+              fontSize: 13,
+              fontWeight: selected ? 700 : 550,
+              '@media (pointer: coarse)': { minHeight: 44 },
+              '@media (hover: hover) and (pointer: fine)': {
+                '&:hover': { color: 'text.primary' },
+              },
+              'a:focus-visible &': {
+                outline: '3px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: 2,
+              },
+            }}
+          >
+            <Box
+              sx={{
+                display: 'grid',
+                placeItems: 'center',
+                minWidth: expanded ? 34 : 0,
+                '& svg': { fontSize: 19 },
+              }}
+            >
+              {child.icon}
+            </Box>
+            {expanded ? child.text : null}
+          </Box>
+        </Link>
+      )
 
-            return (
-              <TreeItem
-                key={child.path}
-                itemId={child.path}
-                sx={{
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: '50%',
-                    left: 0,
-                    width: 3,
-                    height: 18,
-                    borderRadius: 1.5,
-                    bgcolor: childSelected ? 'primary.main' : 'transparent',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                  },
-                  [`&& > .${treeItemClasses.content}`]: {
-                    bgcolor: 'transparent',
-                    '&:hover, &.Mui-selected, &.Mui-selected:hover': {
-                      bgcolor: 'transparent',
-                    },
-                    '&.Mui-selected': {
-                      color: 'primary.main',
-                    },
-                  },
-                }}
-                label={
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: childSelected ? 'primary.main' : 'text.secondary',
-                      fontSize: 13,
-                      fontWeight: childSelected ? 700 : 550,
-                    }}
-                  >
-                    {child.text}
-                  </Typography>
-                }
-              />
-            )
-          })}
-        </TreeItem>
-      </SimpleTreeView>
-    )
-  }
+      return expanded ? (
+        link
+      ) : (
+        <Tooltip key={child.path} title={child.text} placement="right" arrow>
+          {link}
+        </Tooltip>
+      )
+    })
 
   return (
     <Stack
@@ -641,6 +431,23 @@ export function WorkspaceSidebar({
         {organizationId
           ? navigationGroups.map((group, groupIndex) => (
               <Box key={group.label} sx={{ mb: expanded ? 0.25 : 0.75 }}>
+                {expanded ? (
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      display: 'block',
+                      px: 1.25,
+                      pt: groupIndex ? 1.5 : 0,
+                      pb: 0.25,
+                      color: 'text.secondary',
+                      fontSize: 10,
+                      letterSpacing: '.1em',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {group.label}
+                  </Typography>
+                ) : null}
                 {!expanded && groupIndex ? (
                   <Divider
                     sx={{
@@ -653,8 +460,8 @@ export function WorkspaceSidebar({
                 <List disablePadding sx={{ display: 'grid', gap: 0.25 }}>
                   {group.items.map((item) => (
                     <Box key={item.text}>
-                      {expanded && showNestedNavigation && item.children
-                        ? navigationTree(item)
+                      {showNestedNavigation && item.children
+                        ? navigationChildren(item)
                         : navigationLink(item)}
                     </Box>
                   ))}
@@ -669,17 +476,24 @@ export function WorkspaceSidebar({
           to="/"
           onClick={onClose}
           aria-label={t('common.allWorkspaces')}
-          startIcon={expanded ? undefined : <AppsRounded />}
+          startIcon={<AppsRounded />}
           sx={{
             minWidth: 0,
+            minHeight: 46,
             justifyContent: expanded ? 'flex-start' : 'center',
-            px: expanded ? 2 : 0,
+            px: expanded ? 1.25 : 0,
             color: 'text.secondary',
             '&:hover': {
               color: 'text.primary',
               bgcolor: 'action.hover',
             },
-            '& .MuiButton-startIcon': { m: 0 },
+            '& .MuiButton-startIcon': {
+              minWidth: expanded ? 34 : 0,
+              justifyContent: 'center',
+              m: 0,
+              '& svg': { fontSize: 19 },
+            },
+            '@media (pointer: coarse)': { minHeight: 44 },
           }}
         >
           {expanded ? t('common.allWorkspaces') : null}

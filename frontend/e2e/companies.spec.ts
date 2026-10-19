@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
@@ -53,7 +53,7 @@ test('company pages reset on debounced search and render bounded rows', async ({
   await login(page)
   await openAlpha(page)
   const searches: string[] = []
-  await page.route('**/organizations/alpha/companies/?**', async (route) => {
+  await page.route('**/organizations/*/companies/?**', async (route) => {
     const params = new URL(route.request().url()).searchParams
     const search = params.get('search') ?? ''
     if (search) searches.push(search)
@@ -151,10 +151,20 @@ test('edits a company', async ({ page }) => {
 test('adds customer context to the company timeline', async ({ page }) => {
   await login(page)
   await openAlpha(page)
-  await page.goto('/organizations/alpha/companies/co-a')
+  await page.goto(
+    `/organizations/${fixtureIds.alphaOrganization}/companies/${fixtureIds.acmeCompany}`,
+  )
 
   await expect(page.getByRole('heading', { name: 'Customer timeline' })).toBeVisible()
-  await page.getByLabel('Add a note').fill('Customer approved the proposal review for Friday.')
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Add a note' }).click()
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toBeFocused()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Add a note' }).click()
+  await page
+    .getByRole('textbox', { name: 'Add a note' })
+    .fill('Customer approved the proposal review for Friday.')
   const noteRequest = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().endsWith('/timeline/'),
   )
@@ -163,7 +173,13 @@ test('adds customer context to the company timeline', async ({ page }) => {
   expect((await noteRequest).postDataJSON()).toEqual({
     body: 'Customer approved the proposal review for Friday.',
   })
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Note added to the customer timeline.' }),
+  ).toBeVisible()
   await expect(page.getByText('Customer approved the proposal review for Friday.')).toBeVisible()
+  const timelineRegion = page.getByRole('region', { name: 'Customer timeline' })
+  await expect(timelineRegion.locator('ol > li')).toHaveCount(2)
+  await expect(timelineRegion.locator('ol time').first()).toHaveAttribute('datetime')
   await page.screenshot({
     path: test.info().outputPath('customer-timeline-desktop.png'),
     fullPage: true,
@@ -181,4 +197,135 @@ test('adds customer context to the company timeline', async ({ page }) => {
     fullPage: true,
     animations: 'disabled',
   })
+})
+
+test('keeps the customer context usable when billing is unavailable', async ({ page }) => {
+  await page.route('**/services/subscriptions/', async (route) => {
+    await route.fulfill({ status: 503, json: { detail: 'Temporarily unavailable' } })
+  })
+  await page.route('**/contacts/?company=*', async (route) => {
+    await route.fulfill({
+      json: [
+        {
+          id: fixtureIds.contact,
+          organization: fixtureIds.alphaOrganization,
+          company: fixtureIds.acmeCompany,
+          company_name: 'Acme Ltd',
+          assigned_to: 1,
+          assigned_to_name: 'Demo User',
+          first_name: 'Maria',
+          last_name: 'Papadopoulou',
+          email: 'maria@example.com',
+          phone_number: '+30 210 000 0000',
+          department: 'Operations',
+          job_title: 'Operations Director',
+          status: 'active',
+          is_primary: true,
+          archived_at: null,
+          created_at: '2030-01-01T00:00:00Z',
+          updated_at: '2030-01-03T00:00:00Z',
+        },
+      ],
+    })
+  })
+  await login(page)
+  await page.goto(
+    `/organizations/${fixtureIds.alphaOrganization}/companies/${fixtureIds.acmeCompany}`,
+  )
+
+  await expect(page.getByRole('heading', { name: 'Customer timeline' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible()
+  await expect(page.getByText('Maria Papadopoulou').last()).toBeVisible()
+  await expect(page.getByLabel('Customer snapshot').getByText('Unavailable')).toHaveCount(2)
+})
+
+test('viewer sees customer history without mutation controls', async ({ page }) => {
+  const viewerOrganization = { ...orgs[0], current_user_role: 'viewer' }
+  await page.route('**/api/v1/auth/me/', async (route) => {
+    await route.fulfill({
+      json: {
+        id: 1,
+        username: 'demo',
+        email: 'demo@example.com',
+        is_superuser: false,
+        can_create_workspaces: false,
+        organizations: [viewerOrganization],
+      },
+    })
+  })
+  await page.route(`**/api/v1/organizations/${fixtureIds.alphaOrganization}/`, async (route) => {
+    await route.fulfill({ json: viewerOrganization })
+  })
+  await login(page)
+  await page.goto(
+    `/organizations/${fixtureIds.alphaOrganization}/companies/${fixtureIds.acmeCompany}`,
+  )
+
+  await expect(page.getByRole('heading', { name: 'Customer timeline' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Edit company' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Add a note' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Add next action' })).toHaveCount(0)
+})
+
+test('failed note keeps its text and focus for retry', async ({ page }) => {
+  await page.route('**/companies/*/timeline/', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ status: 503, json: { detail: 'Try again shortly.' } })
+      return
+    }
+    await route.fallback()
+  })
+  await login(page)
+  await page.goto(
+    `/organizations/${fixtureIds.alphaOrganization}/companies/${fixtureIds.acmeCompany}`,
+  )
+
+  await page.getByRole('button', { name: 'Add a note' }).click()
+  const note = page.getByRole('textbox', { name: 'Add a note' })
+  await note.fill('Keep this note while the request is retried.')
+  await page.getByRole('button', { name: 'Add note', exact: true }).click()
+
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'The server could not complete this request.' }),
+  ).toBeVisible()
+  await expect(note).toHaveValue('Keep this note while the request is retried.')
+  await expect(note).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Add note', exact: true })).toBeEnabled()
+})
+
+test('adds a company next action and refreshes its timeline', async ({ page }) => {
+  let timelineGets = 0
+  page.on('request', (request) => {
+    if (
+      request.method() === 'GET' &&
+      request.url().includes('/companies/') &&
+      request.url().includes('/timeline/')
+    ) {
+      timelineGets += 1
+    }
+  })
+  await login(page)
+  await page.goto(
+    `/organizations/${fixtureIds.alphaOrganization}/companies/${fixtureIds.acmeCompany}`,
+  )
+  await expect(page.getByRole('heading', { name: 'Customer timeline' })).toBeVisible()
+  await expect.poll(() => timelineGets).toBeGreaterThan(0)
+  const initialTimelineGets = timelineGets
+
+  await page.getByRole('button', { name: 'Add next action' }).click()
+  await expect(page.getByRole('heading', { name: 'Add next action' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Company' })).toContainText('Acme Ltd')
+  await page.getByRole('textbox', { name: 'What needs to happen?' }).fill('Call Acme tomorrow')
+  const taskRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/tasks/'),
+  )
+  await page.getByRole('button', { name: 'Add task' }).click()
+
+  expect((await taskRequest).postDataJSON()).toMatchObject({
+    company: fixtureIds.acmeCompany,
+    title: 'Call Acme tomorrow',
+  })
+  await expect(page.getByRole('heading', { name: 'Add next action' })).toHaveCount(0)
+  await expect.poll(() => timelineGets).toBeGreaterThan(initialTimelineGets)
 })

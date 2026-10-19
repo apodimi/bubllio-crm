@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
@@ -98,8 +98,10 @@ test('mobile navigation works without horizontal overflow', async ({ page }) => 
   await login(page)
   await openAlpha(page)
   const mobileDock = page.getByRole('navigation', { name: 'Primary navigation' })
-  await mobileDock.getByRole('button', { name: 'Services', exact: true }).click()
-  await expect(page).toHaveURL('/organizations/alpha/services/customer-services')
+  await mobileDock.getByRole('button', { name: 'Revenue', exact: true }).click()
+  await expect(page).toHaveURL(
+    `/organizations/${fixtureIds.alphaOrganization}/services/customer-services`,
+  )
   await expect(page.getByRole('heading', { name: 'Customer services', exact: true })).toBeVisible()
   await page.screenshot({
     path: test.info().outputPath('navigation-mobile-dock.png'),
@@ -221,7 +223,12 @@ test('existing account signs in and accepts a workspace invitation', async ({ pa
     expect(route.request().postDataJSON()).toEqual({})
     return route.fulfill({
       status: 201,
-      json: { organization_id: 'alpha', role: 'viewer', tokens: null },
+      json: {
+        organization_id: fixtureIds.alphaOrganization,
+        role: 'viewer',
+        membership_created: true,
+        tokens: null,
+      },
     })
   })
   await page.goto('/invite/existing-token')
@@ -229,6 +236,6 @@ test('existing account signs in and accepts a workspace invitation', async ({ pa
   await page.getByLabel('Username').fill('demo')
   await page.getByLabel('Password').fill('password')
   await page.getByRole('button', { name: 'Sign in and join' }).click()
-  await expect(page).toHaveURL('/organizations/alpha')
-  await expect(page.getByRole('heading', { name: /Move one thing forward/ })).toBeVisible()
+  await expect(page).toHaveURL(`/organizations/${fixtureIds.alphaOrganization}`)
+  await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible()
 })

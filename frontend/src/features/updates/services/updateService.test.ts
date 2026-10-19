@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { request } from '../../../services/api'
+import { updatePreflightContract, updateRunContract } from '../../../types/api-contract/schemas'
 import { updateService } from './updateService'
 
 vi.mock('../../../services/api', () => ({ request: vi.fn() }))
@@ -13,6 +14,7 @@ describe('update service', () => {
 
     expect(request).toHaveBeenCalledWith('/installation/updates/preflight/', {
       body: { target_version: '0.2.0' },
+      schema: updatePreflightContract,
     })
   })
 
@@ -25,6 +27,7 @@ describe('update service', () => {
         current_password: 'correct horse battery staple',
       },
       headers: { 'Idempotency-Key': 'update_request_123' },
+      schema: updateRunContract,
     })
   })
 })

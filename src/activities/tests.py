@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -277,7 +278,7 @@ class TaskApiTests(APITestCase):
         self.assertIsNone(waiting.data["completed_at"])
         self.assertEqual(waiting.data["completed_by_name"], "")
 
-    def test_move_rejects_invalid_status_and_patch_cannot_bypass_service(self):
+    def test_move_rejects_invalid_status_and_patch_updates_status_atomically(self):
         task = self.create_task()
         move_url = reverse(
             "task-move",
@@ -297,8 +298,31 @@ class TaskApiTests(APITestCase):
 
         self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
-        self.assertEqual(patched.data["workflow_status"], "todo")
-        self.assertIsNone(patched.data["completed_at"])
+        self.assertEqual(patched.data["workflow_status"], "completed")
+        self.assertIsNotNone(patched.data["completed_at"])
+
+    def test_patch_rolls_back_fields_and_status_when_timeline_write_fails(self):
+        task = self.create_task(title="Original title")
+        detail_url = reverse(
+            "task-detail",
+            kwargs={"organization_id": self.organization.id, "task_id": task.id},
+        )
+
+        with patch(
+            "activities.services.record_company_timeline_event",
+            side_effect=RuntimeError("timeline unavailable"),
+        ), self.assertRaises(RuntimeError):
+            self.client.patch(
+                detail_url,
+                {"title": "Changed title", "workflow_status": "completed"},
+                format="json",
+            )
+
+        task.refresh_from_db()
+        self.assertEqual(task.title, "Original title")
+        self.assertEqual(task.workflow_status, Task.WorkflowStatus.TODO)
+        self.assertIsNone(task.completed_at)
+        self.assertIsNone(task.completed_by)
 
     def test_non_member_cannot_list_tasks(self):
         self.client.force_authenticate(self.outsider)

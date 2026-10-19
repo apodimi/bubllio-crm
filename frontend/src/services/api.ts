@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type { AxiosRequestConfig } from 'axios'
+import type { ZodType } from 'zod'
+
 import { useAuthStore } from '../features/auth/store/authStore'
 
 export class ApiError extends Error {
@@ -97,6 +99,7 @@ export async function request<T>(
     body?: unknown
     headers?: AxiosRequestConfig['headers']
     method?: AxiosRequestConfig['method']
+    schema?: ZodType<T>
   } = {},
 ): Promise<T> {
   const config: AxiosRequestConfig = {
@@ -108,7 +111,7 @@ export async function request<T>(
   }
   try {
     const response = await apiClient.request<T>(config)
-    return response.data
+    return options.schema ? options.schema.parse(response.data) : response.data
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status ?? 0

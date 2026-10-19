@@ -45,13 +45,33 @@ export function useDealBoardController() {
   const search = routeSearch.q ?? ''
   const stage: DealStage | '' = routeSearch.stage ?? ''
   const deferredSearch = useDebouncedValue(search)
+  const viewFilters = useMemo<DealFilters>(() => {
+    if (view === 'mine') return { archived: 'active', assignedTo: 'me' }
+    if (view === 'no_next_action') return { archived: 'active', nextAction: 'missing' }
+    if (view === 'closing_this_month') {
+      const now = new Date()
+      const format = (date: Date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      return {
+        archived: 'active',
+        expectedCloseFrom: format(new Date(now.getFullYear(), now.getMonth(), 1)),
+        expectedCloseTo: format(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      }
+    }
+    return { archived: view }
+  }, [view])
   const filters = useMemo<DealFilters>(
-    () => ({ search: deferredSearch, stage, archived: view }),
-    [deferredSearch, stage, view],
+    () => ({ search: deferredSearch, stage, ...viewFilters }),
+    [deferredSearch, stage, viewFilters],
   )
   const deals = useDeals(org.id, filters)
   const companies = useCompanies(org.id, { archived: 'active' })
-  const tasks = useTasks(org.id, { bucket: 'open' })
+  const needsTaskContext = view === 'active' || view === 'all' || view === 'archived'
+  const tasks = useTasks(org.id, { bucket: 'open' }, { enabled: needsTaskContext })
   const routeDeal = useDeal(org.id, routeSearch.deal ?? '')
   const move = useMoveDeal(org.id, filters)
   const archive = useArchiveDeal(org.id)

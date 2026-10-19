@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha, orgs } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
@@ -10,60 +10,19 @@ test('subscription cancellation remains active through the paid period and can r
   await login(page)
   await openAlpha(page)
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
-  const servicesTree = page.getByRole('tree', { name: 'Services' })
-  await expect(servicesTree).toBeVisible()
-  await servicesTree.getByText('Services', { exact: true }).click()
-  await expect(servicesTree.getByText('Customer services', { exact: true })).toBeVisible()
-  await servicesTree.getByText('Customer services', { exact: true }).click()
-  await expect(page).toHaveURL('/organizations/alpha/services/customer-services')
-  await expect(
-    servicesTree.getByRole('treeitem', { name: 'Customer services', exact: true }),
-  ).toHaveAttribute('aria-selected', 'true')
-  const servicesParent = servicesTree.getByRole('treeitem', { name: /^Services/ }).first()
-  await expect(servicesParent).toHaveAttribute('aria-expanded', 'true')
-  await servicesTree.getByText('Services', { exact: true }).click()
-  await expect(servicesParent).toHaveAttribute('aria-expanded', 'false')
-  await expect(servicesTree.getByText('Customer services', { exact: true })).toBeHidden()
-  await expect(servicesParent.locator('[data-active-submenu-indicator="true"]')).toBeVisible()
+  await page.getByRole('link', { name: 'Customer services', exact: true }).click()
+  await expect(page).toHaveURL(
+    `/organizations/${fixtureIds.alphaOrganization}/services/customer-services`,
+  )
   await page.screenshot({
-    path: test.info().outputPath('services-secondary-navigation-collapsed.png'),
+    path: test.info().outputPath('customer-services.png'),
     fullPage: true,
     animations: 'disabled',
   })
-  await servicesTree.getByText('Services', { exact: true }).click()
-  await expect(servicesParent).toHaveAttribute('aria-expanded', 'true')
-  await expect(servicesTree.getByText('Customer services', { exact: true })).toBeVisible()
-  await expect(servicesParent.locator('[data-active-submenu-indicator="true"]')).toHaveCount(0)
-  const servicesContent = servicesParent.locator('.MuiTreeItem-content').first()
-  await servicesContent.hover()
-  await expect(servicesContent).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-  const servicesContentBox = await servicesContent.boundingBox()
-  const servicesArrowBox = await servicesContent.locator('.MuiTreeItem-iconContainer').boundingBox()
-  expect(servicesContentBox).not.toBeNull()
-  expect(servicesArrowBox).not.toBeNull()
-  expect(
-    Math.abs(
-      (servicesContentBox?.x ?? 0) +
-        (servicesContentBox?.width ?? 0) -
-        ((servicesArrowBox?.x ?? 0) + (servicesArrowBox?.width ?? 0)),
-    ),
-  ).toBeLessThan(14)
-  await page.screenshot({
-    path: test.info().outputPath('services-secondary-navigation.png'),
-    fullPage: true,
-    animations: 'disabled',
-  })
-  const billingItem = servicesTree.getByRole('treeitem', { name: 'Billing', exact: true })
-  const billingContent = billingItem.locator('.MuiTreeItem-content')
-  const billingLabel = billingItem.getByText('Billing', { exact: true })
-  const restingColor = await billingLabel.evaluate((element) => getComputedStyle(element).color)
-  await billingContent.hover()
-  await expect(billingContent).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-  await expect(billingLabel).toHaveCSS('color', restingColor)
   await page.getByRole('button', { name: 'Edit Managed service' }).click()
   await page.getByRole('button', { name: 'End customer service…' }).click()
   const cancellationRequest = page.waitForRequest((request) =>
-    request.url().endsWith('/subscriptions/sub-a/end/'),
+    request.url().endsWith(`/subscriptions/${fixtureIds.subscription}/end/`),
   )
   await page.getByRole('button', { name: 'End at period close' }).click()
   expect((await cancellationRequest).postDataJSON()).toEqual({ mode: 'end_of_period' })
@@ -93,13 +52,13 @@ test('workspace owner safely updates and tests invitation email', async ({ page 
     created_at: '2030-01-01T00:00:00Z',
     updated_at: '2030-01-01T00:00:00Z',
   }
-  await page.route('**/api/v1/organizations/alpha/settings/', (route) =>
+  await page.route('**/api/v1/organizations/*/settings/', (route) =>
     route.fulfill({ json: { timezone: 'UTC', locale: 'en-us', default_from_name: '' } }),
   )
-  await page.route('**/api/v1/organizations/alpha/email-accounts/', (route) =>
+  await page.route('**/api/v1/organizations/*/email-accounts/', (route) =>
     route.fulfill({ json: [account] }),
   )
-  await page.route('**/api/v1/organizations/alpha/email-accounts/smtp-a/', (route) => {
+  await page.route('**/api/v1/organizations/*/email-accounts/smtp-a/', (route) => {
     expect(route.request().method()).toBe('PATCH')
     expect(route.request().postDataJSON()).toMatchObject({
       host: 'smtp.example.com',
@@ -110,7 +69,7 @@ test('workspace owner safely updates and tests invitation email', async ({ page 
     expect(route.request().postDataJSON()).not.toHaveProperty('password')
     return route.fulfill({ json: { ...account, from_name: 'Alpha CRM' } })
   })
-  await page.route('**/api/v1/organizations/alpha/email-accounts/smtp-a/test/', (route) => {
+  await page.route('**/api/v1/organizations/*/email-accounts/smtp-a/test/', (route) => {
     expect(route.request().postDataJSON()).toEqual({ recipient: 'owner@example.com' })
     return route.fulfill({ json: { detail: 'Test email sent.', status: 'success' } })
   })
@@ -139,6 +98,7 @@ test('installation admin sees a new release banner', async ({ page }) => {
         username: 'first-admin',
         email: 'admin@example.com',
         is_superuser: true,
+        can_create_workspaces: true,
         organizations: orgs,
       },
     }),
@@ -178,6 +138,7 @@ test('installation admin preflights and confirms a maintenance update', async ({
         username: 'first-admin',
         email: 'admin@example.com',
         is_superuser: true,
+        can_create_workspaces: true,
         organizations: orgs,
       },
     }),
@@ -247,7 +208,7 @@ test('installation admin preflights and confirms a maintenance update', async ({
         published_at: '2030-01-01T08:00:00Z',
         active_run: null,
         latest_run: {
-          id: 'completed-run',
+          id: '00000000-0000-4000-8000-000000000601',
           target_version: '0.1.0',
           status: 'succeeded',
           progress: 100,
@@ -346,6 +307,7 @@ test('installation admin can review production readiness checks', async ({ page 
         username: 'first-admin',
         email: 'admin@example.com',
         is_superuser: true,
+        can_create_workspaces: true,
         organizations: orgs,
       },
     }),

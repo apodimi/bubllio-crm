@@ -1,109 +1,40 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from organizations.models import (
-    Organization, OrganizationInvitation, OrganizationMembership,
-    OrganizationProvisioning, WorkspaceAccessEvent,
+from access.api.invitation_serializers import (
+    InvitationAcceptanceSerializer,
+    InvitationCreateSerializer,
+    InvitationDetailSerializer,
+    InvitationRegistrationSerializer,
+    OrganizationInvitationSerializer,
 )
-from accounts.models import UserProfile
 from access.permissions import Capability, get_membership, get_organization_for_user
 from access.services.invitations import (
+    InvitationAcceptanceError,
     InvitationAlreadyMemberError,
     InvitationRolePermissionError,
+    accept_workspace_invitation,
     deliver_workspace_invitation,
     invitation_email_account,
     token_hash,
 )
+from organizations.models import (
+    Organization,
+    OrganizationInvitation,
+    OrganizationMembership,
+    WorkspaceAccessEvent,
+)
 
 logger = logging.getLogger(__name__)
-
-
-class InvitationCreateSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    role = serializers.ChoiceField(choices=[
-        OrganizationMembership.Role.ADMIN,
-        OrganizationMembership.Role.MEMBER,
-        OrganizationMembership.Role.VIEWER,
-    ])
-
-    def validate_email(self, value):
-        return value.strip().lower()
-
-
-class InvitationRegistrationSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
-    password = serializers.CharField(write_only=True)
-    display_name = serializers.CharField(max_length=255, required=True)
-    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    date_of_birth = serializers.DateField(required=False, allow_null=True)
-    timezone = serializers.CharField(max_length=64, default="UTC")
-    locale = serializers.CharField(max_length=20, default="en-us")
-
-    def validate_username(self, value):
-        user_model = get_user_model()
-        if user_model.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError("This username is already in use.")
-        return value
-
-    def validate(self, attrs):
-        candidate = get_user_model()(username=attrs["username"], email=self.context["invited_email"])
-        try:
-            validate_password(attrs["password"], user=candidate)
-        except DjangoValidationError as error:
-            raise serializers.ValidationError({"password": error.messages}) from error
-        return attrs
-
-
-class OrganizationInvitationSerializer(serializers.ModelSerializer):
-    status = serializers.ChoiceField(
-        choices=OrganizationInvitation.Status.choices,
-        read_only=True,
-    )
-    invited_by = serializers.SerializerMethodField()
-
-    class Meta:
-        model = OrganizationInvitation
-        fields = (
-            "id",
-            "email",
-            "role",
-            "status",
-            "invited_by",
-            "created_at",
-            "expires_at",
-            "accepted_at",
-            "revoked_at",
-        )
-
-    def get_invited_by(self, invitation) -> str | None:
-        return invitation.invited_by.username if invitation.invited_by else None
-
-
-class InvitationDetailSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    organization_name = serializers.CharField()
-    role = serializers.CharField()
-    expires_at = serializers.DateTimeField()
-
-
-class InvitationAcceptanceSerializer(serializers.Serializer):
-    organization_id = serializers.UUIDField()
-    role = serializers.CharField()
-    membership_created = serializers.BooleanField()
-    tokens = serializers.DictField(allow_null=True)
 
 
 def _invitation_account(organization):
@@ -336,95 +267,39 @@ class InvitationAcceptAPIView(APIView):
     serializer_class = InvitationAcceptanceSerializer
     permission_classes = [AllowAny]
 
-    @transaction.atomic
     def post(self, request, token):
-        token_digest = token_hash(token)
-        organization_id = get_object_or_404(
-            OrganizationInvitation,
-            token_hash=token_digest, accepted_at__isnull=True, revoked_at__isnull=True,
-            expires_at__gt=timezone.now(),
-        ).organization_id
-        get_object_or_404(Organization.objects.select_for_update(), id=organization_id)
-        invitation = get_object_or_404(
-            OrganizationInvitation.objects.select_for_update().select_related("organization"),
-            token_hash=token_digest, accepted_at__isnull=True, revoked_at__isnull=True,
-            expires_at__gt=timezone.now(),
-        )
-        provisioning = OrganizationProvisioning.objects.select_for_update().filter(
-            organization=invitation.organization
-        ).first()
-        if invitation.role == OrganizationMembership.Role.OWNER:
-            if provisioning is None or provisioning.owner_email.casefold() != invitation.email.casefold():
-                return Response({"detail": "This owner invitation is no longer valid."}, status=404)
-        elif provisioning is not None:
-            return Response({"detail": "The workspace is awaiting its owner."}, status=409)
-        user_model = get_user_model()
-        if request.user.is_authenticated:
-            if request.user.email.lower() != invitation.email:
-                return Response({"detail": "Sign in with the invited email address."}, status=status.HTTP_403_FORBIDDEN)
-            user = request.user
-            tokens = None
-        else:
-            if user_model.objects.filter(email__iexact=invitation.email).exists():
-                return Response({"detail": "An account with this email exists. Sign in before accepting the invitation."}, status=status.HTTP_409_CONFLICT)
-            serializer = InvitationRegistrationSerializer(data=request.data, context={"invited_email": invitation.email})
+        registration_data = None
+        if not request.user.is_authenticated:
+            invitation = get_object_or_404(
+                OrganizationInvitation,
+                token_hash=token_hash(token),
+                accepted_at__isnull=True,
+                revoked_at__isnull=True,
+                expires_at__gt=timezone.now(),
+            )
+            if get_user_model().objects.filter(email__iexact=invitation.email).exists():
+                return Response(
+                    {
+                        "detail": "An account with this email exists. Sign in before accepting the invitation."
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            serializer = InvitationRegistrationSerializer(
+                data=request.data, context={"invited_email": invitation.email}
+            )
             serializer.is_valid(raise_exception=True)
-            user = user_model.objects.create_user(
-                username=serializer.validated_data["username"],
-                email=invitation.email,
-                password=serializer.validated_data["password"],
+            registration_data = serializer.validated_data
+        try:
+            result = accept_workspace_invitation(
+                token=token,
+                authenticated_user=request.user,
+                registration_data=registration_data,
             )
-            UserProfile.objects.create(
-                user=user,
-                display_name=serializer.validated_data["display_name"],
-                first_name=serializer.validated_data.get("first_name", ""),
-                last_name=serializer.validated_data.get("last_name", ""),
-                date_of_birth=serializer.validated_data.get("date_of_birth"),
-                timezone=serializer.validated_data.get("timezone", "UTC"),
-                locale=serializer.validated_data.get("locale", "en-us"),
-                onboarding_completed_at=timezone.now(),
-            )
-            refresh = RefreshToken.for_user(user)
-            tokens = {"access": str(refresh.access_token), "refresh": str(refresh)}
-        if provisioning is not None:
-            OrganizationMembership.objects.filter(
-                organization=invitation.organization,
-                user=provisioning.creator,
-                role=OrganizationMembership.Role.OWNER,
-            ).delete()
-            membership, created = OrganizationMembership.objects.get_or_create(
-                organization=invitation.organization,
-                user=user,
-                defaults={"role": OrganizationMembership.Role.OWNER},
-            )
-            if not created and membership.role != OrganizationMembership.Role.OWNER:
-                membership.role = OrganizationMembership.Role.OWNER
-                membership.save(update_fields=("role", "updated_at"))
-            provisioning.delete()
-            WorkspaceAccessEvent.objects.create(
-                action=WorkspaceAccessEvent.Action.ACCEPT_OWNER_INVITATION,
-                actor=user,
-                target_user=user,
-                organization_id=invitation.organization_id,
-            )
-        else:
-            membership, created = OrganizationMembership.objects.get_or_create(
-                organization=invitation.organization,
-                user=user,
-                defaults={"role": invitation.role},
-            )
-            WorkspaceAccessEvent.objects.create(
-                action=WorkspaceAccessEvent.Action.ACCEPT_MEMBER_INVITATION,
-                actor=user,
-                target_user=user,
-                organization_id=invitation.organization_id,
-                details={"email": invitation.email, "role": membership.role},
-            )
-        invitation.accepted_at = timezone.now()
-        invitation.save(update_fields=("accepted_at",))
+        except InvitationAcceptanceError as error:
+            return Response({"detail": error.detail}, status=error.status_code)
         return Response({
-            "organization_id": str(invitation.organization_id),
-            "role": membership.role,
-            "membership_created": created,
-            "tokens": tokens,
+            "organization_id": str(result.organization_id),
+            "role": result.role,
+            "membership_created": result.membership_created,
+            "tokens": result.tokens,
         }, status=status.HTTP_201_CREATED)

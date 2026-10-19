@@ -114,3 +114,14 @@ class TaskSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+
+class TaskUpdateSerializer(TaskSerializer):
+    workflow_status = serializers.ChoiceField(choices=Task.WorkflowStatus.choices)
+
+    class Meta(TaskSerializer.Meta):
+        read_only_fields = tuple(
+            field
+            for field in TaskSerializer.Meta.read_only_fields
+            if field != "workflow_status"
+        )

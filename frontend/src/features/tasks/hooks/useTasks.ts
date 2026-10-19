@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { TaskInput, TaskWorkflowStatus } from '../../../types/task.types'
+
+import type { TaskInput, TaskUpdateInput, TaskWorkflowStatus } from '../../../types/task.types'
 import { taskService } from '../services/taskService'
 import type { TaskFilters } from '../services/taskService'
 
@@ -9,10 +10,15 @@ export const taskKeys = {
     [...taskKeys.byOrganization(organizationId), filters] as const,
 }
 
-export const useTasks = (organizationId: string, filters: TaskFilters = {}) =>
+export const useTasks = (
+  organizationId: string,
+  filters: TaskFilters = {},
+  options: { enabled?: boolean } = {},
+) =>
   useQuery({
     queryKey: taskKeys.list(organizationId, filters),
     queryFn: ({ signal }) => taskService.list(organizationId, filters, signal),
+    enabled: options.enabled,
   })
 
 function useInvalidateTasks(organizationId: string) {
@@ -31,7 +37,7 @@ export function useCreateTask(organizationId: string) {
 export function useUpdateTask(organizationId: string, taskId: string) {
   const invalidate = useInvalidateTasks(organizationId)
   return useMutation({
-    mutationFn: (body: Partial<TaskInput>) => taskService.update(organizationId, taskId, body),
+    mutationFn: (body: TaskUpdateInput) => taskService.update(organizationId, taskId, body),
     onSuccess: invalidate,
   })
 }

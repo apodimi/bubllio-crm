@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { request } from '../../../services/api'
+import { subscriptionOverviewContract } from '../../../types/api-contract/schemas'
 import { subscriptionService } from './subscriptionService'
 
 vi.mock('../../../services/api', () => ({ request: vi.fn() }))
@@ -24,6 +25,9 @@ describe('subscriptionService', () => {
 
     await subscriptionService.overview('org-a', signal)
 
-    expect(request).toHaveBeenCalledWith('/organizations/org-a/services/overview/', { signal })
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/services/overview/', {
+      signal,
+      schema: subscriptionOverviewContract,
+    })
   })
 })

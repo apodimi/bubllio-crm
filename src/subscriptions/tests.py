@@ -167,6 +167,131 @@ class SubscriptionApiTests(APITestCase):
             2,
         )
 
+    def test_updating_service_price_recalculates_partially_paid_charge_balance(self):
+        subscription_response = self.create_subscription()
+        subscription_id = subscription_response.data["id"]
+        charge = Charge.objects.get(subscription_id=subscription_id)
+        self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={"organization_id": self.organization.id, "charge_id": charge.id},
+            ),
+            {"amount": "40.00"},
+            format="json",
+        )
+
+        update_response = self.client.patch(
+            reverse(
+                "subscription-detail",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription_id,
+                },
+            ),
+            {"net_price": "200.00"},
+            format="json",
+        )
+        updated_charge = self.client.get(self.charges_url()).data[0]
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(updated_charge["net_amount"], "200.00")
+        self.assertEqual(updated_charge["tax_amount"], "48.00")
+        self.assertEqual(updated_charge["gross_amount"], "248.00")
+        self.assertEqual(updated_charge["paid_amount"], "40.00")
+        self.assertEqual(updated_charge["outstanding_amount"], "208.00")
+
+    def test_updating_service_tax_recalculates_unpaid_charge(self):
+        subscription_response = self.create_subscription()
+
+        update_response = self.client.patch(
+            reverse(
+                "subscription-detail",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription_response.data["id"],
+                },
+            ),
+            {"tax_rate": "10.00"},
+            format="json",
+        )
+        updated_charge = self.client.get(self.charges_url()).data[0]
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(updated_charge["tax_amount"], "10.00")
+        self.assertEqual(updated_charge["gross_amount"], "110.00")
+        self.assertEqual(updated_charge["outstanding_amount"], "110.00")
+
+    def test_service_total_cannot_be_reduced_below_amount_already_paid(self):
+        subscription_response = self.create_subscription()
+        subscription_id = subscription_response.data["id"]
+        charge = Charge.objects.get(subscription_id=subscription_id)
+        self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={"organization_id": self.organization.id, "charge_id": charge.id},
+            ),
+            {"amount": "100.00"},
+            format="json",
+        )
+
+        update_response = self.client.patch(
+            reverse(
+                "subscription-detail",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription_id,
+                },
+            ),
+            {"net_price": "50.00", "tax_rate": "0.00"},
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, status.HTTP_400_BAD_REQUEST)
+        charge.refresh_from_db()
+        self.assertEqual(charge.gross_amount, Decimal("124.00"))
+        self.assertEqual(
+            CustomerSubscription.objects.get(id=subscription_id).net_price,
+            Decimal("100.00"),
+        )
+
+    def test_updating_service_keeps_paid_charge_history_and_updates_future_charge(self):
+        subscription_response = self.create_subscription()
+        subscription_id = subscription_response.data["id"]
+        paid_charge = Charge.objects.get(subscription_id=subscription_id)
+        self.client.post(
+            reverse(
+                "charge-payment-list",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "charge_id": paid_charge.id,
+                },
+            ),
+            {"amount": "124.00"},
+            format="json",
+        )
+        future_charge = Charge.objects.get(
+            subscription_id=subscription_id,
+            due_date=date(2026, 11, 5),
+        )
+
+        update_response = self.client.patch(
+            reverse(
+                "subscription-detail",
+                kwargs={
+                    "organization_id": self.organization.id,
+                    "subscription_id": subscription_id,
+                },
+            ),
+            {"net_price": "200.00"},
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        paid_charge.refresh_from_db()
+        future_charge.refresh_from_db()
+        self.assertEqual(paid_charge.gross_amount, Decimal("124.00"))
+        self.assertEqual(future_charge.gross_amount, Decimal("248.00"))
+
     def test_overpayment_is_rejected_without_creating_payment(self):
         subscription_response = self.create_subscription()
         charge = Charge.objects.get(subscription_id=subscription_response.data["id"])

@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Controller, useForm, useWatch } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../auth'
 import { useCompanyAssignees } from '../../companies'
 import { useContacts } from '../../contacts'
@@ -21,7 +22,7 @@ import type { Company } from '../../../types/company.types'
 import type { CrmTask, TaskInput } from '../../../types/task.types'
 import { taskSchema } from '../taskSchema'
 import type { TaskFormValues } from '../taskSchema'
-import { useCreateTask, useDeleteTask, useMoveTask, useUpdateTask } from '../hooks/useTasks'
+import { useCreateTask, useDeleteTask, useUpdateTask } from '../hooks/useTasks'
 
 const toLocalInput = (value: string | null) => {
   if (!value) return ''
@@ -62,6 +63,7 @@ export function TaskDrawer({
   task,
   initialCompanyId,
   initialDealId,
+  onSaved,
   onClose,
 }: {
   organizationId: string
@@ -69,12 +71,13 @@ export function TaskDrawer({
   task?: CrmTask
   initialCompanyId?: string
   initialDealId?: string
+  onSaved?: () => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const create = useCreateTask(organizationId)
   const update = useUpdateTask(organizationId, task?.id ?? '')
   const remove = useDeleteTask(organizationId)
-  const move = useMoveTask(organizationId)
   const mutation = task ? update : create
   const contacts = useContacts(organizationId, { archived: 'active' })
   const deals = useDeals(organizationId)
@@ -95,8 +98,23 @@ export function TaskDrawer({
   const companyId = useWatch({ control, name: 'company' })
   const companyContacts = (contacts.data ?? []).filter((contact) => contact.company === companyId)
   const companyDeals = (deals.data ?? []).filter((deal) => deal.company === companyId)
-  const pending = mutation.isPending || remove.isPending || move.isPending
-  const error = mutation.error || remove.error || move.error
+  const pending = mutation.isPending || remove.isPending
+  const error = mutation.error || remove.error
+  const validationMessages: Record<string, string> = {
+    'Choose a company.': t('crm.tasks.drawer.validation.company'),
+    'Task title is required.': t('crm.tasks.drawer.validation.title'),
+    'Due date and time are required.': t('crm.tasks.drawer.validation.due'),
+    'Use at most 5,000 characters.': t('crm.tasks.drawer.validation.notesLength'),
+    'The reminder must be before the due time.': t('crm.tasks.drawer.validation.reminderBeforeDue'),
+  }
+  const validationMessage = (message?: string) =>
+    message ? (validationMessages[message] ?? t('crm.tasks.drawer.validation.invalid')) : undefined
+  let submitLabel = t('crm.tasks.drawer.addTask')
+  if (pending) {
+    submitLabel = t('crm.tasks.drawer.saving')
+  } else if (task) {
+    submitLabel = t('crm.tasks.drawer.saveChanges')
+  }
 
   async function submit(values: TaskFormValues) {
     const { workflow_status, ...editableValues } = values
@@ -106,10 +124,8 @@ export function TaskDrawer({
       reminder_at: values.reminder_at ? new Date(values.reminder_at).toISOString() : null,
     }
     try {
-      await mutation.mutateAsync(body)
-      if (task && workflow_status !== task.workflow_status) {
-        await move.mutateAsync({ taskId: task.id, workflowStatus: workflow_status })
-      }
+      await mutation.mutateAsync(task ? { ...body, workflow_status } : body)
+      onSaved?.()
       onClose()
     } catch {
       /* Normalized API error is rendered below. */
@@ -117,7 +133,7 @@ export function TaskDrawer({
   }
 
   async function deleteTask() {
-    if (!task || !window.confirm('Delete this task permanently?')) return
+    if (!task || !window.confirm(t('crm.tasks.drawer.deleteConfirmation'))) return
     try {
       await remove.mutateAsync(task.id)
       onClose()
@@ -157,12 +173,14 @@ export function TaskDrawer({
           }}
         >
           <Box>
-            <Typography variant="h5">{task ? 'Edit task' : 'Add next action'}</Typography>
+            <Typography variant="h5">
+              {task ? t('crm.tasks.drawer.editTitle') : t('crm.tasks.drawer.createTitle')}
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Keep the owner, customer and next commitment clear.
+              {t('crm.tasks.drawer.subtitle')}
             </Typography>
           </Box>
-          <IconButton aria-label="Close task form" onClick={onClose} disabled={pending}>
+          <IconButton aria-label={t('crm.tasks.drawer.close')} onClick={onClose} disabled={pending}>
             <CloseRounded />
           </IconButton>
         </Stack>
@@ -176,9 +194,9 @@ export function TaskDrawer({
                 {...field}
                 required
                 autoFocus
-                label="What needs to happen?"
+                label={t('crm.tasks.drawer.titleLabel')}
                 error={Boolean(errors.title)}
-                helperText={errors.title?.message}
+                helperText={validationMessage(errors.title?.message)}
                 disabled={pending}
               />
             )}
@@ -188,11 +206,17 @@ export function TaskDrawer({
               name="kind"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Activity" disabled={pending} sx={{ flex: 1 }}>
-                  <MenuItem value="task">Task</MenuItem>
-                  <MenuItem value="call">Call</MenuItem>
-                  <MenuItem value="email">Email</MenuItem>
-                  <MenuItem value="meeting">Meeting</MenuItem>
+                <TextField
+                  {...field}
+                  select
+                  label={t('crm.tasks.activity')}
+                  disabled={pending}
+                  sx={{ flex: 1 }}
+                >
+                  <MenuItem value="task">{t('crm.tasks.kind.task')}</MenuItem>
+                  <MenuItem value="call">{t('crm.tasks.kind.call')}</MenuItem>
+                  <MenuItem value="email">{t('crm.tasks.kind.email')}</MenuItem>
+                  <MenuItem value="meeting">{t('crm.tasks.kind.meeting')}</MenuItem>
                 </TextField>
               )}
             />
@@ -200,11 +224,17 @@ export function TaskDrawer({
               name="priority"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Priority" disabled={pending} sx={{ flex: 1 }}>
-                  <MenuItem value="low">Low</MenuItem>
-                  <MenuItem value="normal">Normal</MenuItem>
-                  <MenuItem value="high">High</MenuItem>
-                  <MenuItem value="urgent">Urgent</MenuItem>
+                <TextField
+                  {...field}
+                  select
+                  label={t('crm.tasks.details.priority')}
+                  disabled={pending}
+                  sx={{ flex: 1 }}
+                >
+                  <MenuItem value="low">{t('crm.tasks.drawer.priority.low')}</MenuItem>
+                  <MenuItem value="normal">{t('crm.tasks.drawer.priority.normal')}</MenuItem>
+                  <MenuItem value="high">{t('crm.tasks.drawer.priority.high')}</MenuItem>
+                  <MenuItem value="urgent">{t('crm.tasks.drawer.priority.urgent')}</MenuItem>
                 </TextField>
               )}
             />
@@ -217,9 +247,9 @@ export function TaskDrawer({
                 {...field}
                 select
                 required
-                label="Company"
+                label={t('crm.tasks.details.company')}
                 error={Boolean(errors.company)}
-                helperText={errors.company?.message}
+                helperText={validationMessage(errors.company?.message)}
                 disabled={pending}
                 onChange={(event) => {
                   field.onChange(event)
@@ -242,13 +272,13 @@ export function TaskDrawer({
               render={({ field }) => (
                 <TextField
                   select
-                  label="Contact"
+                  label={t('crm.tasks.details.contact')}
                   value={field.value ?? ''}
                   onChange={(event) => field.onChange(event.target.value || null)}
                   disabled={!companyId || pending}
                   sx={{ flex: 1 }}
                 >
-                  <MenuItem value="">No contact</MenuItem>
+                  <MenuItem value="">{t('crm.tasks.drawer.noContact')}</MenuItem>
                   {companyContacts.map((contact) => (
                     <MenuItem key={contact.id} value={contact.id}>
                       {contact.first_name} {contact.last_name}
@@ -263,13 +293,13 @@ export function TaskDrawer({
               render={({ field }) => (
                 <TextField
                   select
-                  label="Deal"
+                  label={t('crm.tasks.details.deal')}
                   value={field.value ?? ''}
                   onChange={(event) => field.onChange(event.target.value || null)}
                   disabled={!companyId || pending}
                   sx={{ flex: 1 }}
                 >
-                  <MenuItem value="">No deal</MenuItem>
+                  <MenuItem value="">{t('crm.tasks.drawer.noDeal')}</MenuItem>
                   {companyDeals.map((deal) => (
                     <MenuItem key={deal.id} value={deal.id}>
                       {deal.title}
@@ -285,14 +315,14 @@ export function TaskDrawer({
             render={({ field }) => (
               <TextField
                 select
-                label="Owner"
+                label={t('crm.tasks.details.owner')}
                 value={field.value ?? ''}
                 onChange={(event) =>
                   field.onChange(event.target.value ? Number(event.target.value) : null)
                 }
                 disabled={pending}
               >
-                <MenuItem value="">Unassigned</MenuItem>
+                <MenuItem value="">{t('crm.tasks.unassigned')}</MenuItem>
                 {ownerOptions.map((person) => (
                   <MenuItem key={person.id} value={person.id}>
                     {person.name}
@@ -306,11 +336,16 @@ export function TaskDrawer({
               name="workflow_status"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Status" disabled={pending}>
-                  <MenuItem value="todo">To do</MenuItem>
-                  <MenuItem value="in_progress">In progress</MenuItem>
-                  <MenuItem value="waiting">Waiting</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
+                <TextField
+                  {...field}
+                  select
+                  label={t('crm.tasks.details.status')}
+                  disabled={pending}
+                >
+                  <MenuItem value="todo">{t('crm.tasks.status.todo')}</MenuItem>
+                  <MenuItem value="in_progress">{t('crm.tasks.status.in_progress')}</MenuItem>
+                  <MenuItem value="waiting">{t('crm.tasks.status.waiting')}</MenuItem>
+                  <MenuItem value="completed">{t('crm.tasks.status.completed')}</MenuItem>
                 </TextField>
               )}
             />
@@ -324,9 +359,9 @@ export function TaskDrawer({
                   {...field}
                   required
                   type="datetime-local"
-                  label="Due"
+                  label={t('crm.tasks.details.due')}
                   error={Boolean(errors.due_at)}
-                  helperText={errors.due_at?.message}
+                  helperText={validationMessage(errors.due_at?.message)}
                   disabled={pending}
                   slotProps={{ inputLabel: { shrink: true } }}
                   sx={{ flex: 1 }}
@@ -339,11 +374,14 @@ export function TaskDrawer({
               render={({ field }) => (
                 <TextField
                   type="datetime-local"
-                  label="Reminder"
+                  label={t('crm.tasks.details.reminder')}
                   value={field.value ?? ''}
                   onChange={(event) => field.onChange(event.target.value || null)}
                   error={Boolean(errors.reminder_at)}
-                  helperText={errors.reminder_at?.message ?? 'Shown in CRM; alerts come later.'}
+                  helperText={
+                    validationMessage(errors.reminder_at?.message) ??
+                    t('crm.tasks.drawer.reminderHint')
+                  }
                   disabled={pending}
                   slotProps={{ inputLabel: { shrink: true } }}
                   sx={{ flex: 1 }}
@@ -359,9 +397,9 @@ export function TaskDrawer({
                 {...field}
                 multiline
                 minRows={4}
-                label="Notes"
+                label={t('crm.tasks.details.notes')}
                 error={Boolean(errors.notes)}
-                helperText={errors.notes?.message}
+                helperText={validationMessage(errors.notes?.message)}
                 disabled={pending}
               />
             )}
@@ -384,15 +422,15 @@ export function TaskDrawer({
               onClick={() => void deleteTask()}
               disabled={pending}
             >
-              Delete
+              {t('crm.tasks.drawer.delete')}
             </Button>
           ) : null}
           <Box sx={{ flex: 1 }} />
           <Button onClick={onClose} disabled={pending} sx={{ mr: 1 }}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" variant="contained" disabled={pending}>
-            {pending ? 'Saving…' : task ? 'Save changes' : 'Add task'}
+            {submitLabel}
           </Button>
         </Stack>
       </Box>

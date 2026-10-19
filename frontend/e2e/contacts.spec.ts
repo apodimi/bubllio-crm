@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha } from './support/crm'
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page)
@@ -38,7 +38,7 @@ test('opens a contact profile from the clean list row', async ({ page }) => {
   await page.getByRole('link', { name: 'Contacts', exact: true }).click()
 
   await page.getByRole('button', { name: 'Open Maria Papadopoulou' }).click()
-  await expect(page).toHaveURL(/contact=contact-a/)
+  await expect(page).toHaveURL(new RegExp(`contact=${fixtureIds.contact}`))
   await expect(page.getByRole('heading', { name: 'Maria Papadopoulou' })).toBeVisible()
 })
 
@@ -55,7 +55,10 @@ test('contact creation uses a company from the selected workspace', async ({ pag
     (request) => request.method() === 'POST' && request.url().endsWith('/contacts/'),
   )
   await page.getByRole('button', { name: 'Create contact', exact: true }).click()
-  expect((await sent).postDataJSON()).toMatchObject({ company: 'co-a', first_name: 'Nikos' })
+  expect((await sent).postDataJSON()).toMatchObject({
+    company: fixtureIds.acmeCompany,
+    first_name: 'Nikos',
+  })
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
@@ -63,8 +66,7 @@ test('contact list stays usable on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page)
   await openAlpha(page)
-  const mobileDock = page.getByRole('navigation', { name: 'Primary navigation' })
-  await mobileDock.getByRole('button', { name: 'Contacts', exact: true }).click()
+  await page.goto(`/organizations/${fixtureIds.alphaOrganization}/contacts`)
 
   await expect(page.getByRole('button', { name: 'Open Maria Papadopoulou' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
