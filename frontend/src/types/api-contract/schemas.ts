@@ -92,13 +92,21 @@ export const catalogItemContract: z.ZodType<ServiceCatalogItem> = z.object({
   is_active: z.boolean(),
 })
 
-export const customerSubscriptionContract: z.ZodType<CustomerSubscription> = z.object({
+type CustomerSubscriptionInput = Omit<CustomerSubscription, 'catalog_item_name'> & {
+  catalog_item_name?: string
+}
+
+export const customerSubscriptionContract: z.ZodType<
+  CustomerSubscription,
+  z.ZodTypeDef,
+  CustomerSubscriptionInput
+> = z.object({
   id: z.string().uuid(),
   organization: z.string().uuid(),
   company: z.string().uuid(),
   company_name: z.string(),
   catalog_item: z.string().uuid().nullable(),
-  catalog_item_name: z.string(),
+  catalog_item_name: z.string().optional().default(''),
   assigned_to: z.number().int().nullable(),
   assigned_to_name: z.string(),
   name: z.string(),

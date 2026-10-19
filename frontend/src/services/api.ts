@@ -1,6 +1,5 @@
 import axios from 'axios'
 import type { AxiosRequestConfig } from 'axios'
-import type { ZodType } from 'zod'
 
 import { useAuthStore } from '../features/auth/store/authStore'
 
@@ -99,7 +98,7 @@ export async function request<T>(
     body?: unknown
     headers?: AxiosRequestConfig['headers']
     method?: AxiosRequestConfig['method']
-    schema?: ZodType<T>
+    schema?: { parse(data: unknown): T }
   } = {},
 ): Promise<T> {
   const config: AxiosRequestConfig = {

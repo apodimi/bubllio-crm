@@ -41,7 +41,7 @@ class ServiceCatalogItemSerializer(serializers.ModelSerializer):
 
 class CustomerSubscriptionSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
-    catalog_item_name = serializers.CharField(source="catalog_item.name", read_only=True)
+    catalog_item_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     tax_amount = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     gross_price = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
@@ -109,6 +109,11 @@ class CustomerSubscriptionSerializer(serializers.ModelSerializer):
         if not subscription.assigned_to:
             return ""
         return subscription.assigned_to.get_full_name() or subscription.assigned_to.username
+
+    def get_catalog_item_name(self, subscription) -> str:
+        if not subscription.catalog_item:
+            return ""
+        return subscription.catalog_item.name
 
     def validate(self, attrs):
         organization = self.context.get("organization") or getattr(self.instance, "organization", None)

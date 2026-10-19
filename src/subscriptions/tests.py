@@ -123,6 +123,23 @@ class SubscriptionApiTests(APITestCase):
         self.assertIn("name", response.data)
         self.assertIn("net_price", response.data)
 
+    def test_custom_subscription_always_exposes_an_empty_catalog_item_name(self):
+        response = self.create_subscription(
+            catalog_item=None,
+            name="Custom support",
+            net_price="80.00",
+            currency="EUR",
+            tax_rate="24.00",
+            billing_interval="monthly",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["catalog_item_name"], "")
+
+        listed = self.client.get(self.subscriptions_url())
+        self.assertEqual(listed.status_code, status.HTTP_200_OK)
+        self.assertEqual(listed.data[0]["catalog_item_name"], "")
+
     def test_cross_tenant_relations_are_rejected(self):
         other_company = Company.objects.create(
             organization=self.other_organization, name="Hidden customer"

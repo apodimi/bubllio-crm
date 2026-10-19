@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  customerSubscriptionContract,
   subscriptionOverviewContract,
   tokenPairContract,
   updateCenterContract,
@@ -8,6 +9,38 @@ import {
 } from './schemas'
 
 describe('critical API contracts', () => {
+  it('normalizes a legacy custom subscription without a catalog item name', () => {
+    const result = customerSubscriptionContract.parse({
+      id: '00000000-0000-4000-8000-000000000701',
+      organization: '00000000-0000-4000-8000-000000000702',
+      company: '00000000-0000-4000-8000-000000000703',
+      company_name: 'Acme',
+      catalog_item: null,
+      assigned_to: null,
+      assigned_to_name: '',
+      name: 'Custom support',
+      net_price: '100.00',
+      currency: 'EUR',
+      tax_rate: '24.00',
+      tax_amount: '24.00',
+      gross_price: '124.00',
+      billing_interval: 'monthly',
+      start_date: '2026-10-01',
+      next_billing_date: '2026-11-01',
+      renewal_date: null,
+      end_date: null,
+      cancellation_effective_date: null,
+      cancelled_at: null,
+      auto_renew: true,
+      status: 'active',
+      effective_status: 'active',
+      operational_reference: '',
+      notes: '',
+    })
+
+    expect(result.catalog_item_name).toBe('')
+  })
+
   it('rejects an incomplete authentication response', () => {
     expect(tokenPairContract.safeParse({ access: 'access-only' }).success).toBe(false)
   })

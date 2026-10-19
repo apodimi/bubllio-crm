@@ -3,6 +3,19 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.7 — 2026-10-20
+
+### Fixed
+
+- custom customer services without a catalog item now expose a stable empty
+  catalog name, and the frontend remains compatible with older responses that
+  omitted the field instead of failing the entire services screen.
+
+### Upgrade notes
+
+- this release has no database migrations and is eligible for an online update
+  from version 0.2.6.
+
 ## 0.2.6 — 2026-10-20
 
 ### Added
