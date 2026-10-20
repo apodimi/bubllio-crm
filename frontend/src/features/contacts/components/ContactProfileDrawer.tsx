@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined'
+import AddTaskRounded from '@mui/icons-material/AddTaskRounded'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import RestoreRounded from '@mui/icons-material/RestoreRounded'
+import ScheduleRounded from '@mui/icons-material/ScheduleRounded'
 import {
   Avatar,
   Box,
@@ -15,9 +17,15 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
+import { useTranslation } from 'react-i18next'
+
 import type { Contact } from '../../../types/contact.types'
+import type { CrmTask } from '../../../types/task.types'
 import { Loading } from '../../../components/common/Feedback'
+import { useCompanies } from '../../companies'
 import { useWorkspace } from '../../organizations'
+import { TaskDrawer } from '../../tasks/components/TaskDrawer'
+import { useTasks } from '../../tasks/hooks/useTasks'
 import { useArchiveContact, useContactActivity, useRestoreContact } from '../hooks/useContacts'
 import { ContactDrawer } from './ContactDrawer'
 
@@ -30,9 +38,13 @@ export function ContactProfileDrawer({
   onClose: () => void
   onCompany: (companyId: string) => void
 }) {
+  const { t } = useTranslation()
   const workspace = useWorkspace()
   const [editing, setEditing] = useState(false)
+  const [taskDrawer, setTaskDrawer] = useState<CrmTask | 'new' | null>(null)
   const activity = useContactActivity(workspace.id, contact.id)
+  const companies = useCompanies(workspace.id)
+  const nextActions = useTasks(workspace.id, { contact: contact.id, bucket: 'open' })
   const archive = useArchiveContact(workspace.id)
   const restore = useRestoreContact(workspace.id)
   const name = `${contact.first_name} ${contact.last_name}`.trim()
@@ -82,12 +94,15 @@ export function ContactProfileDrawer({
               <CloseRounded />
             </IconButton>
           </Stack>
-          <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
+          <Stack direction="row" spacing={1} sx={{ mt: 3, flexWrap: 'wrap', gap: 1 }}>
             <Button
               variant="contained"
-              startIcon={<EditRounded />}
-              onClick={() => setEditing(true)}
+              startIcon={<AddTaskRounded />}
+              onClick={() => setTaskDrawer('new')}
             >
+              {t('crm.contacts.addNextAction')}
+            </Button>
+            <Button variant="outlined" startIcon={<EditRounded />} onClick={() => setEditing(true)}>
               Edit contact
             </Button>
             <Button
@@ -155,6 +170,59 @@ export function ContactProfileDrawer({
           </Stack>
           <Divider />
           <Box>
+            <Stack
+              direction="row"
+              sx={{ mb: 1.5, alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <Box>
+                <Typography variant="h6">{t('crm.contacts.nextActions')}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('crm.contacts.nextActionsDescription')}
+                </Typography>
+              </Box>
+            </Stack>
+            {nextActions.isPending ? (
+              <Loading />
+            ) : (nextActions.data ?? []).length ? (
+              <Stack spacing={0.75}>
+                {(nextActions.data ?? []).slice(0, 3).map((task) => (
+                  <Button
+                    key={task.id}
+                    variant="text"
+                    onClick={() => setTaskDrawer(task)}
+                    startIcon={<ScheduleRounded />}
+                    sx={{
+                      justifyContent: 'flex-start',
+                      px: 1,
+                      py: 1,
+                      color: 'text.primary',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Box component="span" sx={{ minWidth: 0 }}>
+                      <Typography component="span" variant="body2" sx={{ display: 'block' }}>
+                        {task.title}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
+                        {new Date(task.due_at).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  </Button>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                {t('crm.contacts.noNextActions')}
+              </Typography>
+            )}
+          </Box>
+          <Divider />
+          <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Activity
             </Typography>
@@ -178,6 +246,16 @@ export function ContactProfileDrawer({
         </Stack>
       </Drawer>
       {editing ? <ContactDrawer contact={contact} onClose={() => setEditing(false)} /> : null}
+      {taskDrawer ? (
+        <TaskDrawer
+          organizationId={workspace.id}
+          companies={companies.data ?? []}
+          task={taskDrawer === 'new' ? undefined : taskDrawer}
+          initialCompanyId={contact.company}
+          initialContactId={contact.id}
+          onClose={() => setTaskDrawer(null)}
+        />
+      ) : null}
     </>
   )
 }

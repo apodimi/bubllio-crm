@@ -1,15 +1,13 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
-  useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
-import BusinessRounded from '@mui/icons-material/BusinessRounded'
-import CloseRounded from '@mui/icons-material/CloseRounded'
-import HandshakeRounded from '@mui/icons-material/HandshakeRounded'
-import PersonRounded from '@mui/icons-material/PersonRounded'
-import SearchRounded from '@mui/icons-material/SearchRounded'
+import searchIcon from '@iconify-icons/keyline-icons/search'
+import xIcon from '@iconify-icons/keyline-icons/x'
 import {
   Alert,
   Box,
@@ -20,10 +18,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Stack,
   TextField,
   Tooltip,
@@ -35,35 +29,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import type { GlobalSearchResult, GlobalSearchResultType } from '../../../types/global-search.types'
+import type { GlobalSearchResult } from '../../../types/global-search.types'
+import { AppIcon } from '../../../components/common/AppIcon'
+import { groupGlobalSearchResults } from '../globalSearchPresentation'
+import { globalSearchReducer, initialGlobalSearchState } from '../globalSearchState'
 import { useGlobalSearch } from '../hooks/useGlobalSearch'
+import { GlobalSearchResultList } from './GlobalSearchResultList'
 
-const resultTypes: GlobalSearchResultType[] = ['company', 'contact', 'deal']
 const emptyResults: GlobalSearchResult[] = []
-
-const resultIcons = {
-  company: BusinessRounded,
-  contact: PersonRounded,
-  deal: HandshakeRounded,
-} satisfies Record<GlobalSearchResultType, typeof BusinessRounded>
-
-function resultDetails(result: GlobalSearchResult, includeWorkspace: boolean) {
-  const details: Array<string | undefined> = []
-  if (includeWorkspace) {
-    details.push(result.organization.name)
-  }
-  if (result.type === 'company') {
-    details.push(result.customer_code, result.lifecycle_stage)
-  } else if (result.type === 'contact') {
-    details.push(result.company?.name, result.job_title)
-  } else {
-    details.push(result.company?.name, result.stage)
-    if (result.value && result.currency) {
-      details.push(`${result.value} ${result.currency}`)
-    }
-  }
-  return details.filter(Boolean).join(' · ')
-}
 
 type GlobalSearchProps = {
   currentOrganizationId?: string
@@ -73,10 +46,9 @@ type GlobalSearchProps = {
 export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: GlobalSearchProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [scope, setScope] = useState<'current' | 'all'>(currentOrganizationId ? 'current' : 'all')
+  const [state, dispatch] = useReducer(globalSearchReducer, initialGlobalSearchState)
+  const { open, query, activeIndex, searchAllWorkspaces } = state
+  const scope = currentOrganizationId && !searchAllWorkspaces ? 'current' : 'all'
   const debouncedQuery = useDebouncedValue(query, 250)
   const scopedOrganizationId = scope === 'current' ? currentOrganizationId : undefined
   const scopeName =
@@ -86,13 +58,7 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
   const search = useGlobalSearch(debouncedQuery, scopedOrganizationId)
   const resultRefs = useRef<Array<HTMLDivElement | null>>([])
   const results = search.data?.results ?? emptyResults
-  const groupedResults = useMemo(
-    () =>
-      resultTypes
-        .map((type) => ({ type, results: results.filter((result) => result.type === type) }))
-        .filter((group) => group.results.length > 0),
-    [results],
-  )
+  const groupedResults = useMemo(() => groupGlobalSearchResults(results), [results])
   const displayedResults = useMemo(
     () => groupedResults.flatMap((group) => group.results),
     [groupedResults],
@@ -102,56 +68,44 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
     function handleShortcut(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        setScope(currentOrganizationId ? 'current' : 'all')
-        setOpen(true)
+        dispatch({ type: 'open' })
       }
     }
 
     window.addEventListener('keydown', handleShortcut)
     return () => window.removeEventListener('keydown', handleShortcut)
-  }, [currentOrganizationId])
+  }, [])
 
-  useEffect(() => {
-    if (open) {
-      setScope(currentOrganizationId ? 'current' : 'all')
-    }
-  }, [currentOrganizationId, open])
+  const closeSearch = useCallback(() => dispatch({ type: 'close' }), [])
 
-  function closeSearch() {
-    setOpen(false)
-    setQuery('')
-    setActiveIndex(0)
-  }
+  const openSearch = useCallback(() => dispatch({ type: 'open' }), [])
 
-  function openSearch() {
-    setScope(currentOrganizationId ? 'current' : 'all')
-    setOpen(true)
-  }
-
-  function selectResult(result: GlobalSearchResult) {
-    closeSearch()
-    const organizationId = result.organization.id
-    if (result.type === 'company') {
+  const selectResult = useCallback(
+    (result: GlobalSearchResult) => {
+      closeSearch()
+      const organizationId = result.organization.id
+      if (result.type === 'company') {
+        void navigate({
+          to: '/organizations/$organizationId/companies/$companyId',
+          params: { organizationId, companyId: result.id },
+        })
+        return
+      }
+      if (result.type === 'contact') {
+        void navigate({
+          to: '/organizations/$organizationId/contacts',
+          params: { organizationId },
+          search: { contact: result.id },
+        })
+        return
+      }
       void navigate({
-        to: '/organizations/$organizationId/companies/$companyId',
-        params: { organizationId, companyId: result.id },
+        to: '/organizations/$organizationId/deals/$dealId',
+        params: { organizationId, dealId: result.id },
       })
-      return
-    }
-    if (result.type === 'contact') {
-      void navigate({
-        to: '/organizations/$organizationId/contacts',
-        params: { organizationId },
-        search: { contact: result.id },
-      })
-      return
-    }
-    void navigate({
-      to: '/organizations/$organizationId/deals',
-      params: { organizationId },
-      search: { deal: result.id },
-    })
-  }
+    },
+    [closeSearch, navigate],
+  )
 
   function handleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (displayedResults.length === 0) {
@@ -159,25 +113,19 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
     }
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setActiveIndex((current) => {
-        const next = (current + 1) % displayedResults.length
-        resultRefs.current[next]?.scrollIntoView({ block: 'nearest' })
-        return next
-      })
+      const next = (activeIndex + 1) % displayedResults.length
+      resultRefs.current[next]?.scrollIntoView({ block: 'nearest' })
+      dispatch({ type: 'activeIndexChanged', activeIndex: next })
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setActiveIndex((current) => {
-        const next = (current - 1 + displayedResults.length) % displayedResults.length
-        resultRefs.current[next]?.scrollIntoView({ block: 'nearest' })
-        return next
-      })
+      const next = (activeIndex - 1 + displayedResults.length) % displayedResults.length
+      resultRefs.current[next]?.scrollIntoView({ block: 'nearest' })
+      dispatch({ type: 'activeIndexChanged', activeIndex: next })
     } else if (event.key === 'Enter') {
       event.preventDefault()
       selectResult(displayedResults[activeIndex] ?? displayedResults[0])
     }
   }
-
-  let resultIndex = -1
 
   return (
     <>
@@ -198,7 +146,7 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
             '&:hover': { borderColor: 'text.secondary', bgcolor: 'background.paper' },
           }}
         >
-          <SearchRounded sx={{ fontSize: 20 }} />
+          <AppIcon icon={searchIcon} />
           <Typography
             variant="body2"
             noWrap
@@ -256,8 +204,10 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
               aria-label={t('globalSearch.scopeLabel')}
               onChange={(_event, nextScope: 'current' | 'all' | null) => {
                 if (nextScope) {
-                  setScope(nextScope)
-                  setActiveIndex(0)
+                  dispatch({
+                    type: 'scopeChanged',
+                    searchAllWorkspaces: nextScope === 'all',
+                  })
                 }
               }}
               sx={{
@@ -311,8 +261,7 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
             value={query}
             placeholder={t('globalSearch.placeholder')}
             onChange={(event) => {
-              setQuery(event.target.value)
-              setActiveIndex(0)
+              dispatch({ type: 'queryChanged', query: event.target.value })
             }}
             onKeyDown={handleKeyDown}
             slotProps={{
@@ -330,7 +279,7 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchRounded />
+                    <AppIcon icon={searchIcon} />
                   </InputAdornment>
                 ),
                 endAdornment: search.isFetching ? (
@@ -344,11 +293,10 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
                         size="small"
                         aria-label={t('globalSearch.clear')}
                         onClick={() => {
-                          setQuery('')
-                          setActiveIndex(0)
+                          dispatch({ type: 'queryChanged', query: '' })
                         }}
                       >
-                        <CloseRounded fontSize="small" />
+                        <AppIcon icon={xIcon} size={18} />
                       </IconButton>
                     </Tooltip>
                   </InputAdornment>
@@ -361,7 +309,9 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
         <DialogContent sx={{ p: 0, minHeight: 220 }}>
           {query.trim().length < 2 ? (
             <Stack sx={{ minHeight: 220, alignItems: 'center', justifyContent: 'center', px: 3 }}>
-              <SearchRounded sx={{ mb: 1, color: 'text.secondary' }} />
+              <Box sx={{ mb: 1, color: 'text.secondary' }}>
+                <AppIcon icon={searchIcon} />
+              </Box>
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                 {t('globalSearch.hint')}
               </Typography>
@@ -403,80 +353,16 @@ export function GlobalSearch({ currentOrganizationId, currentWorkspaceName }: Gl
               </Typography>
             </Stack>
           ) : (
-            <List id="global-search-results" role="listbox" disablePadding sx={{ py: 1 }}>
-              {groupedResults.map((group) => (
-                <Box component="li" role="presentation" key={group.type} sx={{ listStyle: 'none' }}>
-                  <Stack
-                    direction="row"
-                    sx={{ alignItems: 'baseline', justifyContent: 'space-between', px: 2, pt: 1.5 }}
-                  >
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 750 }}>
-                      {t(`globalSearch.groups.${group.type}`)}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontVariantNumeric: 'tabular-nums' }}
-                    >
-                      {group.results.length}
-                    </Typography>
-                  </Stack>
-                  {group.results.map((result) => {
-                    resultIndex += 1
-                    const index = resultIndex
-                    const ResultIcon = resultIcons[result.type]
-                    return (
-                      <ListItemButton
-                        id={`global-search-result-${index}`}
-                        key={`${result.type}-${result.id}`}
-                        ref={(element) => {
-                          resultRefs.current[index] = element
-                        }}
-                        role="option"
-                        selected={activeIndex === index}
-                        aria-selected={activeIndex === index}
-                        onMouseMove={() => setActiveIndex(index)}
-                        onClick={() => selectResult(result)}
-                        sx={{
-                          mx: 1,
-                          my: 0.25,
-                          px: 1.5,
-                          borderRadius: 1,
-                          '&.Mui-selected': { bgcolor: 'action.selected' },
-                          '&.Mui-selected:hover': { bgcolor: 'action.selected' },
-                        }}
-                      >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: 38,
-                            color: activeIndex === index ? 'primary.main' : 'text.secondary',
-                          }}
-                        >
-                          <ResultIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={result.display_name}
-                          secondary={resultDetails(result, scope === 'all')}
-                          slotProps={{
-                            primary: { noWrap: true, sx: { fontWeight: 650 } },
-                            secondary: { noWrap: true },
-                          }}
-                        />
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{
-                            display: { xs: 'none', sm: activeIndex === index ? 'block' : 'none' },
-                          }}
-                        >
-                          {t('globalSearch.openResult')}
-                        </Typography>
-                      </ListItemButton>
-                    )
-                  })}
-                </Box>
-              ))}
-            </List>
+            <GlobalSearchResultList
+              groups={groupedResults}
+              activeIndex={activeIndex}
+              includeWorkspace={scope === 'all'}
+              onActivate={(index) => dispatch({ type: 'activeIndexChanged', activeIndex: index })}
+              onSelect={selectResult}
+              registerResult={(index, element) => {
+                resultRefs.current[index] = element
+              }}
+            />
           )}
         </DialogContent>
         <Divider />

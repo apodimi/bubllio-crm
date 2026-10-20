@@ -4,6 +4,7 @@ export {
   useCreateTask,
   useDeleteTask,
   useReopenTask,
+  useRescheduleTask,
   useMoveTask,
   useTasks,
   useUpdateTask,

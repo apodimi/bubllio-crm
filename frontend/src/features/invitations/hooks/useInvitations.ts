@@ -5,6 +5,7 @@ import type {
   WorkspaceRole,
 } from '../../../types/invitation.types'
 import { invitationService } from '../services/invitationService'
+import { activityInboxKeys } from '../../activity-inbox'
 
 export const invitationKeys = {
   byOrganization: (organizationId: string) =>
@@ -37,14 +38,20 @@ export function useCreateInvitation(organizationId: string) {
     mutationFn: (input: { email: string; role: InvitationRole }) =>
       invitationService.create(organizationId, input),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: invitationKeys.byOrganization(organizationId) }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: invitationKeys.byOrganization(organizationId) }),
+        queryClient.invalidateQueries({ queryKey: activityInboxKeys.detail(organizationId) }),
+      ]),
   })
 }
 
 export function useInvitationActions(organizationId: string) {
   const queryClient = useQueryClient()
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: invitationKeys.byOrganization(organizationId) })
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: invitationKeys.byOrganization(organizationId) }),
+      queryClient.invalidateQueries({ queryKey: activityInboxKeys.detail(organizationId) }),
+    ])
   const resend = useMutation({
     mutationFn: (invitationId: string) => invitationService.resend(organizationId, invitationId),
     onSuccess: refresh,

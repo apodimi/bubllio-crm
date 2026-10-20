@@ -19,5 +19,7 @@ export function useAccountSettings() {
     mutationFn: (body: { password: string; confirmation: string }) =>
       authService.deleteAccount(body),
   })
-  return { settings, save, changePassword, deleteAccount }
+  const exportAccount = useMutation({ mutationFn: () => authService.exportAccount() })
+
+  return { settings, save, changePassword, deleteAccount, exportAccount }
 }

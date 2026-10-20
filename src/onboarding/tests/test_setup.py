@@ -264,13 +264,16 @@ class InstallationSetupTests(APITestCase):
             "name": "Primary", "host": "smtp.example.com", "port": 587,
             "username": "mailer", "password": "smtp-secret", "from_email": "hello@example.com",
         }
-        with patch("onboarding.api.setup.send_setup_test_email", side_effect=RuntimeError("secret-details")):
-            response = self.client.post(
-                self.smtp_test_url,
-                {"setup_token": self.setup_token, "smtp": smtp, "recipient": "admin@example.com"}, format="json",
-            )
+        with self.assertLogs("onboarding.api.setup", level="ERROR") as logs:
+            with patch("onboarding.api.setup.send_setup_test_email", side_effect=RuntimeError("secret-details")):
+                response = self.client.post(
+                    self.smtp_test_url,
+                    {"setup_token": self.setup_token, "smtp": smtp, "recipient": "admin@example.com"}, format="json",
+                )
         self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
         self.assertNotIn("secret-details", str(response.data))
+        self.assertIn("RuntimeError", logs.output[0])
+        self.assertNotIn("secret-details", logs.output[0])
         self.assertTrue(self.client.get(self.url).data["available"])
 
     def test_setup_test_email_closes_after_setup(self):

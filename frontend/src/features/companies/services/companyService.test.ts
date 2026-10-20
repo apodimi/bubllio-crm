@@ -21,4 +21,28 @@ describe('company pagination', () => {
       signal: undefined,
     })
   })
+
+  it('loads the tenant-scoped companies that need a next step', async () => {
+    await companyService.attention('org-a')
+
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/companies/attention/', {
+      signal: undefined,
+    })
+  })
+
+  it('posts structured communication to the selected company timeline', async () => {
+    const body = {
+      kind: 'call' as const,
+      contact: 'contact-a',
+      outcome: 'Proposal requested',
+      body: 'Send the revised offer.',
+      occurred_at: '2030-01-02T10:30:00.000Z',
+    }
+
+    await companyService.addCommunication('org-a', 'company-a', body)
+
+    expect(request).toHaveBeenCalledWith('/organizations/org-a/companies/company-a/timeline/', {
+      body,
+    })
+  })
 })

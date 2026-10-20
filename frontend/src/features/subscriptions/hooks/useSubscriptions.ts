@@ -6,6 +6,7 @@ import type {
   SubscriptionInput,
 } from '../../../types/subscription.types'
 import { subscriptionService } from '../services/subscriptionService'
+import { activityInboxKeys } from '../../activity-inbox'
 
 const keys = {
   root: (organizationId: string) => ['organizations', organizationId, 'services'] as const,
@@ -15,6 +16,11 @@ const keys = {
   charges: (organizationId: string) => [...keys.root(organizationId), 'charges'] as const,
   overview: (organizationId: string) => [...keys.root(organizationId), 'overview'] as const,
 }
+const invalidateServices = (client: ReturnType<typeof useQueryClient>, organizationId: string) =>
+  Promise.all([
+    client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    client.invalidateQueries({ queryKey: activityInboxKeys.detail(organizationId) }),
+  ])
 
 export const useCatalog = (organizationId: string, enabled = true) =>
   useQuery({
@@ -61,7 +67,7 @@ export function useCreateSubscription(organizationId: string) {
   return useMutation({
     mutationFn: (body: CreateSubscriptionInput) =>
       subscriptionService.createSubscription(organizationId, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    onSuccess: () => invalidateServices(client, organizationId),
   })
 }
 export function useUpdateSubscription(organizationId: string) {
@@ -69,7 +75,7 @@ export function useUpdateSubscription(organizationId: string) {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: Partial<SubscriptionInput> }) =>
       subscriptionService.updateSubscription(organizationId, id, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    onSuccess: () => invalidateServices(client, organizationId),
   })
 }
 export function useRecordPayment(organizationId: string) {
@@ -77,7 +83,7 @@ export function useRecordPayment(organizationId: string) {
   return useMutation({
     mutationFn: ({ chargeId, body }: { chargeId: string; body: PaymentInput }) =>
       subscriptionService.recordPayment(organizationId, chargeId, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    onSuccess: () => invalidateServices(client, organizationId),
   })
 }
 export function useCancelSubscription(organizationId: string) {
@@ -85,14 +91,14 @@ export function useCancelSubscription(organizationId: string) {
   return useMutation({
     mutationFn: ({ id, mode }: { id: string; mode: 'end_of_period' | 'immediate' }) =>
       subscriptionService.cancelSubscription(organizationId, id, mode),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    onSuccess: () => invalidateServices(client, organizationId),
   })
 }
 export function useResumeSubscription(organizationId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => subscriptionService.resumeSubscription(organizationId, id),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    onSuccess: () => invalidateServices(client, organizationId),
   })
 }
 
@@ -100,6 +106,6 @@ export function usePauseSubscription(organizationId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => subscriptionService.pauseSubscription(organizationId, id),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.root(organizationId) }),
+    onSuccess: () => invalidateServices(client, organizationId),
   })
 }

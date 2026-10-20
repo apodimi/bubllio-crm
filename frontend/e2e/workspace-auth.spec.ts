@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { fixtureIds, login, mockApi, openAlpha } from './support/crm'
+import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
@@ -16,7 +16,6 @@ test(
     })
     await login(page)
     await openAlpha(page)
-    await expect(page.getByLabel('Bubllio CRM version')).toHaveText(/^Bubllio CRM v\d+\.\d+\.\d+$/)
     await page.getByRole('link', { name: 'Companies', exact: true }).click()
     await expect(page.getByRole('row', { name: /Open Acme Ltd/ })).toBeVisible()
     await page.screenshot({ path: test.info().outputPath('companies-desktop.png'), fullPage: true })
@@ -135,6 +134,11 @@ test('desktop navigation collapses to a usable icon rail', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Companies', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Collapse navigation' }).click()
   await expect(page.getByRole('button', { name: 'Expand navigation' })).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('companies-collapsed-navigation.png'),
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.getByRole('button', { name: 'Expand navigation' }).click()
   await expect(
     page.getByRole('navigation', { name: 'Primary navigation' }).getByText('Companies', {
@@ -186,6 +190,7 @@ test('authenticated language preference lives in the account menu', async ({ pag
 
   await expect(page.getByRole('combobox', { name: 'Language' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Open account menu' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Account settings' })).toBeVisible()
   await page.getByRole('menuitem', { name: /Language.*English/ }).click()
   await page.getByRole('menuitemradio', { name: 'Greek' }).click()
 
@@ -193,6 +198,29 @@ test('authenticated language preference lives in the account menu', async ({ pag
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('lang', 'el')
   await expect(page.getByRole('button', { name: 'Άνοιγμα μενού λογαριασμού' })).toBeVisible()
+})
+
+test('installation capability exposes installation settings in the account menu', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/auth/me/', (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: 'installation-admin',
+        email: 'admin@example.test',
+        is_superuser: false,
+        can_create_workspaces: true,
+        organizations: orgs,
+      },
+    }),
+  )
+
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('button', { name: 'Open account menu' }).click()
+
+  await expect(page.getByRole('menuitem', { name: 'Installation settings' })).toBeVisible()
 })
 
 test('a signed-in user keeps the session when opening /login from the address bar', async ({

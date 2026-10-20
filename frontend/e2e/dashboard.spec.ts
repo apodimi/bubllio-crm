@@ -16,6 +16,53 @@ test('dashboard avoids list downloads and catalog avoids billing requests', asyn
   expect(requests.filter((path) => /\/services\/(charges|subscriptions)\/$/.test(path))).toEqual([])
 })
 
+test('turns a customer without a next step into an actionable follow-up', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+
+  const section = page.getByRole('region', { name: 'Needs a next step' })
+  await expect(section.getByText('Acme Ltd')).toBeVisible()
+  await expect(section.getByText('No communication recorded yet')).toBeVisible()
+  await section.getByRole('button', { name: 'Add follow-up' }).click()
+  await expect(page.getByRole('heading', { name: 'Add next action' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Company' })).toContainText('Acme Ltd')
+  await page.getByRole('textbox', { name: 'What needs to happen?' }).fill('Check in with Acme')
+  await page.getByRole('button', { name: 'Add task' }).click()
+
+  await expect(section.getByText('Every assigned customer has a next step.')).toBeVisible()
+})
+
+test('keeps My work usable while an older server has no attention endpoint', async ({ page }) => {
+  await page.route('**/companies/attention/', (route) =>
+    route.fulfill({ status: 404, json: { detail: 'Not found.' } }),
+  )
+  await login(page)
+  await openAlpha(page)
+
+  await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Follow-up queue' })).toBeVisible()
+  const section = page.getByRole('region', { name: 'Needs a next step' })
+  await expect(section).toBeVisible()
+  await expect(section.getByText('Customer suggestions are being prepared')).toBeVisible()
+  await expect(
+    page.getByText('This resource is unavailable or you do not have access.'),
+  ).toHaveCount(0)
+})
+
+test('shows real attention service failures instead of hiding them', async ({ page }) => {
+  await page.route('**/companies/attention/', (route) =>
+    route.fulfill({ status: 500, json: { detail: 'Unavailable.' } }),
+  )
+  await login(page)
+  await openAlpha(page)
+
+  const section = page.getByRole('region', { name: 'Needs a next step' })
+  await expect(section).toBeVisible()
+  await expect(
+    section.getByText('The server could not complete this request. Please try again.'),
+  ).toBeVisible()
+})
+
 test('My work links keep saved task and deal views across reload and back', async ({ page }) => {
   await login(page)
   await openAlpha(page)
@@ -28,8 +75,10 @@ test('My work links keep saved task and deal views across reload and back', asyn
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible()
   await page.getByRole('link', { name: 'Open deal' }).click()
-  await expect(page).toHaveURL(/view=no_next_action.*deal=|deal=.*view=no_next_action/)
-  await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
+  await expect(page).toHaveURL(
+    `/organizations/${fixtureIds.alphaOrganization}/deals/${fixtureIds.deal}`,
+  )
+  await expect(page.getByRole('heading', { name: 'Annual platform renewal' })).toBeVisible()
   await page.goBack()
   await page.getByRole('link', { name: 'View deals' }).click()
   await expect(page).toHaveURL(/\/deals\?view=no_next_action/)
@@ -61,19 +110,50 @@ test('dashboard puts daily work first and supports completion with undo', async 
   await page.getByRole('link', { name: 'My work', exact: true }).click()
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('My work')
-  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText("Today's tasks")
+  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText('Follow-up queue')
   await expect(page.getByText('1 people are still waiting to join.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Manage invitations' })).toHaveAttribute(
     'href',
     `/organizations/${fixtureIds.alphaOrganization}/members`,
   )
-  await expect(page.getByRole('heading', { name: "Today's tasks", level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Follow-up queue', level: 2 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Needs attention', level: 2 })).toBeVisible()
+  const followUpQueueBox = await page.getByRole('region', { name: 'Follow-up queue' }).boundingBox()
+  const needsAttentionBox = await page
+    .getByRole('region', { name: 'Needs attention' })
+    .boundingBox()
+  expect(followUpQueueBox).not.toBeNull()
+  expect(needsAttentionBox).not.toBeNull()
+  expect(Math.abs((followUpQueueBox?.width ?? 0) - (needsAttentionBox?.width ?? 0))).toBeLessThan(2)
   await page.screenshot({
     path: test.info().outputPath('operations-board-desktop.png'),
     fullPage: true,
     animations: 'disabled',
   })
+  await page.getByRole('button', { name: 'Actions for Call about renewal' }).click()
+  await page.getByRole('menuitem', { name: 'Log communication' }).click()
+  const communicationDialog = page.getByRole('dialog', { name: 'Log communication' })
+  await communicationDialog.getByRole('textbox', { name: 'Outcome' }).fill('Renewal discussed')
+  const communicationRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/timeline/'),
+  )
+  await communicationDialog.getByRole('button', { name: 'Log communication' }).click()
+  expect((await communicationRequest).postDataJSON()).toMatchObject({
+    kind: 'call',
+    outcome: 'Renewal discussed',
+  })
+  await expect(page.getByText('Communication added to the customer timeline.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Actions for Call about renewal' }).click()
+  const snoozeRequest = page.waitForRequest(
+    (request) => request.method() === 'PATCH' && request.url().endsWith('/tasks/task-a/'),
+  )
+  await page.getByRole('menuitem', { name: 'Move to tomorrow' }).click()
+  expect(new Date((await snoozeRequest).postDataJSON().due_at).getTime()).toBeGreaterThan(
+    Date.now(),
+  )
+  await expect(page.getByText(/Call about renewal moved to tomorrow/)).toBeVisible()
+
   await page.getByRole('checkbox', { name: 'Complete Call about renewal' }).click()
   await expect(page.getByRole('checkbox', { name: 'Complete Call about renewal' })).toHaveCount(0)
   await expect(page.getByText('Call about renewal completed.')).toBeVisible()
@@ -83,7 +163,7 @@ test('dashboard puts daily work first and supports completion with undo', async 
   await page.setViewportSize({ width: 320, height: 740 })
   await page.reload()
   const focusBox = await page
-    .getByRole('heading', { name: "Today's tasks", level: 2 })
+    .getByRole('heading', { name: 'Follow-up queue', level: 2 })
     .boundingBox()
   const attentionBox = await page
     .getByRole('heading', { name: 'Needs attention', level: 2 })
@@ -278,13 +358,12 @@ test('global search scopes results and supports keyboard navigation', async ({ p
   await dealSearch.press('ArrowDown')
   await dealSearch.press('Enter')
   await expect(page).toHaveURL(
-    `/organizations/${fixtureIds.alphaOrganization}/deals?deal=${fixtureIds.deal}`,
+    `/organizations/${fixtureIds.alphaOrganization}/deals/${fixtureIds.deal}`,
   )
-  await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
-  await expect(page.getByRole('textbox', { name: 'Deal title' })).toHaveValue('Renewal opportunity')
+  await expect(page.getByRole('heading', { name: 'Renewal opportunity' })).toBeVisible()
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Edit deal' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Renewal opportunity' })).toHaveCount(0)
 
   await page.setViewportSize({ width: 360, height: 740 })
   await openAlpha(page)

@@ -1,0 +1,9 @@
+{
+  "version": "0.2.8",
+  "min_version": "0.2.7",
+  "max_version": "0.2.7",
+  "migration_policy": "online_safe",
+  "expected_schema": "bubllio-crm-0.2.8",
+  "health_timeout_seconds": 180,
+  "rollback_compatible": true
+}

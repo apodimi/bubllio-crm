@@ -1,7 +1,23 @@
-import { type ComponentProps, type ElementType, type ReactNode } from 'react'
+import {
+  useState,
+  type ComponentProps,
+  type ElementType,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import arrowRight from '@iconify-icons/keyline-icons/arrow-right'
+import moreHorizontal from '@iconify-icons/keyline-icons/more-horizontal'
 import type { IconifyIcon } from '@iconify/react'
-import { Box, Checkbox, CircularProgress, Stack, Typography } from '@mui/material'
+import {
+  Box,
+  Checkbox,
+  CircularProgress,
+  IconButton,
+  Menu,
+  MenuItem,
+  Stack,
+  Typography,
+} from '@mui/material'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -13,6 +29,7 @@ type DashboardRoute =
   | '/organizations/$organizationId/contacts'
   | '/organizations/$organizationId/tasks'
   | '/organizations/$organizationId/deals'
+  | '/organizations/$organizationId/deals/$dealId'
   | '/organizations/$organizationId/services/customer-services'
   | '/organizations/$organizationId/services/billing'
   | '/organizations/$organizationId/members'
@@ -41,16 +58,18 @@ export function TextLink({
   organizationId,
   children,
   search,
+  dealId,
 }: {
   to: DashboardRoute
   organizationId: string
   children: ReactNode
   search?: Record<string, string>
+  dealId?: string
 }) {
   return (
     <Link
       to={to}
-      params={{ organizationId }}
+      params={{ organizationId, dealId }}
       search={search}
       style={{ color: 'inherit', textDecoration: 'none' }}
     >
@@ -135,6 +154,8 @@ export function TaskRow({
   canManage,
   pending,
   onComplete,
+  onLogCommunication,
+  onSnooze,
 }: {
   task: CrmTask
   organizationId: string
@@ -142,8 +163,11 @@ export function TaskRow({
   canManage: boolean
   pending: boolean
   onComplete: (task: CrmTask) => void
+  onLogCommunication: (task: CrmTask) => void
+  onSnooze: (task: CrmTask) => void
 }) {
   const { t, i18n } = useTranslation()
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const due = new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit' }).format(
     new Date(task.due_at),
   )
@@ -151,7 +175,9 @@ export function TaskRow({
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: canManage ? '44px minmax(0, 1fr) auto' : '12px minmax(0, 1fr) auto',
+        gridTemplateColumns: canManage
+          ? '44px minmax(0, 1fr) auto 44px'
+          : '12px minmax(0, 1fr) auto',
         minHeight: 72,
         alignItems: 'center',
         gap: 1.25,
@@ -208,6 +234,39 @@ export function TaskRow({
       >
         {due}
       </Typography>
+      {canManage ? (
+        <>
+          <IconButton
+            aria-label={t('crm.dashboard.taskActions', { title: task.title })}
+            disabled={pending}
+            onClick={(event: MouseEvent<HTMLButtonElement>) => setMenuAnchor(event.currentTarget)}
+          >
+            <AppIcon icon={moreHorizontal} size={22} />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={() => setMenuAnchor(null)}
+          >
+            <MenuItem
+              onClick={() => {
+                setMenuAnchor(null)
+                onLogCommunication(task)
+              }}
+            >
+              {t('crm.dashboard.logCommunication')}
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setMenuAnchor(null)
+                onSnooze(task)
+              }}
+            >
+              {t('crm.dashboard.snoozeTomorrow')}
+            </MenuItem>
+          </Menu>
+        </>
+      ) : null}
     </Box>
   )
 }

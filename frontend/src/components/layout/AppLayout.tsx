@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useAuth } from '../../features/auth'
 import { useAuthStore } from '../../features/auth/store/authStore'
+import { useActivityInbox } from '../../features/activity-inbox'
 import { useOrganization, useOrganizations, WorkspaceContext } from '../../features/organizations'
 import { useSetupStatus } from '../../features/setup/hooks/useSetup'
 import { UpdateBanner } from '../../features/updates/components/UpdateBanner'
@@ -62,13 +63,16 @@ export function RootLayout() {
 function Shell() {
   const { t } = useTranslation()
   const auth = useAuth()
-  const isSuperuser = useAuthStore((state) => state.user?.is_superuser ?? false)
+  const isInstallationAdmin = useAuthStore(
+    (state) => state.user?.can_create_workspaces ?? state.user?.is_superuser ?? false,
+  )
   const [mobileOpen, setMobileOpen] = useState(false)
   const [desktopNavigationExpanded, setDesktopNavigationExpanded] = useState(true)
   const params = useParams({ strict: false })
   const organizationId = 'organizationId' in params ? params.organizationId : undefined
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const organizations = useOrganizations()
+  const activityInbox = useActivityInbox(organizationId ?? '')
   const navigate = useNavigate()
   const currentOrganization = organizations.data?.find(
     (organization) => organization.id === organizationId,
@@ -98,7 +102,7 @@ function Shell() {
       organizations={organizations.data ?? []}
       currentPath={pathname}
       username={auth.username}
-      isSuperuser={isSuperuser}
+      isSuperuser={isInstallationAdmin}
       currentRole={currentOrganization?.current_user_role}
       onOrganizationChange={selectOrganization}
       onClose={closeMobileNavigation}
@@ -106,6 +110,8 @@ function Shell() {
       onToggle={() => setDesktopNavigationExpanded((expanded) => !expanded)}
       showNestedNavigation
       showWorkspaceSelector={false}
+      inboxCount={activityInbox.data?.count ?? 0}
+      inboxItems={activityInbox.data?.items}
     />
   )
 
@@ -115,12 +121,14 @@ function Shell() {
       organizations={organizations.data ?? []}
       currentPath={pathname}
       username={auth.username}
-      isSuperuser={isSuperuser}
+      isSuperuser={isInstallationAdmin}
       currentRole={currentOrganization?.current_user_role}
       onOrganizationChange={selectOrganization}
       onClose={closeMobileNavigation}
       expanded
       showNestedNavigation
+      inboxCount={activityInbox.data?.count ?? 0}
+      inboxItems={activityInbox.data?.items}
     />
   )
 
@@ -227,8 +235,11 @@ function Shell() {
           onOrganizationChange={selectOrganization}
           onOpenNavigation={() => setMobileOpen(true)}
           username={auth.username}
-          isSuperuser={isSuperuser}
+          isSuperuser={isInstallationAdmin}
+          currentRole={currentOrganization?.current_user_role}
           onLogout={auth.logout}
+          inboxCount={activityInbox.data?.count ?? 0}
+          inboxItems={activityInbox.data?.items}
         />
         <Box
           component="main"
@@ -247,7 +258,7 @@ function Shell() {
           }}
         >
           <Box sx={{ px: isWorkspaceDashboard ? { xs: 1.5, sm: 3, lg: 4.5 } : 0 }}>
-            <UpdateBanner isInstallationAdmin={isSuperuser} />
+            <UpdateBanner isInstallationAdmin={isInstallationAdmin} />
           </Box>
           <Outlet />
         </Box>

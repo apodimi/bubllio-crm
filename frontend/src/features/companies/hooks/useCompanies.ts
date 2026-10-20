@@ -6,7 +6,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import type { CompanyInput, CompanyTimelineCategory } from '../../../types/company.types'
+import type {
+  CompanyCommunicationInput,
+  CompanyInput,
+  CompanyTimelineCategory,
+} from '../../../types/company.types'
+import { ApiError } from '../../../services/api'
+import { activityInboxKeys } from '../../activity-inbox'
 import { companyService } from '../services/companyService'
 import type { CompanyFilters } from '../services/companyService'
 
@@ -21,6 +27,8 @@ export const companyKeys = {
     [...companyKeys.detail(organizationId, companyId), 'activity'] as const,
   timeline: (organizationId: string, companyId: string) =>
     [...companyKeys.detail(organizationId, companyId), 'timeline'] as const,
+  attention: (organizationId: string) =>
+    [...companyKeys.byOrganization(organizationId), 'attention'] as const,
   timelineList: (organizationId: string, companyId: string, category?: CompanyTimelineCategory) =>
     [...companyKeys.timeline(organizationId, companyId), category ?? 'all'] as const,
 }
@@ -42,6 +50,21 @@ export const useCrmSummary = (organizationId: string) =>
     queryKey: ['organizations', organizationId, 'crm-summary'],
     queryFn: ({ signal }) => companyService.summary(organizationId, signal),
     staleTime: 0,
+  })
+
+export const useCompanyAttention = (organizationId: string) =>
+  useQuery({
+    queryKey: companyKeys.attention(organizationId),
+    queryFn: async ({ signal }) => {
+      try {
+        return await companyService.attention(organizationId, signal)
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return null
+        }
+        throw error
+      }
+    },
   })
 
 export function useCompanyPage(organizationId: string, filters: CompanyFilters, page: number) {
@@ -101,6 +124,20 @@ export const useAddCompanyTimelineNote = (organizationId: string, companyId: str
   })
 }
 
+export const useAddCompanyCommunication = (organizationId: string, companyId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CompanyCommunicationInput) =>
+      companyService.addCommunication(organizationId, companyId, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: companyKeys.timeline(organizationId, companyId),
+      })
+      void queryClient.invalidateQueries({ queryKey: companyKeys.attention(organizationId) })
+    },
+  })
+}
+
 export const useCompanyAssignees = (organizationId: string, enabled = true) =>
   useQuery({
     queryKey: [...companyKeys.byOrganization(organizationId), 'assignees'],
@@ -111,7 +148,10 @@ export const useCompanyAssignees = (organizationId: string, enabled = true) =>
 const useCompanyMutation = (organizationId: string) => {
   const queryClient = useQueryClient()
   return () =>
-    queryClient.invalidateQueries({ queryKey: companyKeys.byOrganization(organizationId) })
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: companyKeys.byOrganization(organizationId) }),
+      queryClient.invalidateQueries({ queryKey: activityInboxKeys.detail(organizationId) }),
+    ])
 }
 
 export const useCreateCompany = (organizationId: string) => {

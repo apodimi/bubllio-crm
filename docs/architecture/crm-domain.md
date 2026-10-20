@@ -109,15 +109,47 @@ metadata such as changed field names rather than previous field values.
 
 `CompanyTimelineEvent` is the customer-facing, append-only history for a company.
 It combines company and contact changes with deals, tasks, customer services,
-payments, and manual workspace notes. Events store a stable type, category,
-optional source reference, actor, timestamp, and safe display metadata. Manual
-notes store their text in `body`; system events do not copy previous field values.
+payments, manual workspace notes, and structured communication logs. Events store
+a stable type, category, optional source reference, actor, timestamp, and safe
+display metadata. Manual notes store their text in `body`; communication logs
+store their channel and outcome as display metadata and may reference a contact;
+system events do not copy previous field values.
 The timeline is indexed for newest-first company reads and category filters.
 
+The tenant-scoped company attention endpoint returns at most five active companies
+assigned to the current user that have no incomplete task. Companies with no
+recorded communication sort before those with older communication. This is a
+derived My work view, not a stored health score.
+
 The API is `/api/v1/organizations/<organization_id>/companies/<company_id>/timeline/`.
-Workspace viewers may read it; roles with `manage_crm` may add a note. Ownership
-always comes from the authorized organization and company URL. Results are
-paginated with a default page size of 25 and a maximum of 100.
+Workspace viewers may read it; roles with `manage_crm` may add a note or log a
+call, email, or meeting. A referenced contact must belong to the same company and
+organization. Ownership always comes from the authorized organization and company
+URL. Results are paginated with a default page size of 25 and a maximum of 100.
+The attention view is
+`/api/v1/organizations/<organization_id>/companies/attention/` and requires
+`view_crm`.
+
+## Action inbox
+
+The action inbox is a derived, non-persistent view of unresolved work assigned
+to the current user. It combines overdue and due-today tasks, active deals
+without an open next action, active companies without an open follow-up,
+grouped billing conditions, and pending invitations for roles that can manage
+members. A company signal is omitted when one of its deals already has a
+stronger signal. Items have stable IDs, deterministic severity and due-date
+ordering, and the response is bounded to 50 items.
+
+The endpoint is
+`GET /api/v1/organizations/<organization_id>/activity-inbox/` and requires
+`view_crm`. The membership role is evaluated server-side; pending invitations
+are included only for roles with `manage_members`. The count is the number of
+currently unresolved items, not an unread-message count. Read, dismiss, and
+notification-delivery state are not implemented.
+
+The web client refreshes this derived view every 30 seconds while active, on
+window focus, and after related mutations such as completing a task. This is
+near-live polling; the inbox does not use WebSockets or server-sent events.
 
 ## Contact
 
@@ -154,6 +186,14 @@ Deal lists support tenant-scoped operational filters for ownership, missing or
 present next actions, expected-close date ranges, archive state, and an optional
 bounded result limit. The built-in My work and deal views compose these filters
 through bookmarkable URLs; they do not create persistent custom-view records.
+
+The web client exposes a canonical deal profile at
+`/organizations/<organization_id>/deals/<deal_id>`. It combines the existing
+tenant-scoped deal detail with tasks filtered by that deal, and supports the
+existing edit, archive/restore, add-task, edit-task, and complete-task actions.
+The older `/deals?deal=<deal_id>` drawer URL remains compatible for saved links.
+This first profile version does not claim an immutable deal event or stage
+history; that remains future work.
 
 ## Why Not Use `Customer` As The Main Model?
 

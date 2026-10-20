@@ -3,8 +3,10 @@ import { organizationPath } from '../../organizations/services/organizationServi
 import type {
   Company,
   CompanyActivity,
+  CompanyAttentionItem,
   CompanyAssignee,
   CompanyInput,
+  CompanyCommunicationInput,
   CompanyTimelineCategory,
   CompanyTimelineEvent,
 } from '../../../types/company.types'
@@ -37,6 +39,8 @@ const companyPath = (organizationId: string, companyId?: string) =>
 export const companyService = {
   summary: (organizationId: string, signal?: AbortSignal) =>
     request<CrmSummary>(companyPath(organizationId) + 'summary/', { signal }),
+  attention: (organizationId: string, signal?: AbortSignal) =>
+    request<CompanyAttentionItem[]>(companyPath(organizationId) + 'attention/', { signal }),
   page: (organizationId: string, filters: CompanyFilters, page: number, signal?: AbortSignal) => {
     const params = new URLSearchParams({ page: String(page + 1), page_size: '50' })
     if (filters.search?.trim()) params.set('search', filters.search.trim())
@@ -84,6 +88,8 @@ export const companyService = {
     request<CompanyTimelineEvent>(`${companyPath(organizationId, companyId)}timeline/`, {
       body: { body },
     }),
+  addCommunication: (organizationId: string, companyId: string, body: CompanyCommunicationInput) =>
+    request<CompanyTimelineEvent>(`${companyPath(organizationId, companyId)}timeline/`, { body }),
   archive: (organizationId: string, companyId: string) =>
     request<Company>(`${companyPath(organizationId, companyId)}archive/`, { body: {} }),
   restore: (organizationId: string, companyId: string) =>

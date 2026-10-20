@@ -1,7 +1,9 @@
+import briefcaseIcon from '@iconify-icons/keyline-icons/briefcase'
 import { Link } from '@tanstack/react-router'
 import { Box, List, ListItemButton, ListItemText, Stack, Typography } from '@mui/material'
-import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
 import { useTranslation } from 'react-i18next'
+
+import { AppIcon } from '../common/AppIcon'
 
 type WorkspaceSecondarySidebarProps = {
   organizationId: string
@@ -49,7 +51,7 @@ export function WorkspaceSecondarySidebar({
       <Stack sx={{ position: 'sticky', top: 0, p: 2, gap: 1.75 }}>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 1.25, minHeight: 40 }}>
           <Box sx={{ display: 'grid', placeItems: 'center', color: 'primary.main' }}>
-            <SubscriptionsRounded sx={{ fontSize: 20 }} />
+            <AppIcon icon={briefcaseIcon} />
           </Box>
           <Typography component="h2" variant="h6" sx={{ fontSize: '1rem', fontWeight: 700 }}>
             {t('navigation.services')}

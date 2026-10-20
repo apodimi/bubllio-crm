@@ -1,85 +1,10 @@
-import type { ReactNode } from 'react'
 import filterIcon from '@iconify-icons/keyline-icons/filter'
 import searchIcon from '@iconify-icons/keyline-icons/search'
-import {
-  Box,
-  Button,
-  ButtonBase,
-  IconButton,
-  InputAdornment,
-  Stack,
-  TextField,
-} from '@mui/material'
+import { Button, IconButton, InputAdornment, Stack, TextField } from '@mui/material'
 
 import { AppIcon } from './AppIcon'
-
-export interface EntityListViewOption<T extends string> {
-  value: T
-  label: ReactNode
-  disabled?: boolean
-}
-
-interface EntityListViewTabsProps<T extends string> {
-  label: string
-  options: readonly EntityListViewOption<T>[]
-  value: T
-  onChange: (value: T) => void
-}
-
-export function EntityListViewTabs<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: EntityListViewTabsProps<T>) {
-  return (
-    <Box
-      component="nav"
-      aria-label={label}
-      sx={{
-        display: 'flex',
-        overflowX: 'auto',
-        borderBottom: 1,
-        borderColor: 'divider',
-        mb: 2,
-      }}
-    >
-      {options.map((option) => {
-        const selected = value === option.value
-        return (
-          <ButtonBase
-            key={option.value}
-            disabled={option.disabled}
-            aria-current={selected ? 'page' : undefined}
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
-            sx={{
-              position: 'relative',
-              flexShrink: 0,
-              minHeight: 44,
-              px: { xs: 1.25, sm: 1.75 },
-              color: selected ? 'text.primary' : 'text.secondary',
-              fontWeight: selected ? 700 : 600,
-              '&::after': selected
-                ? {
-                    content: '""',
-                    position: 'absolute',
-                    height: 2,
-                    insetInline: { xs: 10, sm: 14 },
-                    bottom: 0,
-                    bgcolor: 'primary.main',
-                  }
-                : undefined,
-              '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-            }}
-          >
-            {option.label}
-          </ButtonBase>
-        )
-      })}
-    </Box>
-  )
-}
+export { OperationalTabs as EntityListViewTabs } from './OperationalTabs'
+export type { OperationalTabOption as EntityListViewOption } from './OperationalTabs'
 
 interface EntityListToolbarProps {
   search: string

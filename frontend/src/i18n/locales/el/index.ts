@@ -3,6 +3,7 @@ import common from './common.json'
 import crm from './crm.json'
 import errors from './errors.json'
 import globalSearch from './globalSearch.json'
+import inbox from './inbox.json'
 import navigation from './navigation.json'
 import organizations from './organizations.json'
 import passwordReset from './passwordReset.json'
@@ -19,5 +20,6 @@ export const elTranslations = {
   passwordReset,
   errors,
   globalSearch,
+  inbox,
   updates,
 } as const

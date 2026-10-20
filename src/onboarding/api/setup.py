@@ -1,4 +1,5 @@
 import hmac
+import logging
 import os
 
 from django.contrib.auth import get_user_model
@@ -15,6 +16,9 @@ from organizations.services.email_security import encrypt_secret
 from organizations.services.email_service import send_setup_test_email
 from organizations.models import EmailAccount, InstallationState, Organization, OrganizationMembership, OrganizationSettings
 from .setup_serializers import InstallationSetupSerializer, InstallationSmtpTestSerializer
+
+
+logger = logging.getLogger(__name__)
 
 
 class SetupAttemptThrottle(AnonRateThrottle):
@@ -113,7 +117,8 @@ class InstallationSmtpTestAPIView(APIView):
         smtp = serializer.validated_data["smtp"]
         try:
             send_setup_test_email(smtp=smtp, recipient=serializer.validated_data["recipient"])
-        except Exception:
+        except Exception as exc:
+            logger.error("Installation SMTP test failed (%s)", type(exc).__name__)
             return Response(
                 {"detail": "Test email could not be sent. Check the SMTP settings and recipient."},
                 status=status.HTTP_502_BAD_GATEWAY,

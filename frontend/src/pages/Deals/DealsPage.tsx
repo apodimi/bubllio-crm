@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import plusIcon from '@iconify-icons/keyline-icons/plus'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { Alert, Box, Button, Drawer, Stack, Typography } from '@mui/material'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { AppIcon } from '../../components/common/AppIcon'
@@ -81,6 +82,7 @@ function DealBoardSummary({ forecast }: { forecast: ForecastSummary }) {
 
 export function DealsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const boardRef = useRef<HTMLDivElement | null>(null)
   const {
     org,
@@ -128,6 +130,16 @@ export function DealsPage() {
   const needsTaskContext = view === 'active' || view === 'all' || view === 'archived'
   const error = deals.error || companies.error || (needsTaskContext ? tasks.error : null)
   const isPending = deals.isPending || companies.isPending || (needsTaskContext && tasks.isPending)
+  const openProfile = (dealId: string) =>
+    navigate({
+      to: '/organizations/$organizationId/deals/$dealId',
+      params: { organizationId: org.id, dealId },
+      search: {
+        q: routeSearch.q,
+        view: routeSearch.view,
+        stage: routeSearch.stage,
+      },
+    })
 
   useEffect(() => {
     const board = boardRef.current
@@ -298,7 +310,7 @@ export function DealsPage() {
                       )
                     : '—'}
                 </Typography>
-                <Button onClick={() => updateSearch({ deal: deal.id })}>
+                <Button onClick={() => void openProfile(deal.id)}>
                   {t('crm.deals.openDeal', { title: deal.title })}
                 </Button>
               </Box>
@@ -337,7 +349,7 @@ export function DealsPage() {
                     deals={laneDeals(item)}
                     nextActionByDeal={nextActionByDeal}
                     draggable={canMove}
-                    onOpen={(deal) => updateSearch({ deal: deal.id })}
+                    onOpen={(deal) => void openProfile(deal.id)}
                     onOpenActions={(anchor, deal) => setActionsMenu({ anchor, deal })}
                     onOpenNextAction={
                       canManage
@@ -427,6 +439,7 @@ export function DealsPage() {
           task={nextActionDrawer.task}
           initialCompanyId={nextActionDrawer.deal.company}
           initialDealId={nextActionDrawer.deal.id}
+          initialDealTitle={nextActionDrawer.deal.title}
           onClose={() => setNextActionDrawer(null)}
         />
       ) : null}

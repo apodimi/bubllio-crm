@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import {
@@ -107,19 +107,23 @@ export function SubscriptionDrawer({
     notes: subscription?.notes ?? '',
   })
   const usesCatalogDefaults = !subscription && Boolean(form.catalog_item)
-  useEffect(() => {
-    if (subscription || !form.catalog_item) return
-    const item = catalog.find((candidate) => candidate.id === form.catalog_item)
-    if (item)
-      setForm((current) => ({
-        ...current,
-        name: item.name,
-        net_price: item.default_net_price,
-        currency: item.currency,
-        tax_rate: item.default_tax_rate,
-        billing_interval: item.billing_interval,
-      }))
-  }, [catalog, form.catalog_item, subscription])
+
+  function selectCatalogItem(catalogItemId: string) {
+    const item = catalog.find((candidate) => candidate.id === catalogItemId)
+    setForm((current) => ({
+      ...current,
+      catalog_item: catalogItemId,
+      ...(item && !subscription
+        ? {
+            name: item.name,
+            net_price: item.default_net_price,
+            currency: item.currency,
+            tax_rate: item.default_tax_rate,
+            billing_interval: item.billing_interval,
+          }
+        : {}),
+    }))
+  }
   const submit = () => {
     const normalizedDates = {
       catalog_item: form.catalog_item || null,
@@ -207,7 +211,7 @@ export function SubscriptionDrawer({
           select
           label={t('crm.services.drawer.catalogService')}
           value={form.catalog_item}
-          onChange={(e) => setForm({ ...form, catalog_item: e.target.value })}
+          onChange={(event) => selectCatalogItem(event.target.value)}
         >
           <MenuItem value="">{t('crm.services.drawer.customService')}</MenuItem>
           {catalog

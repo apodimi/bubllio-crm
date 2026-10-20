@@ -1,20 +1,8 @@
 import { Box, Divider, Link, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 
+import { DescriptionItem } from '../../../components/common/DescriptionItem'
 import type { Company } from '../../../types/company.types'
-
-function Detail({ label, value, empty }: { label: string; value?: string; empty: string }) {
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ mt: 0.35, wordBreak: 'break-word' }}>
-        {value || empty}
-      </Typography>
-    </Box>
-  )
-}
 
 export function CompanyProfileContent({ company }: { company: Company }) {
   const { t } = useTranslation()
@@ -32,15 +20,13 @@ export function CompanyProfileContent({ company }: { company: Company }) {
           {t('crm.companies.profileContent.contactDetails')}
         </Typography>
         <Stack spacing={1.5}>
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.email')}
-            value={company.email}
-            empty={t('crm.companies.profileContent.emptyValue')}
+            value={company.email || t('crm.companies.profileContent.emptyValue')}
           />
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.phone')}
-            value={company.phone_number}
-            empty={t('crm.companies.profileContent.emptyValue')}
+            value={company.phone_number || t('crm.companies.profileContent.emptyValue')}
           />
           <Box>
             <Typography variant="caption" color="text.secondary">
@@ -64,30 +50,25 @@ export function CompanyProfileContent({ company }: { company: Company }) {
           {t('crm.companies.profileContent.businessDetails')}
         </Typography>
         <Stack spacing={1.5}>
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.customerCode')}
-            value={company.customer_code}
-            empty={t('crm.companies.profileContent.emptyValue')}
+            value={company.customer_code || t('crm.companies.profileContent.emptyValue')}
           />
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.accountOwner')}
             value={company.assigned_to_name || t('crm.companies.unassigned')}
-            empty={t('crm.companies.profileContent.emptyValue')}
           />
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.taxId')}
-            value={company.tax_id}
-            empty={t('crm.companies.profileContent.emptyValue')}
+            value={company.tax_id || t('crm.companies.profileContent.emptyValue')}
           />
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.industry')}
-            value={company.industry}
-            empty={t('crm.companies.profileContent.emptyValue')}
+            value={company.industry || t('crm.companies.profileContent.emptyValue')}
           />
-          <Detail
+          <DescriptionItem
             label={t('crm.companies.profileContent.address')}
-            value={address.join(', ')}
-            empty={t('crm.companies.profileContent.emptyValue')}
+            value={address.join(', ') || t('crm.companies.profileContent.emptyValue')}
           />
         </Stack>
       </Box>

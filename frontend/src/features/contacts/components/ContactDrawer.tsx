@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 
-import type { Contact, ContactInput } from '../../../types/contact.types'
+import type { Contact } from '../../../types/contact.types'
 import { useCompanies, useCompanyAssignees } from '../../companies'
 import { useWorkspace } from '../../organizations'
 import { contactSchema, type ContactFormValues } from '../contactSchema'
@@ -109,7 +109,7 @@ export function ContactDrawer({ contact, onClose }: { contact?: Contact; onClose
 
   async function submit(values: ContactFormValues) {
     try {
-      await mutation.mutateAsync(values as ContactInput)
+      await mutation.mutateAsync(values)
       onClose()
     } catch {
       // The normalized API error is shown below.

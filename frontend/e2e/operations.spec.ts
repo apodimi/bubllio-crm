@@ -10,6 +10,7 @@ test('subscription cancellation remains active through the paid period and can r
   await login(page)
   await openAlpha(page)
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+  await page.getByRole('button', { name: 'Revenue', exact: true }).click()
   await page.getByRole('link', { name: 'Customer services', exact: true }).click()
   await expect(page).toHaveURL(
     `/organizations/${fixtureIds.alphaOrganization}/services/customer-services`,
@@ -76,7 +77,12 @@ test('workspace owner safely updates and tests invitation email', async ({ page 
 
   await login(page)
   await openAlpha(page)
-  await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Open account menu' }).click()
+  await page.screenshot({
+    path: test.info().outputPath('account-menu.png'),
+    animations: 'disabled',
+  })
+  await page.getByRole('link', { name: 'Workspace settings', exact: true }).click()
   await page.getByRole('button', { name: 'Email connections' }).click()
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
   await expect(page.getByLabel('SMTP hostname')).toHaveValue('smtp.example.com')
@@ -270,7 +276,7 @@ test('installation admin preflights and confirms a maintenance update', async ({
 
   await login(page)
   await page.getByRole('button', { name: 'Open account menu' }).click()
-  await page.getByRole('menuitem', { name: 'Account settings' }).click()
+  await page.getByRole('menuitem', { name: 'Installation settings' }).click()
 
   const center = page.locator('#update-center')
   await expect(center.getByRole('heading', { name: 'Update center' })).toBeVisible()
@@ -390,7 +396,7 @@ test('installation admin can review production readiness checks', async ({ page 
 
   await login(page)
   await page.getByRole('button', { name: 'Open account menu' }).click()
-  await page.getByRole('menuitem', { name: 'Account settings' }).click()
+  await page.getByRole('menuitem', { name: 'Installation settings' }).click()
 
   await expect(page.getByRole('heading', { name: 'Server safety checks' })).toBeVisible()
   await expect(page.getByText('9 of 11 safety checks passed')).toBeVisible()

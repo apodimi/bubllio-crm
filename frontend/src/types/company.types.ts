@@ -47,7 +47,20 @@ export interface CompanyActivity {
 }
 
 export type CompanyTimelineCategory =
-  'company' | 'contact' | 'deal' | 'task' | 'service' | 'payment' | 'note'
+  'company' | 'contact' | 'deal' | 'task' | 'service' | 'payment' | 'note' | 'communication'
+
+export interface CompanyCommunicationInput {
+  kind: 'call' | 'email' | 'meeting'
+  outcome: string
+  body: string
+  contact: string | null
+  occurred_at: string
+}
+
+export interface CompanyAttentionItem {
+  company: Company
+  last_communication_at: string | null
+}
 
 export interface CompanyTimelineEvent {
   id: string
@@ -69,6 +82,8 @@ export interface CompanyTimelineEvent {
     to_status?: string
     amount?: string
     currency?: string
+    kind?: string
+    outcome?: string
   }
   occurred_at: string
 }

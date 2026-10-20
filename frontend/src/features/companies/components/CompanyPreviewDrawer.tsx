@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import AddCommentRounded from '@mui/icons-material/AddCommentRounded'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import EditRounded from '@mui/icons-material/EditRounded'
 import OpenInNewRounded from '@mui/icons-material/OpenInNewRounded'
-import { Box, Button, Chip, Drawer, IconButton, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Chip, Drawer, IconButton, Stack, Typography } from '@mui/material'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -10,6 +11,7 @@ import { Failure, Loading } from '../../../components/common/Feedback'
 import { canCreateRecords, useWorkspace } from '../../organizations'
 import { useContacts } from '../../contacts'
 import { useCompany } from '../hooks/useCompanies'
+import { CompanyNoteComposer } from './CompanyNoteComposer'
 import { CompanyProfileContent } from './CompanyProfileContent'
 import { CompanyDialog } from './CompanyDialog'
 
@@ -26,6 +28,8 @@ export function CompanyPreviewDrawer({
   const workspace = useWorkspace()
   const canManage = workspace.id === organizationId && canCreateRecords(workspace)
   const [editing, setEditing] = useState(false)
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false)
+  const [noteAdded, setNoteAdded] = useState(false)
   const company = useCompany(organizationId, companyId)
   const contacts = useContacts(organizationId, { company: company.data?.id ?? '' })
   const companyContacts = contacts.data ?? []
@@ -41,6 +45,7 @@ export function CompanyPreviewDrawer({
           width: { xs: '100%', sm: 560 },
           maxWidth: '100vw',
           bgcolor: 'background.default',
+          overflow: 'hidden',
         },
       }}
     >
@@ -51,7 +56,7 @@ export function CompanyPreviewDrawer({
           <Failure error={company.error} retry={() => void company.refetch()} />
         </Box>
       ) : (
-        <>
+        <Box sx={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column' }}>
           <Box
             sx={{
               px: { xs: 2.5, sm: 4 },
@@ -87,30 +92,85 @@ export function CompanyPreviewDrawer({
                 <CloseRounded />
               </IconButton>
             </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ mt: 2.5 }}>
-              {canManage ? (
+          </Box>
+          <Stack
+            direction="row"
+            useFlexGap
+            sx={{
+              gap: 0.75,
+              flexWrap: 'wrap',
+              px: { xs: 2, sm: 3.5 },
+              py: 1.25,
+              bgcolor: 'background.paper',
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
+            {canManage ? (
+              <>
                 <Button
                   variant="contained"
+                  startIcon={<AddCommentRounded />}
+                  onClick={() => {
+                    setNoteAdded(false)
+                    setNoteComposerOpen(true)
+                  }}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  {t('crm.companies.preview.addNote')}
+                </Button>
+                <Button
                   startIcon={<EditRounded />}
                   onClick={() => setEditing(true)}
+                  sx={{ whiteSpace: 'nowrap' }}
                 >
-                  {t('crm.companies.edit')}
+                  {t('crm.companies.preview.edit')}
                 </Button>
-              ) : null}
-              <Link
-                to="/organizations/$organizationId/companies/$companyId"
-                params={{ organizationId, companyId: company.data.customer_code }}
+              </>
+            ) : null}
+            <Link
+              to="/organizations/$organizationId/companies/$companyId"
+              params={{ organizationId, companyId: company.data.customer_code }}
+            >
+              <Button
+                component="span"
+                startIcon={<OpenInNewRounded />}
+                sx={{ whiteSpace: 'nowrap' }}
               >
-                <Button component="span" variant="outlined" startIcon={<OpenInNewRounded />}>
-                  {t('crm.companies.preview.openFullProfile')}
-                </Button>
-              </Link>
-            </Stack>
-          </Box>
-          <Box sx={{ px: { xs: 2.5, sm: 4 }, py: 4, overflowY: 'auto' }}>
+                {t('crm.companies.preview.openFullProfile')}
+              </Button>
+            </Link>
+          </Stack>
+          {noteComposerOpen ? (
+            <Box
+              sx={{
+                px: { xs: 2.5, sm: 4 },
+                py: 2.5,
+                bgcolor: 'background.paper',
+                borderBottom: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <CompanyNoteComposer
+                organizationId={organizationId}
+                companyId={company.data.id}
+                onCancel={() => setNoteComposerOpen(false)}
+                onSuccess={() => {
+                  setNoteComposerOpen(false)
+                  setNoteAdded(true)
+                }}
+              />
+            </Box>
+          ) : null}
+          {noteAdded ? (
+            <Box aria-live="polite" sx={{ px: { xs: 2.5, sm: 4 }, pt: 2 }}>
+              <Alert severity="success">{t('crm.companies.timeline.noteSuccess')}</Alert>
+            </Box>
+          ) : null}
+          <Box sx={{ flex: 1, minHeight: 0, px: { xs: 2.5, sm: 4 }, py: 3, overflowY: 'auto' }}>
             <CompanyProfileContent company={company.data} />
           </Box>
-        </>
+        </Box>
       )}
       {canManage && editing && company.data ? (
         <CompanyDialog

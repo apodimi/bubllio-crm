@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import CloseRounded from '@mui/icons-material/CloseRounded'
-import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded'
+import deleteIcon from '@iconify-icons/keyline-icons/delete'
+import xIcon from '@iconify-icons/keyline-icons/x'
 import {
   Alert,
   Box,
@@ -14,6 +14,8 @@ import {
 } from '@mui/material'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+
+import { AppIcon } from '../../../components/common/AppIcon'
 import { useAuthStore } from '../../auth'
 import { useCompanyAssignees } from '../../companies'
 import { useContacts } from '../../contacts'
@@ -42,10 +44,11 @@ const taskValues = (
   task: CrmTask | undefined,
   currentUserId: number | null,
   initialCompanyId?: string,
+  initialContactId?: string,
   initialDealId?: string,
 ): TaskFormValues => ({
   company: task?.company ?? initialCompanyId ?? '',
-  contact: task?.contact ?? null,
+  contact: task?.contact ?? initialContactId ?? null,
   deal: task?.deal ?? initialDealId ?? null,
   assigned_to: task?.assigned_to ?? currentUserId,
   title: task?.title ?? '',
@@ -62,7 +65,9 @@ export function TaskDrawer({
   companies,
   task,
   initialCompanyId,
+  initialContactId,
   initialDealId,
+  initialDealTitle,
   onSaved,
   onClose,
 }: {
@@ -70,7 +75,9 @@ export function TaskDrawer({
   companies: Company[]
   task?: CrmTask
   initialCompanyId?: string
+  initialContactId?: string
   initialDealId?: string
+  initialDealTitle?: string
   onSaved?: () => void
   onClose: () => void
 }) {
@@ -93,11 +100,20 @@ export function TaskDrawer({
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: taskValues(task, currentUserId, initialCompanyId, initialDealId),
+    defaultValues: taskValues(
+      task,
+      currentUserId,
+      initialCompanyId,
+      initialContactId,
+      initialDealId,
+    ),
   })
   const companyId = useWatch({ control, name: 'company' })
   const companyContacts = (contacts.data ?? []).filter((contact) => contact.company === companyId)
   const companyDeals = (deals.data ?? []).filter((deal) => deal.company === companyId)
+  const selectedDealId = useWatch({ control, name: 'deal' })
+  const selectedDealAvailable =
+    !selectedDealId || companyDeals.some((deal) => deal.id === selectedDealId)
   const pending = mutation.isPending || remove.isPending
   const error = mutation.error || remove.error
   const validationMessages: Record<string, string> = {
@@ -181,7 +197,7 @@ export function TaskDrawer({
             </Typography>
           </Box>
           <IconButton aria-label={t('crm.tasks.drawer.close')} onClick={onClose} disabled={pending}>
-            <CloseRounded />
+            <AppIcon icon={xIcon} />
           </IconButton>
         </Stack>
         <Stack spacing={2.5} sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, sm: 4 }, py: 4 }}>
@@ -273,7 +289,9 @@ export function TaskDrawer({
                 <TextField
                   select
                   label={t('crm.tasks.details.contact')}
-                  value={field.value ?? ''}
+                  value={
+                    companyContacts.some((contact) => contact.id === field.value) ? field.value : ''
+                  }
                   onChange={(event) => field.onChange(event.target.value || null)}
                   disabled={!companyId || pending}
                   sx={{ flex: 1 }}
@@ -300,6 +318,11 @@ export function TaskDrawer({
                   sx={{ flex: 1 }}
                 >
                   <MenuItem value="">{t('crm.tasks.drawer.noDeal')}</MenuItem>
+                  {!selectedDealAvailable && selectedDealId ? (
+                    <MenuItem value={selectedDealId}>
+                      {task?.deal_title || initialDealTitle || selectedDealId}
+                    </MenuItem>
+                  ) : null}
                   {companyDeals.map((deal) => (
                     <MenuItem key={deal.id} value={deal.id}>
                       {deal.title}
@@ -418,7 +441,7 @@ export function TaskDrawer({
           {task ? (
             <Button
               color="error"
-              startIcon={<DeleteOutlineRounded />}
+              startIcon={<AppIcon icon={deleteIcon} />}
               onClick={() => void deleteTask()}
               disabled={pending}
             >

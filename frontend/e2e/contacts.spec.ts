@@ -40,6 +40,34 @@ test('opens a contact profile from the clean list row', async ({ page }) => {
   await page.getByRole('button', { name: 'Open Maria Papadopoulou' }).click()
   await expect(page).toHaveURL(new RegExp(`contact=${fixtureIds.contact}`))
   await expect(page.getByRole('heading', { name: 'Maria Papadopoulou' })).toBeVisible()
+  await page.screenshot({
+    path: test.info().outputPath('contact-profile.png'),
+    animations: 'disabled',
+  })
+})
+
+test('schedules a next action from a contact profile', async ({ page }) => {
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('link', { name: 'Contacts', exact: true }).click()
+  await page.getByRole('button', { name: 'Open Maria Papadopoulou' }).click()
+
+  await page.getByRole('button', { name: 'Add next action' }).click()
+  await expect(page.getByRole('heading', { name: 'Add next action' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Company' })).toContainText('Acme Ltd')
+  await expect(page.getByRole('combobox', { name: 'Contact' })).toContainText('Maria Papadopoulou')
+  await page.getByRole('textbox', { name: 'What needs to happen?' }).fill('Call Maria tomorrow')
+  const taskRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().endsWith('/tasks/'),
+  )
+  await page.getByRole('button', { name: 'Add task' }).click()
+
+  expect((await taskRequest).postDataJSON()).toMatchObject({
+    company: fixtureIds.acmeCompany,
+    contact: fixtureIds.contact,
+    title: 'Call Maria tomorrow',
+  })
+  await expect(page.getByText('Call Maria tomorrow')).toBeVisible()
 })
 
 test('contact creation uses a company from the selected workspace', async ({ page }) => {

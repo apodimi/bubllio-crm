@@ -137,6 +137,7 @@ class CompanyTimelineEvent(models.Model):
         SERVICE = "service", "Service"
         PAYMENT = "payment", "Payment"
         NOTE = "note", "Note"
+        COMMUNICATION = "communication", "Communication"
 
     class EventType(models.TextChoices):
         COMPANY_CREATED = "company.created", "Company created"
@@ -164,6 +165,7 @@ class CompanyTimelineEvent(models.Model):
         SERVICE_STATUS_CHANGED = "service.status_changed", "Service status changed"
         PAYMENT_RECORDED = "payment.recorded", "Payment recorded"
         NOTE_ADDED = "note.added", "Note added"
+        COMMUNICATION_LOGGED = "communication.logged", "Communication logged"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(

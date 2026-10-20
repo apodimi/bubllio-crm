@@ -18,8 +18,8 @@ const contactsQuery = (organizationId: string, filters: ContactFilters) =>
     queryFn: ({ signal }) => contactService.list(organizationId, filters, signal),
   })
 
-export const useContacts = (organizationId: string, filters: ContactFilters = {}) =>
-  useQuery(contactsQuery(organizationId, filters))
+export const useContacts = (organizationId: string, filters: ContactFilters = {}, enabled = true) =>
+  useQuery({ ...contactsQuery(organizationId, filters), enabled })
 
 export const useContact = (organizationId: string, contactId: string) =>
   useQuery({

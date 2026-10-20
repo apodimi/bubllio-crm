@@ -5,6 +5,44 @@ from .choices import locale_choices, timezone_choices
 from .models import EmailAccount, Organization, OrganizationMembership, OrganizationSettings
 
 
+class ActivityInboxEntitySerializer(serializers.Serializer):
+    type = serializers.ChoiceField(
+        choices=("task", "deal", "company", "billing", "members")
+    )
+    id = serializers.CharField(allow_null=True)
+
+
+class ActivityInboxActionSerializer(serializers.Serializer):
+    kind = serializers.CharField()
+    path = serializers.CharField()
+
+
+class ActivityInboxItemSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    kind = serializers.ChoiceField(
+        choices=(
+            "overdue_task",
+            "task_due_today",
+            "deal_without_next_action",
+            "company_without_follow_up",
+            "overdue_charges",
+            "renewals_due",
+            "pending_invitations",
+        )
+    )
+    severity = serializers.ChoiceField(choices=("critical", "warning", "info"))
+    title = serializers.CharField()
+    description = serializers.CharField()
+    entity = ActivityInboxEntitySerializer()
+    due_at = serializers.CharField(allow_null=True)
+    action = ActivityInboxActionSerializer()
+
+
+class ActivityInboxSerializer(serializers.Serializer):
+    count = serializers.IntegerField(min_value=0)
+    items = ActivityInboxItemSerializer(many=True)
+
+
 class OrganizationSerializer(serializers.ModelSerializer):
     current_user_role = serializers.SerializerMethodField()
 

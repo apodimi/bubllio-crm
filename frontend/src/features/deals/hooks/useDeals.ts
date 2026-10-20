@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { activityInboxKeys } from '../../activity-inbox'
 import type { Deal, DealInput } from '../../../types/deal.types'
 import { dealService, type DealFilters } from '../services/dealService'
 export const dealKeys = {
@@ -7,6 +8,11 @@ export const dealKeys = {
     [...dealKeys.byOrganization(org), 'list', filters] as const,
   detail: (org: string, id: string) => [...dealKeys.byOrganization(org), 'detail', id] as const,
 }
+const invalidateDeals = (client: ReturnType<typeof useQueryClient>, org: string) =>
+  Promise.all([
+    client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    client.invalidateQueries({ queryKey: activityInboxKeys.detail(org) }),
+  ])
 export const useDeals = (org: string, filters: DealFilters = {}) =>
   useQuery({
     queryKey: dealKeys.list(org, filters),
@@ -23,21 +29,21 @@ export const useUpdateDeal = (org: string) => {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: Partial<Deal> }) =>
       dealService.update(org, id, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    onSuccess: () => invalidateDeals(client, org),
   })
 }
 export const useCreateDeal = (org: string) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (body: DealInput) => dealService.create(org, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    onSuccess: () => invalidateDeals(client, org),
   })
 }
 export const useUpdateDealRecord = (org: string, id: string) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (body: Partial<DealInput>) => dealService.update(org, id, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    onSuccess: () => invalidateDeals(client, org),
   })
 }
 export const useMoveDeal = (org: string, filters: DealFilters = {}) => {
@@ -76,7 +82,7 @@ export const useMoveDeal = (org: string, filters: DealFilters = {}) => {
       return { previous }
     },
     onError: (_error, _variables, context) => client.setQueryData(listKey, context?.previous),
-    onSettled: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    onSettled: () => invalidateDeals(client, org),
   })
 }
 
@@ -84,7 +90,7 @@ export const useArchiveDeal = (org: string) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => dealService.archive(org, id),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    onSuccess: () => invalidateDeals(client, org),
   })
 }
 
@@ -92,6 +98,6 @@ export const useDeleteDeal = (org: string) => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => dealService.remove(org, id),
-    onSuccess: () => client.invalidateQueries({ queryKey: dealKeys.byOrganization(org) }),
+    onSuccess: () => invalidateDeals(client, org),
   })
 }

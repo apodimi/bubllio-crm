@@ -28,6 +28,7 @@ import {
   Typography,
 } from '@mui/material'
 import type { CrmTask, TaskWorkflowStatus } from '../../../types/task.types'
+import { taskFromDragData, taskStatusFromDragData } from '../taskBoardDnd'
 
 const lanes: Array<{ value: TaskWorkflowStatus; label: string; accent: string }> = [
   { value: 'todo', label: 'To do', accent: '#68758a' },
@@ -335,13 +336,14 @@ export function TaskBoard({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
   const dragStart = (event: DragStartEvent) =>
-    setActiveTask((event.active.data.current?.task as CrmTask | undefined) ?? null)
+    setActiveTask(taskFromDragData(event.active.data.current) ?? null)
   const dragEnd = (event: DragEndEvent) => {
     setActiveTask(null)
-    const task = event.active.data.current?.task as CrmTask | undefined
-    const status = (event.over?.data.current?.workflowStatus ??
-      event.over?.data.current?.task?.workflow_status) as TaskWorkflowStatus | undefined
-    if (task && status && status !== task.workflow_status && !moving) onMove(task, status)
+    const task = taskFromDragData(event.active.data.current)
+    const status = taskStatusFromDragData(event.over?.data.current)
+    if (task && status && status !== task.workflow_status && !moving) {
+      onMove(task, status)
+    }
   }
   return (
     <DndContext

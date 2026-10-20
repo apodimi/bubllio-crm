@@ -29,9 +29,14 @@ export const orgs = [
 ]
 export async function mockApi(
   page: Page,
-  options: { tasks?: Array<Record<string, unknown>> } = {},
+  options: {
+    tasks?: Array<Record<string, unknown>>
+    inbox?: { count: number; items: Array<Record<string, unknown>> }
+    inboxStatus?: number
+  } = {},
 ) {
   const tasks: Array<Record<string, unknown>> = [...(options.tasks ?? [])]
+  let inbox = options.inbox ?? { count: 0, items: [] }
   let lastCompletedTask: Record<string, unknown> | null = null
   const timelineEvents = [
     {
@@ -218,7 +223,28 @@ export async function mockApi(
       return route.fulfill({ status: 403, json: { detail: 'Authentication required' } })
     if (path === '/api/v1/organizations/') return route.fulfill({ json: orgs })
     if (path === '/api/v1/organizations/alpha/') return route.fulfill({ json: orgs[0] })
+    if (path === '/api/v1/organizations/alpha/activity-inbox/') {
+      if (options.inboxStatus) {
+        return route.fulfill({ status: options.inboxStatus, json: { detail: 'Unavailable.' } })
+      }
+      return route.fulfill({ json: inbox })
+    }
     if (path === '/api/v1/organizations/beta/') return route.fulfill({ json: orgs[1] })
+    if (path === '/api/v1/organizations/alpha/companies/attention/') {
+      const hasOpenTask = tasks.some(
+        (task) => task.company === fixtureIds.acmeCompany && !task.completed_at,
+      )
+      return route.fulfill({
+        json: hasOpenTask
+          ? []
+          : [
+              {
+                company: companies[0],
+                last_communication_at: null,
+              },
+            ],
+      })
+    }
     if (path === '/api/v1/organizations/alpha/companies/') {
       if (route.request().method() === 'POST') {
         const body = route.request().postDataJSON()
@@ -296,6 +322,12 @@ export async function mockApi(
       }
       lastCompletedTask = completedTask
       tasks.splice(0, 1)
+      inbox = {
+        count: Math.max(0, inbox.count - 1),
+        items: inbox.items.filter(
+          (item) => (item.entity as { id?: string } | undefined)?.id !== fixtureIds.task,
+        ),
+      }
       return route.fulfill({ json: completedTask })
     }
     if (path === '/api/v1/organizations/alpha/tasks/task-a/reopen/' && lastCompletedTask) {
@@ -380,6 +412,27 @@ export async function mockApi(
     }
     if (path === `/api/v1/organizations/alpha/companies/${fixtureIds.acmeCompany}/timeline/`) {
       if (route.request().method() === 'POST') {
+        const payload = route.request().postDataJSON()
+        if (payload.kind) {
+          const contact = contacts.find((item) => item.id === payload.contact)
+          const event = {
+            id: `timeline-communication-${timelineEvents.length}`,
+            category: 'communication',
+            event_type: 'communication.logged',
+            source_type: contact ? 'contact' : 'company',
+            source_id: contact?.id ?? fixtureIds.acmeCompany,
+            actor_name: 'Demo User',
+            body: payload.body,
+            details: {
+              kind: payload.kind,
+              outcome: payload.outcome,
+              contact_name: contact ? `${contact.first_name} ${contact.last_name}` : '',
+            },
+            occurred_at: payload.occurred_at,
+          }
+          timelineEvents.unshift(event)
+          return route.fulfill({ status: 201, json: event })
+        }
         const event = {
           id: `timeline-note-${timelineEvents.length}`,
           category: 'note',
@@ -387,7 +440,7 @@ export async function mockApi(
           source_type: 'company',
           source_id: 'co-a',
           actor_name: 'Demo User',
-          body: route.request().postDataJSON().body,
+          body: payload.body,
           details: {},
           occurred_at: '2030-01-02T10:00:00Z',
         }
@@ -401,8 +454,10 @@ export async function mockApi(
       return route.fulfill({ json: { count: rows.length, results: rows } })
     }
     if (path.startsWith('/api/v1/organizations/alpha/companies/')) {
-      const companyId = path.split('/').at(-2)
-      const index = companies.findIndex((company) => company.id === companyId)
+      const companyReference = path.split('/').at(-2)
+      const index = companies.findIndex(
+        (company) => company.id === companyReference || company.customer_code === companyReference,
+      )
       if (index === -1) return route.fulfill({ status: 404, json: { detail: 'Not found' } })
       if (route.request().method() === 'PATCH') {
         companies[index] = { ...companies[index], ...route.request().postDataJSON() }
@@ -542,6 +597,20 @@ export async function mockApi(
         return matchesSearch && matchesArchive && (!company || contact.company === company)
       })
       return route.fulfill({ json: { count: rows.length, results: rows } })
+    }
+    if (path === '/api/v1/organizations/alpha/contacts/') {
+      const archived = new URL(route.request().url()).searchParams.get('archived') ?? 'all'
+      return route.fulfill({
+        json: contacts.filter((contact) => {
+          if (archived === 'active') {
+            return !contact.archived_at
+          }
+          if (archived === 'archived') {
+            return Boolean(contact.archived_at)
+          }
+          return true
+        }),
+      })
     }
     if (path.startsWith('/api/v1/organizations/alpha/contacts/')) {
       const parts = path.split('/').filter(Boolean)

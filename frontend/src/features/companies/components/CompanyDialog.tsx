@@ -31,15 +31,17 @@ type FieldProps = {
   control: ReturnType<typeof useForm<CompanyFormValues>>['control']
   disabled: boolean
   errors: ReturnType<typeof useForm<CompanyFormValues>>['formState']['errors']
+  expanded: boolean
 }
 
-function MoreDetails({ control, disabled, errors }: FieldProps) {
+function MoreDetails({ control, disabled, errors, expanded }: FieldProps) {
   const { t } = useTranslation()
 
   return (
     <Accordion
       disableGutters
       elevation={0}
+      defaultExpanded={expanded}
       sx={{
         bgcolor: 'transparent',
         borderTop: 1,
@@ -327,9 +329,21 @@ export function CompanyDialog({
             </IconButton>
           </Stack>
         </Box>
-        <Box sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, sm: 4 }, py: 4 }}>
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: { xs: 2.5, sm: 4 }, py: 3 }}>
           <Stack spacing={2.5}>
             {mutation.isError ? <Alert severity="error">{mutation.error.message}</Alert> : null}
+            {members.isError ? (
+              <Alert
+                severity="warning"
+                action={
+                  <Button color="inherit" size="small" onClick={() => void members.refetch()}>
+                    {t('common.retry')}
+                  </Button>
+                }
+              >
+                {t('crm.companies.form.ownerLoadError')}
+              </Alert>
+            ) : null}
             <Controller
               name="name"
               control={control}
@@ -439,7 +453,12 @@ export function CompanyDialog({
                 />
               )}
             />
-            <MoreDetails control={control} disabled={mutation.isPending} errors={errors} />
+            <MoreDetails
+              control={control}
+              disabled={mutation.isPending}
+              errors={errors}
+              expanded={Boolean(company)}
+            />
           </Stack>
         </Box>
         <Stack

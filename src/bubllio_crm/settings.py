@@ -137,6 +137,19 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Public REST API contract for Bubllio CRM.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "InstallationUpdateRunStatusEnum": "onboarding.models.InstallationUpdateRun.Status",
+        "TaskKindEnum": "activities.models.Task.Kind",
+        "ActivityInboxKindEnum": (
+            "overdue_task",
+            "task_due_today",
+            "deal_without_next_action",
+            "company_without_follow_up",
+            "overdue_charges",
+            "renewals_due",
+            "pending_invitations",
+        ),
+    },
 }
 
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {

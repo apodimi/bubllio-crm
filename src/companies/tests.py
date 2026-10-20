@@ -1,12 +1,15 @@
 from unittest.mock import patch
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from organizations.models import Organization, OrganizationMembership
 from contacts.models import Contact
+from activities.models import Task
 
 from .models import Company, CompanyActivity, CompanyTimelineEvent
 
@@ -475,6 +478,78 @@ class CompanyTenantAccessTests(APITestCase):
         self.assertEqual(notes.data["results"][0]["body"], created.data["body"])
         self.assertTrue(CompanyTimelineEvent.objects.filter(id=record.id).exists())
 
+    def test_attention_lists_only_my_active_companies_without_open_follow_up(self):
+        never_contacted = Company.objects.create(
+            organization=self.organization,
+            name="Needs First Contact",
+            assigned_to=self.user,
+        )
+        contacted = Company.objects.create(
+            organization=self.organization,
+            name="Needs Next Step",
+            assigned_to=self.user,
+        )
+        with_follow_up = Company.objects.create(
+            organization=self.organization,
+            name="Already Planned",
+            assigned_to=self.user,
+        )
+        inactive = Company.objects.create(
+            organization=self.organization,
+            name="Inactive Account",
+            assigned_to=self.user,
+            lifecycle_stage=Company.LifecycleStage.INACTIVE,
+        )
+        CompanyTimelineEvent.objects.create(
+            organization=self.organization,
+            company=contacted,
+            actor=self.user,
+            category=CompanyTimelineEvent.Category.COMMUNICATION,
+            event_type=CompanyTimelineEvent.EventType.COMMUNICATION_LOGGED,
+            occurred_at=timezone.now() - timedelta(days=10),
+        )
+        Task.objects.create(
+            organization=self.organization,
+            company=with_follow_up,
+            assigned_to=self.user,
+            created_by=self.user,
+            title="Planned call",
+            due_at=timezone.now() + timedelta(days=1),
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(
+            reverse(
+                "company-attention",
+                kwargs={"organization_id": self.organization.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["company"]["name"] for item in response.data],
+            [never_contacted.name, contacted.name],
+        )
+        self.assertIsNone(response.data[0]["last_communication_at"])
+        self.assertIsNotNone(response.data[1]["last_communication_at"])
+        self.assertNotIn(with_follow_up.name, str(response.data))
+        self.assertNotIn(inactive.name, str(response.data))
+
+    def test_attention_is_tenant_scoped(self):
+        hidden = Company.objects.get(name="Hidden Company")
+        hidden.assigned_to = self.user
+        hidden.save(update_fields=("assigned_to",))
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(
+            reverse(
+                "company-attention",
+                kwargs={"organization_id": self.other_organization.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_timeline_rejects_blank_notes_and_invalid_filters(self):
         company = Company.objects.get(name="Visible Company")
         self.client.force_authenticate(self.user)
@@ -492,6 +567,103 @@ class CompanyTenantAccessTests(APITestCase):
         self.assertEqual(blank.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(invalid_category.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(invalid_page.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_timeline_logs_structured_communication_for_company_contact(self):
+        company = Company.objects.get(name="Visible Company")
+        contact = Contact.objects.create(
+            organization=self.organization,
+            company=company,
+            first_name="Maria",
+            last_name="Pappas",
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.post(
+            self.action_url(company, "timeline"),
+            {
+                "kind": "call",
+                "contact": contact.id,
+                "outcome": "Proposal requested",
+                "body": "Send the revised offer on Friday.",
+                "occurred_at": "2030-01-02T10:30:00Z",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["category"], "communication")
+        self.assertEqual(response.data["event_type"], "communication.logged")
+        self.assertEqual(response.data["source_type"], "contact")
+        self.assertEqual(response.data["source_id"], str(contact.id))
+        self.assertEqual(
+            response.data["details"],
+            {
+                "kind": "call",
+                "outcome": "Proposal requested",
+                "contact_name": "Maria Pappas",
+            },
+        )
+        self.assertEqual(response.data["occurred_at"], "2030-01-02T10:30:00Z")
+
+    def test_timeline_rejects_communication_contact_from_another_company(self):
+        company = Company.objects.get(name="Visible Company")
+        other_company = Company.objects.create(
+            organization=self.organization,
+            name="Another Company",
+        )
+        contact = Contact.objects.create(
+            organization=self.organization,
+            company=other_company,
+            first_name="Wrong",
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.post(
+            self.action_url(company, "timeline"),
+            {
+                "kind": "email",
+                "contact": contact.id,
+                "outcome": "Should not be recorded",
+                "body": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(
+            CompanyTimelineEvent.objects.filter(
+                company=company,
+                event_type=CompanyTimelineEvent.EventType.COMMUNICATION_LOGGED,
+            ).exists()
+        )
+
+    def test_timeline_rejects_communication_contact_from_another_tenant(self):
+        company = Company.objects.get(name="Visible Company")
+        hidden_company = Company.objects.get(name="Hidden Company")
+        contact = Contact.objects.create(
+            organization=self.other_organization,
+            company=hidden_company,
+            first_name="Hidden",
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.post(
+            self.action_url(company, "timeline"),
+            {
+                "kind": "meeting",
+                "contact": contact.id,
+                "outcome": "Should not be recorded",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(
+            CompanyTimelineEvent.objects.filter(
+                company=company,
+                event_type=CompanyTimelineEvent.EventType.COMMUNICATION_LOGGED,
+            ).exists()
+        )
 
     def test_timeline_is_tenant_scoped_and_viewer_cannot_add_notes(self):
         company = Company.objects.get(name="Visible Company")

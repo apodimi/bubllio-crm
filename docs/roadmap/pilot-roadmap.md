@@ -73,8 +73,12 @@ checks, error report και αναγνωρίσιμο import batch.
 
 ### 5. Deal profile
 
-Πλήρης σελίδα deal με timeline, stage history, notes, activities, contacts και
-next action. Το υπάρχον drawer παραμένει το γρήγορο create/edit flow.
+**Υλοποιήθηκε η πρώτη έκδοση:** canonical σελίδα deal με εμπορικά στοιχεία,
+συνδεδεμένη εταιρεία/επαφή/owner, σημειώσεις και υπάρχοντα next actions. Από τη
+σελίδα μπορούν να προστεθούν, επεξεργαστούν και ολοκληρωθούν tasks, ενώ το
+υπάρχον drawer παραμένει το γρήγορο create/edit flow και τα παλιά drawer URLs
+παραμένουν συμβατά. Immutable deal timeline και stage history παραμένουν
+μελλοντική επέκταση και δεν παρουσιάζονται ως υλοποιημένα.
 
 ## Εκτός pilot
 

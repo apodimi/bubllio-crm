@@ -1,6 +1,6 @@
 import uuid
 
-from django.db.models import Q
+from django.db.models import Exists, F, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -13,10 +13,12 @@ from bubllio_crm.pagination import collection_response
 from .models import Company, CompanyActivity, CompanyTimelineEvent
 from .serializers import (
     CompanyActivitySerializer,
+    CompanyAttentionSerializer,
     CompanyAssigneeSerializer,
     CompanySerializer,
     CompanyTimelineEventSerializer,
     CompanyTimelineNoteSerializer,
+    CompanyCommunicationSerializer,
     CrmSummarySerializer,
 )
 from .services import (
@@ -49,6 +51,55 @@ class CompanySummaryAPIView(APIView):
             user=request.user, organization_id=organization_id, capability=Capability.VIEW_CRM,
         )
         return Response(crm_summary(organization))
+
+
+class CompanyAttentionAPIView(APIView):
+    serializer_class = CompanyAttentionSerializer
+
+    def get(self, request, organization_id):
+        organization = get_organization_for_user(
+            user=request.user,
+            organization_id=organization_id,
+            capability=Capability.VIEW_CRM,
+        )
+        open_tasks = organization.tasks.filter(
+            company_id=OuterRef("pk"),
+            completed_at__isnull=True,
+        )
+        latest_communication = CompanyTimelineEvent.objects.filter(
+            organization=organization,
+            company_id=OuterRef("pk"),
+            category=CompanyTimelineEvent.Category.COMMUNICATION,
+        ).order_by("-occurred_at")
+        companies = (
+            Company.objects.filter(
+                organization=organization,
+                assigned_to=request.user,
+                archived_at__isnull=True,
+            )
+            .exclude(lifecycle_stage=Company.LifecycleStage.INACTIVE)
+            .annotate(
+                has_open_task=Exists(open_tasks),
+                last_communication_at=Subquery(
+                    latest_communication.values("occurred_at")[:1]
+                ),
+            )
+            .filter(has_open_task=False)
+            .select_related("assigned_to")
+            .order_by(F("last_communication_at").asc(nulls_first=True), "name", "id")[:5]
+        )
+        return Response(
+            CompanyAttentionSerializer(
+                [
+                    {
+                        "company": company,
+                        "last_communication_at": company.last_communication_at,
+                    }
+                    for company in companies
+                ],
+                many=True,
+            ).data
+        )
 
 
 class CompanyListCreateAPIView(APIView):
@@ -287,6 +338,39 @@ class CompanyTimelineAPIView(APIView):
         company = get_company_by_public_reference(
             organization=organization, reference=company_id
         )
+        communication_fields = {"kind", "outcome", "contact", "occurred_at"}
+        if communication_fields.intersection(request.data):
+            serializer = CompanyCommunicationSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            contact = None
+            contact_id = serializer.validated_data.get("contact")
+            if contact_id:
+                contact = get_object_or_404(
+                    company.contacts,
+                    id=contact_id,
+                    organization=organization,
+                )
+            event = record_company_timeline_event(
+                company=company,
+                actor=request.user,
+                category=CompanyTimelineEvent.Category.COMMUNICATION,
+                event_type=CompanyTimelineEvent.EventType.COMMUNICATION_LOGGED,
+                source_type="contact" if contact else "company",
+                source_id=contact.id if contact else company.id,
+                body=serializer.validated_data["body"],
+                details={
+                    "kind": serializer.validated_data["kind"],
+                    "outcome": serializer.validated_data["outcome"],
+                    "contact_name": (
+                        f"{contact.first_name} {contact.last_name}".strip() if contact else ""
+                    ),
+                },
+                occurred_at=serializer.validated_data.get("occurred_at"),
+            )
+            return Response(
+                CompanyTimelineEventSerializer(event).data,
+                status=status.HTTP_201_CREATED,
+            )
         serializer = CompanyTimelineNoteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         event = record_company_timeline_event(

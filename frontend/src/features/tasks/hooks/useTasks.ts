@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { activityInboxKeys } from '../../activity-inbox'
 import type { TaskInput, TaskUpdateInput, TaskWorkflowStatus } from '../../../types/task.types'
 import { taskService } from '../services/taskService'
 import type { TaskFilters } from '../services/taskService'
@@ -23,7 +24,12 @@ export const useTasks = (
 
 function useInvalidateTasks(organizationId: string) {
   const client = useQueryClient()
-  return () => client.invalidateQueries({ queryKey: taskKeys.byOrganization(organizationId) })
+  return async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: taskKeys.byOrganization(organizationId) }),
+      client.invalidateQueries({ queryKey: activityInboxKeys.detail(organizationId) }),
+    ])
+  }
 }
 
 export function useCreateTask(organizationId: string) {
@@ -38,6 +44,15 @@ export function useUpdateTask(organizationId: string, taskId: string) {
   const invalidate = useInvalidateTasks(organizationId)
   return useMutation({
     mutationFn: (body: TaskUpdateInput) => taskService.update(organizationId, taskId, body),
+    onSuccess: invalidate,
+  })
+}
+
+export function useRescheduleTask(organizationId: string) {
+  const invalidate = useInvalidateTasks(organizationId)
+  return useMutation({
+    mutationFn: ({ taskId, dueAt }: { taskId: string; dueAt: string }) =>
+      taskService.update(organizationId, taskId, { due_at: dueAt }),
     onSuccess: invalidate,
   })
 }

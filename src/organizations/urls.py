@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from .api.email_accounts import EmailAccountDetailAPIView, EmailAccountListCreateAPIView, EmailAccountTestAPIView
+from .api.activity_inbox import ActivityInboxAPIView
 from onboarding.api.installation_admins import InstallationAdminInvitationListCreateAPIView
 from onboarding.api.installation_settings import InstallationSettingsAPIView
 from access.api.invitations import (
@@ -25,6 +26,7 @@ urlpatterns = [
     path("personal/", PersonalWorkspaceAPIView.as_view(), name="personal-workspace"),
     path("settings/options/", OrganizationSettingsOptionsAPIView.as_view(), name="organization-settings-options"),
     path("<uuid:organization_id>/", OrganizationDetailAPIView.as_view(), name="organization-detail"),
+    path("<uuid:organization_id>/activity-inbox/", ActivityInboxAPIView.as_view(), name="activity-inbox"),
     path("<uuid:organization_id>/invitations/", OrganizationInvitationListCreateAPIView.as_view(), name="organization-invitation-list"),
     path(
         "<uuid:organization_id>/invitations/<uuid:invitation_id>/",

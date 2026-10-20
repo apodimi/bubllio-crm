@@ -1,17 +1,21 @@
-import BusinessRounded from '@mui/icons-material/BusinessRounded'
-import GroupAddRounded from '@mui/icons-material/GroupAddRounded'
-import HomeRounded from '@mui/icons-material/HomeRounded'
-import Inventory2Rounded from '@mui/icons-material/Inventory2Rounded'
-import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded'
-import ReceiptLongRounded from '@mui/icons-material/ReceiptLongRounded'
-import SettingsRounded from '@mui/icons-material/SettingsRounded'
-import SubscriptionsRounded from '@mui/icons-material/SubscriptionsRounded'
-import TaskAltRounded from '@mui/icons-material/TaskAltRounded'
-import TrendingUpRounded from '@mui/icons-material/TrendingUpRounded'
+import briefcaseIcon from '@iconify-icons/keyline-icons/briefcase'
+import buildingIcon from '@iconify-icons/keyline-icons/building'
+import creditCardIcon from '@iconify-icons/keyline-icons/credit-card'
+import homeIcon from '@iconify-icons/keyline-icons/home'
+import inboxIcon from '@iconify-icons/keyline-icons/inbox'
+import listCheckIcon from '@iconify-icons/keyline-icons/list-check'
+import packageIcon from '@iconify-icons/keyline-icons/package'
+import settingsIcon from '@iconify-icons/keyline-icons/settings'
+import trendingUpIcon from '@iconify-icons/keyline-icons/trending-up'
+import userPlusIcon from '@iconify-icons/keyline-icons/user-plus'
+import usersIcon from '@iconify-icons/keyline-icons/users'
 import type { ReactNode } from 'react'
+
+import { AppIcon } from '../common/AppIcon'
 
 export type WorkspaceRoute =
   | '/organizations/$organizationId'
+  | '/organizations/$organizationId/inbox'
   | '/organizations/$organizationId/companies'
   | '/organizations/$organizationId/contacts'
   | '/organizations/$organizationId/deals'
@@ -23,10 +27,19 @@ export type WorkspaceRoute =
   | '/organizations/$organizationId/settings'
 
 export type WorkspaceNavigationKey =
-  'overview' | 'companies' | 'contacts' | 'deals' | 'tasks' | 'services' | 'members' | 'settings'
+  | 'overview'
+  | 'inbox'
+  | 'companies'
+  | 'contacts'
+  | 'deals'
+  | 'tasks'
+  | 'services'
+  | 'members'
+  | 'settings'
 
 type NavigationLabelKey =
   | 'navigation.overview'
+  | 'navigation.inbox'
   | 'navigation.companies'
   | 'navigation.contacts'
   | 'navigation.deals'
@@ -64,16 +77,25 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.overview',
     route: '/organizations/$organizationId',
     relativePath: '',
-    icon: <HomeRounded />,
+    icon: <AppIcon icon={homeIcon} />,
     group: 'home',
     mobile: true,
+  },
+  {
+    key: 'inbox',
+    labelKey: 'navigation.inbox',
+    route: '/organizations/$organizationId/inbox',
+    relativePath: '/inbox',
+    icon: <AppIcon icon={inboxIcon} />,
+    group: 'home',
+    mobile: false,
   },
   {
     key: 'companies',
     labelKey: 'navigation.companies',
     route: '/organizations/$organizationId/companies',
     relativePath: '/companies',
-    icon: <BusinessRounded />,
+    icon: <AppIcon icon={buildingIcon} />,
     group: 'customers',
     mobile: true,
     mobileLabelKey: 'navigation.customers',
@@ -83,7 +105,7 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.contacts',
     route: '/organizations/$organizationId/contacts',
     relativePath: '/contacts',
-    icon: <PeopleAltRounded />,
+    icon: <AppIcon icon={usersIcon} />,
     group: 'customers',
     mobile: false,
   },
@@ -92,7 +114,7 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.deals',
     route: '/organizations/$organizationId/deals',
     relativePath: '/deals',
-    icon: <TrendingUpRounded />,
+    icon: <AppIcon icon={trendingUpIcon} />,
     group: 'sales',
     mobile: true,
   },
@@ -101,7 +123,7 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.tasks',
     route: '/organizations/$organizationId/tasks',
     relativePath: '/tasks',
-    icon: <TaskAltRounded />,
+    icon: <AppIcon icon={listCheckIcon} />,
     group: 'sales',
     mobile: true,
   },
@@ -110,7 +132,7 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.revenue',
     route: '/organizations/$organizationId/services/customer-services',
     relativePath: '/services',
-    icon: <SubscriptionsRounded />,
+    icon: <AppIcon icon={briefcaseIcon} />,
     group: 'revenue',
     mobile: true,
     mobileLabelKey: 'navigation.revenue',
@@ -119,19 +141,19 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
         labelKey: 'navigation.customerServices',
         route: '/organizations/$organizationId/services/customer-services',
         relativePath: '/services/customer-services',
-        icon: <SubscriptionsRounded />,
+        icon: <AppIcon icon={briefcaseIcon} />,
       },
       {
         labelKey: 'navigation.billing',
         route: '/organizations/$organizationId/services/billing',
         relativePath: '/services/billing',
-        icon: <ReceiptLongRounded />,
+        icon: <AppIcon icon={creditCardIcon} />,
       },
       {
         labelKey: 'navigation.catalog',
         route: '/organizations/$organizationId/services/catalog',
         relativePath: '/services/catalog',
-        icon: <Inventory2Rounded />,
+        icon: <AppIcon icon={packageIcon} />,
       },
     ],
   },
@@ -140,7 +162,7 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.people',
     route: '/organizations/$organizationId/members',
     relativePath: '/members',
-    icon: <GroupAddRounded />,
+    icon: <AppIcon icon={userPlusIcon} />,
     group: 'administration',
     mobile: false,
     requiresWorkspaceManager: true,
@@ -150,7 +172,7 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
     labelKey: 'navigation.settings',
     route: '/organizations/$organizationId/settings',
     relativePath: '/settings',
-    icon: <SettingsRounded />,
+    icon: <AppIcon icon={settingsIcon} />,
     group: 'administration',
     mobile: false,
     requiresWorkspaceManager: true,

@@ -3,6 +3,47 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.8 — 2026-10-21
+
+### Added
+
+- a tenant-scoped action inbox for assigned tasks, deals without next actions,
+  customers needing follow-up, billing conditions, renewals, and invitations;
+- structured customer communication logs for calls, email, and meetings, plus a
+  focused customer follow-up queue and canonical deal profile;
+- reusable profile, navigation, operational-tab, metric, description, dashboard,
+  and account-settings components with focused regression coverage.
+
+### Changed
+
+- reorganized the application shell, account settings, customer profile,
+  timeline, dashboard, and global search into smaller focused React modules;
+- reduced state synchronization effects, introduced explicit reducers for
+  multi-step search and update confirmation state, and deferred optional data
+  requests until the related UI is opened;
+- unified inbox state across desktop and mobile navigation and improved loading,
+  empty, retry, permission, and mutation-error feedback.
+
+### Fixed
+
+- customer and deal actions now preserve tenant permissions and expose failed
+  task completion, account export, administrator loading, and deferred company
+  request errors instead of failing silently;
+- drag-and-drop payloads are validated at runtime, customer timeline rendering
+  handles every supported event family, and account SMTP logs avoid secret error
+  content;
+- navigation spacing, profile density, mobile access, React key handling, and
+  global-search workspace switching remain stable across responsive layouts.
+
+### Upgrade notes
+
+- this release adds only state-level timeline choices; migration
+  `companies.0007` produces no database SQL on SQLite or PostgreSQL and is
+  eligible for an online update from version 0.2.7;
+- after deployment, verify sign-in, workspace switching, the action inbox,
+  customer communication logging, deal profiles, account export, installation
+  settings, and Update Center status.
+
 ## 0.2.7 — 2026-10-20
 
 ### Fixed

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useReducer } from 'react'
 import checkCircle from '@iconify-icons/keyline-icons/circle-check'
 import cloudDownload from '@iconify-icons/keyline-icons/cloud-download'
 import serverIcon from '@iconify-icons/keyline-icons/server'
@@ -32,6 +32,10 @@ import {
   useUpdateRun,
 } from '../hooks/useUpdateCenter'
 import { UpdateProgress } from './UpdateProgress'
+import {
+  initialUpdateConfirmationState,
+  updateConfirmationReducer,
+} from '../updateConfirmationState'
 
 function policyColor(policy: UpdateMigrationPolicy): 'success' | 'warning' | 'error' {
   if (policy === 'online_safe') {
@@ -58,14 +62,19 @@ export function UpdateCenter() {
   const status = useUpdateCenterStatus(true)
   const preflight = useUpdatePreflight()
   const startUpdate = useStartUpdate()
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [confirmation, setConfirmation] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
+  const [confirmationState, dispatchConfirmation] = useReducer(
+    updateConfirmationReducer,
+    initialUpdateConfirmationState,
+  )
   const activeRunId = status.data?.active_run?.id ?? startUpdate.data?.id ?? null
   const trackedRun = useUpdateRun(activeRunId)
   const run = trackedRun.data ?? startUpdate.data ?? status.data?.active_run ?? null
   const displayedRun = run ?? status.data?.latest_run ?? null
   const targetVersion = status.data?.latest_version ?? null
+  const confirmation =
+    confirmationState.targetVersion === targetVersion ? confirmationState.confirmation : ''
+  const currentPassword =
+    confirmationState.targetVersion === targetVersion ? confirmationState.currentPassword : ''
   const readiness = preflight.data ?? status.data?.preflight ?? null
   const policy = readiness?.migration_policy ?? null
   const requiresTypedConfirmation = policy !== null && policy !== 'online_safe'
@@ -73,11 +82,6 @@ export function UpdateCenter() {
     Boolean(targetVersion) &&
     Boolean(readiness?.eligible) &&
     (!requiresTypedConfirmation || confirmation === targetVersion)
-
-  useEffect(() => {
-    setConfirmation('')
-    setCurrentPassword('')
-  }, [targetVersion])
 
   async function runPreflight() {
     if (!targetVersion) {
@@ -91,15 +95,13 @@ export function UpdateCenter() {
       return
     }
     const password = currentPassword
-    setCurrentPassword('')
+    dispatchConfirmation({ type: 'close', targetVersion })
     await startUpdate.mutateAsync({ targetVersion, currentPassword: password })
     closeConfirmation()
   }
 
   function closeConfirmation() {
-    setConfirmOpen(false)
-    setConfirmation('')
-    setCurrentPassword('')
+    dispatchConfirmation({ type: 'close', targetVersion })
   }
 
   const releaseUrl = readiness?.manifest.release_url ?? status.data?.release_url
@@ -330,7 +332,7 @@ export function UpdateCenter() {
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
                       variant="contained"
-                      onClick={() => setConfirmOpen(true)}
+                      onClick={() => dispatchConfirmation({ type: 'open', targetVersion })}
                       disabled={!readiness.eligible}
                     >
                       {readiness.migration_policy === 'online_safe'
@@ -347,7 +349,7 @@ export function UpdateCenter() {
         {startUpdate.isError && <Alert severity="error">{t('updates.startError')}</Alert>}
       </Stack>
 
-      <Dialog open={confirmOpen} onClose={closeConfirmation} maxWidth="sm" fullWidth>
+      <Dialog open={confirmationState.open} onClose={closeConfirmation} maxWidth="sm" fullWidth>
         <DialogTitle>{t('updates.confirmTitle', { version: targetVersion })}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -359,7 +361,13 @@ export function UpdateCenter() {
                 autoFocus
                 label={t('updates.typeVersion', { version: targetVersion })}
                 value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
+                onChange={(event) =>
+                  dispatchConfirmation({
+                    type: 'confirmationChanged',
+                    targetVersion,
+                    value: event.target.value,
+                  })
+                }
                 error={Boolean(confirmation && confirmation !== targetVersion)}
                 helperText={
                   confirmation && confirmation !== targetVersion
@@ -375,7 +383,13 @@ export function UpdateCenter() {
                 type="password"
                 label={t('updates.currentPassword')}
                 value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
+                onChange={(event) =>
+                  dispatchConfirmation({
+                    type: 'passwordChanged',
+                    targetVersion,
+                    value: event.target.value,
+                  })
+                }
                 helperText={t('updates.stepUpHelp')}
                 autoComplete="current-password"
               />

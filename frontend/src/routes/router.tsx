@@ -98,6 +98,11 @@ const overview = createRoute({
   path: '/',
   component: lazyRouteComponent(() => import('../pages/Dashboard/DashboardPage'), 'DashboardPage'),
 })
+const inbox = createRoute({
+  getParentRoute: () => workspace,
+  path: '/inbox',
+  component: lazyRouteComponent(() => import('../pages/Inbox/InboxPage'), 'InboxPage'),
+})
 const companies = createRoute({
   getParentRoute: () => workspace,
   path: '/companies',
@@ -123,6 +128,12 @@ const deals = createRoute({
   path: '/deals',
   validateSearch: parseDealSearch,
   component: lazyRouteComponent(() => import('../pages/Deals/DealsPage'), 'DealsPage'),
+})
+const dealDetail = createRoute({
+  getParentRoute: () => workspace,
+  path: '/deals/$dealId',
+  validateSearch: parseDealSearch,
+  component: lazyRouteComponent(() => import('../pages/Deals/DealProfilePage'), 'DealProfilePage'),
 })
 const tasks = createRoute({
   getParentRoute: () => workspace,
@@ -183,10 +194,12 @@ export const router = createRouter({
     accountSettings,
     workspace.addChildren([
       overview,
+      inbox,
       companies,
       companyDetail,
       contacts,
       deals,
+      dealDetail,
       tasks,
       services,
       customerServices,

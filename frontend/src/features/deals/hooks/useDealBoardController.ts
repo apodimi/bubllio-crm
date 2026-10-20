@@ -23,6 +23,7 @@ import {
   type DealSearchPatch,
   type DealView,
 } from '../dealBoardConfig'
+import { dealFromDragData, dealStageFromDragData } from '../dealBoardDnd'
 import type { DealFilters } from '../services/dealService'
 import { useArchiveDeal, useDeal, useDeals, useDeleteDeal, useMoveDeal } from './useDeals'
 
@@ -142,7 +143,7 @@ export function useDealBoardController() {
     if (!canMove) {
       return
     }
-    setActiveDeal((event.active.data.current?.deal as Deal | undefined) ?? null)
+    setActiveDeal(dealFromDragData(event.active.data.current) ?? null)
   }
 
   function dragEnd(event: DragEndEvent) {
@@ -150,14 +151,14 @@ export function useDealBoardController() {
     if (!canMove) {
       return
     }
-    const deal = event.active.data.current?.deal as Deal | undefined
-    const targetStage = event.over?.data.current?.stage as DealStage | undefined
+    const deal = dealFromDragData(event.active.data.current)
+    const targetStage = dealStageFromDragData(event.over?.data.current)
     if (!deal || !targetStage || !event.over) {
       return
     }
     const targetLane = laneDeals(targetStage)
     const destination = targetLane.filter((item) => item.id !== deal.id)
-    const overDeal = event.over.data.current?.deal as Deal | undefined
+    const overDeal = dealFromDragData(event.over.data.current)
     if (overDeal?.id === deal.id) {
       return
     }

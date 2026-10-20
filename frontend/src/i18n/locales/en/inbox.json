@@ -1,0 +1,31 @@
+{
+  "title": "Action inbox",
+  "description": "One focused list of work that needs your next move.",
+  "filters": "Filter action inbox by source",
+  "sources": {
+    "all": "All",
+    "tasks": "Tasks",
+    "sales": "Sales",
+    "customers": "Customers",
+    "billing": "Billing",
+    "team": "Team"
+  },
+  "complete": "Complete",
+  "open": "Open",
+  "retry": "Try again",
+  "listLabel": "Unresolved actions",
+  "needsReview": "Needs review",
+  "noOpenFollowUp": "No open follow-up",
+  "itemsCount_one": "{{count}} item",
+  "itemsCount_other": "{{count}} items",
+  "kinds": {
+    "overdue_charges": "Overdue charges",
+    "renewals_due": "Renewals in the next 30 days",
+    "pending_invitations": "Pending invitations"
+  },
+  "emptyTitle": "You're all caught up",
+  "emptyDescription": "There are no unresolved actions in this view.",
+  "error": "The action inbox could not be loaded. Please try again.",
+  "upgradeTitle": "Action inbox is being prepared",
+  "upgradeDescription": "It will appear automatically when the server update is complete. The rest of the CRM remains available."
+}

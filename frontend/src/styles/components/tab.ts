@@ -7,6 +7,8 @@ export const tab: Components<Theme>['MuiTab'] = {
       minWidth: 72,
       paddingInline: theme.spacing(1.5),
       textTransform: 'none',
+      fontSize: '0.8125rem',
+      lineHeight: 1.4,
       fontWeight: 600,
       color: theme.palette.text.secondary,
       '&.Mui-selected': { color: theme.palette.primary.main },

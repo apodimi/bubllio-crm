@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page)
 })
 
-test('deal board keeps search and stage filters in the URL', async ({ page }) => {
+test('deal profile returns to the filtered board state', async ({ page }) => {
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'Deals', exact: true }).click()
@@ -17,6 +17,7 @@ test('deal board keeps search and stage filters in the URL', async ({ page }) =>
     fullPage: true,
     animations: 'disabled',
   })
+  await page.getByRole('button', { name: 'Mine', exact: true }).click()
   await page.getByRole('textbox', { name: 'Search deals' }).fill('Annual')
   await expect(page).toHaveURL(/q=Annual/)
 
@@ -24,19 +25,61 @@ test('deal board keeps search and stage filters in the URL', async ({ page }) =>
   await page.getByRole('combobox', { name: 'Stage' }).click()
   await page.getByRole('option', { name: 'Proposal' }).click()
   await expect(page).toHaveURL(/stage=proposal/)
+  await page.keyboard.press('Escape')
 
-  await page.reload()
+  await page.getByRole('button', { name: 'Open Annual platform renewal' }).click()
+  await expect(page).toHaveURL(
+    new RegExp(`/deals/${fixtureIds.deal}.*q=Annual.*view=mine.*stage=proposal`),
+  )
+  await page.getByRole('link', { name: 'Back to pipeline' }).click()
+  await expect(page).toHaveURL(/deals\?.*q=Annual.*view=mine.*stage=proposal/)
   await expect(page.getByRole('textbox', { name: 'Search deals' })).toHaveValue('Annual')
   await expect(page.getByText('Stage: Proposal')).toBeVisible()
 })
 
-test('opens an existing deal from the board', async ({ page }) => {
+test('opens the canonical deal profile from the board', async ({ page }) => {
   await login(page)
   await openAlpha(page)
   await page.getByRole('link', { name: 'Deals', exact: true }).click()
 
   await page.getByRole('button', { name: 'Open Annual platform renewal' }).click()
-  await expect(page).toHaveURL(new RegExp(`deal=${fixtureIds.deal}`))
+  await expect(page).toHaveURL(
+    new RegExp(`/organizations/${fixtureIds.alphaOrganization}/deals/${fixtureIds.deal}$`),
+  )
+  await expect(page.getByRole('heading', { name: 'Annual platform renewal' })).toBeVisible()
+  await expect(page.getByText('€12,000.00')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Next actions' })).toBeVisible()
+  await expect(page.getByText('No actions are connected to this deal yet.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Add next action' }).click()
+  await expect(page.getByRole('heading', { name: 'Add next action' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Company' })).toHaveText('Acme Ltd')
+  await expect(page.getByRole('combobox', { name: 'Deal' })).toHaveText('Annual platform renewal')
+})
+
+test('shows and recovers from a failed deferred company load', async ({ page }) => {
+  let attempts = 0
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url())
+    if (!/\/companies\/?$/.test(url.pathname)) {
+      await route.fallback()
+      return
+    }
+    attempts += 1
+    if (attempts <= 2) {
+      await route.fulfill({ status: 503, json: { detail: 'Temporarily unavailable' } })
+      return
+    }
+    await route.fallback()
+  })
+  await login(page)
+  await page.goto(`/organizations/${fixtureIds.alphaOrganization}/deals/${fixtureIds.deal}`)
+
+  await page.getByRole('button', { name: 'Edit deal' }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'The server could not complete this request. Please try again.',
+  )
+  await page.getByRole('button', { name: 'Retry' }).click()
   await expect(page.getByRole('heading', { name: 'Edit deal' })).toBeVisible()
 })
 

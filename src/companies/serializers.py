@@ -135,6 +135,25 @@ class CompanyTimelineNoteSerializer(serializers.Serializer):
     body = serializers.CharField(max_length=5000, allow_blank=False, trim_whitespace=True)
 
 
+class CompanyCommunicationSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=("call", "email", "meeting"))
+    outcome = serializers.CharField(max_length=120, allow_blank=False, trim_whitespace=True)
+    body = serializers.CharField(
+        max_length=5000,
+        allow_blank=True,
+        trim_whitespace=True,
+        required=False,
+        default="",
+    )
+    contact = serializers.UUIDField(required=False, allow_null=True)
+    occurred_at = serializers.DateTimeField(required=False)
+
+
+class CompanyAttentionSerializer(serializers.Serializer):
+    company = CompanySerializer(read_only=True)
+    last_communication_at = serializers.DateTimeField(allow_null=True)
+
+
 class CompanyAssigneeSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="user_id")
     name = serializers.SerializerMethodField()

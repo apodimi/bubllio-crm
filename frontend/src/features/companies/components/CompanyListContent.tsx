@@ -247,6 +247,7 @@ function CompanyDesktopTable({
               <TableCell>
                 <ButtonBase
                   onClick={() => onOpenCompany(company)}
+                  aria-label={t('crm.companies.openCompany', { name: company.name })}
                   sx={{
                     display: 'block',
                     width: '100%',
