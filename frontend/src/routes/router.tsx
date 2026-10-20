@@ -173,6 +173,14 @@ const serviceCatalog = createRoute({
     'ServiceCatalogPage',
   ),
 })
+const collaborators = createRoute({
+  getParentRoute: () => workspace,
+  path: '/costing/collaborators',
+  component: lazyRouteComponent(
+    () => import('../pages/Costing/CollaboratorsPage'),
+    'CollaboratorsPage',
+  ),
+})
 const members = createRoute({
   getParentRoute: () => workspace,
   path: '/members',
@@ -205,6 +213,7 @@ export const router = createRouter({
       customerServices,
       billing,
       serviceCatalog,
+      collaborators,
       members,
       settings,
     ]),

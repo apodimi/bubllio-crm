@@ -73,6 +73,52 @@ def build_workspace_data_export(organization):
                     }
                     for task in organization.tasks.all()
                 ],
+                "external_collaborators": [
+                    {
+                        "id": collaborator.id,
+                        "name": collaborator.name,
+                        "specialty": collaborator.specialty,
+                        "email": collaborator.email,
+                        "phone_number": collaborator.phone_number,
+                        "notes": collaborator.notes,
+                        "is_active": collaborator.is_active,
+                        "created_at": collaborator.created_at,
+                        "updated_at": collaborator.updated_at,
+                    }
+                    for collaborator in organization.external_collaborators.all()
+                ],
+                "collaborator_services": [
+                    {
+                        "id": service.id,
+                        "collaborator_id": service.collaborator_id,
+                        "name": service.name,
+                        "description": service.description,
+                        "default_cost": service.default_cost,
+                        "currency": service.currency,
+                        "is_active": service.is_active,
+                        "created_at": service.created_at,
+                        "updated_at": service.updated_at,
+                    }
+                    for service in organization.collaborator_services.all()
+                ],
+                "deal_cost_lines": [
+                    {
+                        "id": line.id,
+                        "deal_id": line.deal_id,
+                        "collaborator_id": line.collaborator_id,
+                        "collaborator_service_id": line.collaborator_service_id,
+                        "collaborator_name": line.collaborator_name,
+                        "service_name": line.service_name,
+                        "description": line.description,
+                        "quantity": line.quantity,
+                        "unit_cost": line.unit_cost,
+                        "currency": line.currency,
+                        "status": line.status,
+                        "created_at": line.created_at,
+                        "updated_at": line.updated_at,
+                    }
+                    for line in organization.deal_cost_lines.all()
+                ],
             }
 
 
@@ -84,6 +130,9 @@ def build_installation_data_export():
         "companies",
         "contacts",
         "tasks",
+        "external_collaborators",
+        "collaborator_services",
+        "deal_cost_lines",
     ).select_related("settings")
 
     workspaces = [

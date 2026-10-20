@@ -9,6 +9,9 @@ describe('workspace navigation', () => {
       'services',
     )
     expect(selectedMobileNavigation('/organizations/acme/contacts', 'acme')).toBe('companies')
+    expect(selectedMobileNavigation('/organizations/acme/costing/collaborators', 'acme')).toBe(
+      'services',
+    )
   })
 
   it('keeps management destinations out of the mobile dock', () => {

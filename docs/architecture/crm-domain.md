@@ -228,6 +228,9 @@ Organization 1 -> many ServiceCatalogItems
 Organization 1 -> many CustomerSubscriptions
 Organization 1 -> many Charges
 Organization 1 -> many Payments
+Organization 1 -> many ExternalCollaborators
+Organization 1 -> many CollaboratorServices
+Organization 1 -> many DealCostLines
 Organization 1 -> many OrganizationMemberships
 User 1 -> many OrganizationMemberships
 Company 1 -> many Contacts
@@ -242,7 +245,34 @@ Organization 1 -> many EmailAccounts
 User 1 -> 0 or 1 personal Organization
 CustomerSubscription 1 -> many Charges
 Charge 1 -> many Payments
+ExternalCollaborator 1 -> many CollaboratorServices
+Deal 1 -> many DealCostLines
 ```
+
+## External collaborators and deal costing
+
+External collaborators are organization-owned supplier records, not users and
+not workspace members. Each collaborator may have a reusable service catalog
+with a default cost and currency. A collaborator or catalog service is retired
+by setting `is_active` to false; the API does not hard-delete either resource.
+
+Deals may contain internal cost lines. A cost line snapshots the collaborator
+name, service name, description, unit cost, and currency when it is created, so
+later catalog edits do not rewrite historical deal economics. Lines may be
+estimated, committed, paid, or cancelled. Cancelled lines are excluded from
+profitability.
+
+Cost lines must use the deal currency. Bubllio does not perform foreign-exchange
+conversion. Deal profitability uses the deal's net value before VAT and reports
+estimated cost, committed cost, estimated gross profit, and estimated margin.
+These figures are commercial forecasts, not accounting net profit or proof of
+collection.
+
+The collaborator API is under
+`/api/v1/organizations/<organization_id>/costing/`. Deal costs and profitability
+are nested below `/api/v1/organizations/<organization_id>/deals/<deal_id>/`.
+Workspace viewers may read them; roles with `manage_crm` may make changes. Every
+related record is validated against the organization resolved from the URL.
 
 ## Tasks and next actions
 

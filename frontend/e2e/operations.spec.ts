@@ -4,6 +4,22 @@ import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
+test('opens customer service creation before lazy company choices have loaded', async ({
+  page,
+}) => {
+  await login(page)
+  await openAlpha(page)
+  await page.getByRole('button', { name: 'Revenue', exact: true }).click()
+  await page.getByRole('link', { name: 'Service agreements', exact: true }).click()
+
+  const add = page.getByRole('button', { name: 'New service agreement' })
+  await expect(add).toBeEnabled()
+  await add.click()
+  await expect(page.getByRole('heading', { name: 'New service agreement' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Customer' }).click()
+  await expect(page.getByRole('option', { name: 'Acme Ltd' })).toBeVisible()
+})
+
 test('subscription cancellation remains active through the paid period and can resume', async ({
   page,
 }) => {
@@ -11,7 +27,7 @@ test('subscription cancellation remains active through the paid period and can r
   await openAlpha(page)
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
   await page.getByRole('button', { name: 'Revenue', exact: true }).click()
-  await page.getByRole('link', { name: 'Customer services', exact: true }).click()
+  await page.getByRole('link', { name: 'Service agreements', exact: true }).click()
   await expect(page).toHaveURL(
     `/organizations/${fixtureIds.alphaOrganization}/services/customer-services`,
   )
@@ -21,7 +37,7 @@ test('subscription cancellation remains active through the paid period and can r
     animations: 'disabled',
   })
   await page.getByRole('button', { name: 'Edit Managed service' }).click()
-  await page.getByRole('button', { name: 'End customer service…' }).click()
+  await page.getByRole('button', { name: 'End agreement…' }).click()
   const cancellationRequest = page.waitForRequest((request) =>
     request.url().endsWith(`/subscriptions/${fixtureIds.subscription}/end/`),
   )
@@ -29,7 +45,7 @@ test('subscription cancellation remains active through the paid period and can r
   expect((await cancellationRequest).postDataJSON()).toEqual({ mode: 'end_of_period' })
   await expect(page.getByText('Ending at period close', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Edit Managed service' }).click()
-  await expect(page.getByText(/Service remains active through/)).toBeVisible()
+  await expect(page.getByText(/remains active through/)).toBeVisible()
   await page.getByRole('button', { name: 'Keep active' }).click()
   await expect(page.getByText('Active', { exact: true })).toBeVisible()
 })

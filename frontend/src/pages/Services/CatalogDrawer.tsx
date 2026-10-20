@@ -18,13 +18,7 @@ import {
 import { useCreateCatalogItem, useUpdateCatalogItem } from '../../features/subscriptions'
 import type { BillingInterval, ServiceCatalogItem } from '../../types/subscription.types'
 
-const intervals: Array<{ value: BillingInterval; label: string }> = [
-  { value: 'one_off', label: 'One-off' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'semiannual', label: 'Every six months' },
-  { value: 'annual', label: 'Annual' },
-]
+import { billingIntervals } from './billingOptions'
 const drawerSx = {
   '& .MuiDrawer-paper': {
     width: { xs: '100%', sm: 580 },
@@ -50,7 +44,7 @@ function Header({
           {description}
         </Typography>
       </Box>
-      <IconButton aria-label="Close" onClick={onClose}>
+      <IconButton aria-label={title} onClick={onClose}>
         <CloseRounded />
       </IconButton>
     </Stack>
@@ -145,9 +139,9 @@ export function CatalogDrawer({
             }
             fullWidth
           >
-            {intervals.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
+            {billingIntervals.map((interval) => (
+              <MenuItem key={interval} value={interval}>
+                {t(`crm.services.intervals.${interval}`)}
               </MenuItem>
             ))}
           </TextField>

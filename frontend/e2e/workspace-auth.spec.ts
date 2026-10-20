@@ -101,7 +101,11 @@ test('mobile navigation works without horizontal overflow', async ({ page }) => 
   await expect(page).toHaveURL(
     `/organizations/${fixtureIds.alphaOrganization}/services/customer-services`,
   )
-  await expect(page.getByRole('heading', { name: 'Customer services', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('heading', {
+      name: /^(Service agreements|Συμφωνίες υπηρεσιών)$/,
+    }),
+  ).toBeVisible()
   await page.screenshot({
     path: test.info().outputPath('navigation-mobile-dock.png'),
     fullPage: true,

@@ -3,6 +3,42 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.9 — 2026-10-21
+
+### Added
+
+- organization-scoped external collaborators with reusable services, default
+  costs, currencies, contact details, notes, and active or retired states;
+- deal cost lines that snapshot collaborator and service details, support
+  estimated, committed, paid, and cancelled states, and calculate deal-level
+  estimated cost, gross profit, and margin;
+- a dedicated collaborators workspace, deal profitability panel, bilingual
+  interface copy, account export coverage, and responsive end-to-end flows.
+
+### Changed
+
+- customer service creation remains available without an existing customer and
+  explains the required next step inside the form;
+- billing and service labels now use the active interface language consistently;
+- development startup restores Django auto-reload for a faster local workflow.
+
+### Security and data integrity
+
+- collaborator, service, deal-cost, and profitability operations resolve the
+  organization from the URL, enforce CRM capabilities, and reject related
+  records belonging to another workspace;
+- deal currencies cannot change while cost lines exist, monetary inputs remain
+  non-negative, quantities must be positive, and no implicit currency conversion
+  is performed.
+
+### Upgrade notes
+
+- migration `costing.0001_initial` adds new tables and indexes without changing
+  existing CRM records; the release is eligible for an online update from
+  version 0.2.8;
+- after deployment, verify collaborator creation, service pricing, deal cost
+  entry, profitability totals, workspace export, and responsive navigation.
+
 ## 0.2.8 — 2026-10-21
 
 ### Added

@@ -43,7 +43,7 @@ wheels = [
 
 [[package]]
 name = "bubllio-crm"
-version = "0.2.8"
+version = "0.2.9"
 source = { editable = "." }
 dependencies = [
     { name = "celery" },

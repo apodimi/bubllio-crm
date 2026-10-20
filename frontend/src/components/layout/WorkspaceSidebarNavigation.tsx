@@ -79,7 +79,8 @@ function NavigationLink({
   inboxLabel,
 }: LinkProps) {
   const selected = item.children
-    ? currentPath.startsWith(item.path)
+    ? currentPath.startsWith(item.path) ||
+      item.children.some((child) => currentPath.startsWith(child.path))
     : currentPath === item.path || currentPath === `${item.path}/`
   const link = (
     <Link
@@ -248,7 +249,9 @@ export function WorkspaceSidebarNavigation({
   inboxItems,
 }: Props) {
   const { t } = useTranslation()
-  const [revenueExpanded, setRevenueExpanded] = useState(currentPath.includes('/services/'))
+  const [revenueExpanded, setRevenueExpanded] = useState(
+    currentPath.includes('/services/') || currentPath.includes('/costing/'),
+  )
   const canManage = isSuperuser || currentRole === 'owner' || currentRole === 'admin'
   const labels = {
     home: t('navigation.groups.home'),

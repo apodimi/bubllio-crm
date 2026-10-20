@@ -67,6 +67,15 @@ class DealSerializer(serializers.ModelSerializer):
         tax_rate = attrs.get("tax_rate", getattr(self.instance, "tax_rate", 24))
         if tax_rate < 0 or tax_rate > 100:
             raise serializers.ValidationError({"tax_rate": "Enter a VAT rate between 0 and 100."})
+        currency = attrs.get("currency", getattr(self.instance, "currency", "EUR"))
+        if (
+            self.instance
+            and currency.upper() != self.instance.currency.upper()
+            and self.instance.cost_lines.exists()
+        ):
+            raise serializers.ValidationError(
+                {"currency": "Remove this deal's cost lines before changing its currency."}
+            )
         stage = attrs.get("stage", getattr(self.instance, "stage", Deal.Stage.LEAD))
         reason = attrs.get("lost_reason", getattr(self.instance, "lost_reason", ""))
         if stage == Deal.Stage.LOST and not reason.strip():

@@ -28,9 +28,10 @@
   "signOut": "Sign out",
   "installationAdministrator": "Installation administrator",
   "workspaceMember": "Workspace member",
-  "customerServices": "Customer services",
+  "customerServices": "Service agreements",
   "billing": "Billing",
   "catalog": "Catalog",
+  "collaborators": "Collaborators & costs",
   "groups": {
     "home": "Home",
     "customers": "Customers",

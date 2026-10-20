@@ -41,7 +41,7 @@ function Header({
           {description}
         </Typography>
       </Box>
-      <IconButton aria-label="Close" onClick={onClose}>
+      <IconButton aria-label={title} onClick={onClose}>
         <CloseRounded />
       </IconButton>
     </Stack>

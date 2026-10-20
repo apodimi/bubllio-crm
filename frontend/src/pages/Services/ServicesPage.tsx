@@ -32,13 +32,6 @@ import { CatalogDrawer, PaymentDrawer, SubscriptionDrawer } from './ServiceDrawe
 
 type ServicesView = 'customer-services' | 'billing' | 'catalog'
 type Translate = (key: string, options?: Record<string, unknown>) => string
-const intervalLabels = {
-  one_off: 'One-off',
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  semiannual: 'Every 6 months',
-  annual: 'Annual',
-}
 const statusColors: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info'> = {
   active: 'success',
   paused: 'warning',
@@ -52,8 +45,6 @@ const statusColors: Record<string, 'default' | 'success' | 'warning' | 'error' |
   upcoming: 'default',
   waived: 'default',
 }
-const label = (value: string) =>
-  value.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase())
 const money = (amount: string, currency: string) =>
   `${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
 const date = (value: string) =>
@@ -100,7 +91,6 @@ function ServicesPage({ view }: { view: ServicesView }) {
     <Button
       variant="contained"
       startIcon={<AddRounded />}
-      disabled={view === 'customer-services' && !(companies.data ?? []).length}
       onClick={() => (view === 'catalog' ? setCatalogDrawer(true) : setSubscriptionDrawer(true))}
     >
       {view === 'catalog' ? t('crm.services.addCatalog') : t('crm.services.addCustomer')}
@@ -293,10 +283,10 @@ function SubscriptionsTable({
                 ) : null}
               </TableCell>
               <TableCell>{row.company_name}</TableCell>
-              <TableCell>{intervalLabels[row.billing_interval]}</TableCell>
+              <TableCell>{t(`crm.services.intervals.${row.billing_interval}`)}</TableCell>
               <TableCell>
                 {row.effective_status === 'cancelling' && row.cancellation_effective_date
-                  ? `Ends ${date(row.cancellation_effective_date)}`
+                  ? t('crm.services.endsOn', { date: date(row.cancellation_effective_date) })
                   : date(row.next_billing_date)}
               </TableCell>
               <TableCell>
@@ -304,8 +294,8 @@ function SubscriptionsTable({
                   size="small"
                   label={
                     row.effective_status === 'cancelling'
-                      ? 'Ending at period close'
-                      : label(row.effective_status)
+                      ? t('crm.services.statuses.cancelling')
+                      : t(`crm.services.statuses.${row.effective_status}`)
                   }
                   color={statusColors[row.effective_status]}
                 />
@@ -315,8 +305,11 @@ function SubscriptionsTable({
               </TableCell>
               {canManage ? (
                 <TableCell align="right">
-                  <Tooltip title="Edit subscription">
-                    <IconButton aria-label={`Edit ${row.name}`} onClick={() => onEdit(row)}>
+                  <Tooltip title={t('crm.services.editAgreement')}>
+                    <IconButton
+                      aria-label={t('crm.services.editNamed', { name: row.name })}
+                      onClick={() => onEdit(row)}
+                    >
                       <EditRounded />
                     </IconButton>
                   </Tooltip>
@@ -385,7 +378,7 @@ function ChargesTable({
               <TableCell>
                 <Chip
                   size="small"
-                  label={label(row.payment_status)}
+                  label={t(`crm.services.statuses.${row.payment_status}`)}
                   color={statusColors[row.payment_status]}
                 />
               </TableCell>
@@ -458,21 +451,30 @@ function CatalogTable({
                 ) : null}
               </TableCell>
               <TableCell>{row.internal_code || '—'}</TableCell>
-              <TableCell>{intervalLabels[row.billing_interval]}</TableCell>
+              <TableCell>{t(`crm.services.intervals.${row.billing_interval}`)}</TableCell>
               <TableCell>
                 <Chip
                   size="small"
-                  label={row.is_active ? 'Active' : 'Inactive'}
+                  label={
+                    row.is_active
+                      ? t('crm.services.statuses.active')
+                      : t('crm.services.statuses.inactive')
+                  }
                   color={row.is_active ? 'success' : 'default'}
                 />
               </TableCell>
               <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                {money(row.default_net_price, row.currency)} + VAT
+                {t('crm.services.pricePlusVat', {
+                  price: money(row.default_net_price, row.currency),
+                })}
               </TableCell>
               {canManage ? (
                 <TableCell align="right">
-                  <Tooltip title="Edit catalog service">
-                    <IconButton aria-label={`Edit ${row.name}`} onClick={() => onEdit(row)}>
+                  <Tooltip title={t('crm.services.editCatalog')}>
+                    <IconButton
+                      aria-label={t('crm.services.editNamed', { name: row.name })}
+                      onClick={() => onEdit(row)}
+                    >
                       <EditRounded />
                     </IconButton>
                   </Tooltip>

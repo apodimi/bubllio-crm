@@ -9,6 +9,7 @@ import settingsIcon from '@iconify-icons/keyline-icons/settings'
 import trendingUpIcon from '@iconify-icons/keyline-icons/trending-up'
 import userPlusIcon from '@iconify-icons/keyline-icons/user-plus'
 import usersIcon from '@iconify-icons/keyline-icons/users'
+import userIcon from '@iconify-icons/keyline-icons/user'
 import type { ReactNode } from 'react'
 
 import { AppIcon } from '../common/AppIcon'
@@ -23,6 +24,7 @@ export type WorkspaceRoute =
   | '/organizations/$organizationId/services/customer-services'
   | '/organizations/$organizationId/services/billing'
   | '/organizations/$organizationId/services/catalog'
+  | '/organizations/$organizationId/costing/collaborators'
   | '/organizations/$organizationId/members'
   | '/organizations/$organizationId/settings'
 
@@ -48,6 +50,7 @@ type NavigationLabelKey =
   | 'navigation.customerServices'
   | 'navigation.billing'
   | 'navigation.catalog'
+  | 'navigation.collaborators'
   | 'navigation.people'
   | 'navigation.settings'
   | 'navigation.customers'
@@ -155,6 +158,12 @@ export const workspaceNavigation: WorkspaceNavigationItem[] = [
         relativePath: '/services/catalog',
         icon: <AppIcon icon={packageIcon} />,
       },
+      {
+        labelKey: 'navigation.collaborators',
+        route: '/organizations/$organizationId/costing/collaborators',
+        relativePath: '/costing/collaborators',
+        icon: <AppIcon icon={userIcon} />,
+      },
     ],
   },
   {
@@ -190,6 +199,9 @@ export function selectedMobileNavigation(pathname: string, organizationId?: stri
 
   if (pathname.startsWith(`/organizations/${organizationId}/contacts`)) {
     return 'companies'
+  }
+  if (pathname.startsWith(`/organizations/${organizationId}/costing`)) {
+    return 'services'
   }
 
   const item = workspaceNavigation

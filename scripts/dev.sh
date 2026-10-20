@@ -60,7 +60,7 @@ echo "Applying database migrations..."
 echo "Starting backend on http://127.0.0.1:8000"
 (
   cd "$ROOT_DIR"
-  uv run python src/manage.py runserver 127.0.0.1:8000 --noreload 2>&1 | tee "$BACKEND_LOG"
+  uv run python src/manage.py runserver 127.0.0.1:8000 2>&1 | tee "$BACKEND_LOG"
 ) &
 backend_pid=$!
 

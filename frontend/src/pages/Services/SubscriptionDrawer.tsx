@@ -29,13 +29,7 @@ import type {
   ServiceCatalogItem,
 } from '../../types/subscription.types'
 
-const intervals: Array<{ value: BillingInterval; label: string }> = [
-  { value: 'one_off', label: 'One-off' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'semiannual', label: 'Every six months' },
-  { value: 'annual', label: 'Annual' },
-]
+import { billingIntervals } from './billingOptions'
 const today = () => new Date().toISOString().slice(0, 10)
 const drawerSx = {
   '& .MuiDrawer-paper': {
@@ -62,7 +56,7 @@ function Header({
           {description}
         </Typography>
       </Box>
-      <IconButton aria-label="Close" onClick={onClose}>
+      <IconButton aria-label={title} onClick={onClose}>
         <CloseRounded />
       </IconButton>
     </Stack>
@@ -183,15 +177,17 @@ export function SubscriptionDrawer({
                 disabled={resume.isPending}
                 onClick={() => resume.mutate(subscription.id, { onSuccess: onClose })}
               >
-                {resume.isPending ? 'Resuming…' : 'Keep active'}
+                {resume.isPending
+                  ? t('crm.services.drawer.resuming')
+                  : t('crm.services.drawer.keepActive')}
               </Button>
             }
           >
-            Service remains active through{' '}
-            {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
-              new Date(`${subscription.cancellation_effective_date}T00:00:00`),
-            )}
-            . No later charge will be collected.
+            {t('crm.services.drawer.cancellingNotice', {
+              date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
+                new Date(`${subscription.cancellation_effective_date}T00:00:00`),
+              ),
+            })}
           </Alert>
         ) : null}
         <TextField
@@ -267,9 +263,9 @@ export function SubscriptionDrawer({
                 setForm({ ...form, billing_interval: e.target.value as BillingInterval })
               }
             >
-              {intervals.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
+              {billingIntervals.map((interval) => (
+                <MenuItem key={interval} value={interval}>
+                  {t(`crm.services.intervals.${interval}`)}
                 </MenuItem>
               ))}
             </TextField>
@@ -378,8 +374,7 @@ export function SubscriptionDrawer({
             {confirmCancellation ? (
               <Alert severity="warning">
                 <Typography variant="body2" sx={{ mb: 1.5 }}>
-                  Ending at period close keeps the service available through the current coverage
-                  period and cancels only later charges.
+                  {t('crm.services.drawer.endOfPeriodExplanation')}
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                   <Button
@@ -393,7 +388,9 @@ export function SubscriptionDrawer({
                       )
                     }
                   >
-                    {cancel.isPending ? 'Scheduling…' : 'End at period close'}
+                    {cancel.isPending
+                      ? t('crm.services.drawer.scheduling')
+                      : t('crm.services.drawer.endAtPeriodClose')}
                   </Button>
                   <Button
                     color="error"
@@ -405,10 +402,10 @@ export function SubscriptionDrawer({
                       )
                     }
                   >
-                    End immediately
+                    {t('crm.services.drawer.endImmediately')}
                   </Button>
                   <Button color="inherit" onClick={() => setConfirmCancellation(false)}>
-                    Keep subscription
+                    {t('crm.services.drawer.keepAgreement')}
                   </Button>
                 </Stack>
               </Alert>

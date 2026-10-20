@@ -17,6 +17,7 @@ import { useCompanies } from '../../features/companies'
 import { useArchiveDeal, useDeal } from '../../features/deals'
 import { canCreateRecords, useWorkspace } from '../../features/organizations'
 import { useCompleteTask, useTasks } from '../../features/tasks'
+import { DealProfitabilityPanel } from '../../features/costing/components/DealProfitabilityPanel'
 import { TaskDrawer } from '../../features/tasks/components/TaskDrawer'
 import type { CrmTask } from '../../types/task.types'
 
@@ -344,6 +345,14 @@ export function DealProfilePage() {
           />
         </Paper>
       </Box>
+
+      <DealProfitabilityPanel
+        organizationId={workspace.id}
+        dealId={record.id}
+        currency={record.currency}
+        canManage={canManage}
+        archived={Boolean(record.archived_at)}
+      />
 
       {editingDeal && companies.data ? (
         <DealDrawer
