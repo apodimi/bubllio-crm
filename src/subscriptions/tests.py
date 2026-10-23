@@ -494,9 +494,10 @@ class SubscriptionApiTests(APITestCase):
             format="json",
         )
 
-        overview = self.client.get(
-            reverse("subscription-overview", kwargs={"organization_id": self.organization.id})
-        )
+        with patch("subscriptions.services.timezone.localdate", return_value=date(2026, 10, 13)):
+            overview = self.client.get(
+                reverse("subscription-overview", kwargs={"organization_id": self.organization.id})
+            )
 
         self.assertEqual(overview.status_code, status.HTTP_200_OK)
         self.assertEqual(overview.data["active_subscriptions"], 1)

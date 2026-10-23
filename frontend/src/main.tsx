@@ -10,6 +10,20 @@ import { router } from './routes/router'
 import './i18n'
 import './styles/fonts'
 
+window.addEventListener('vite:preloadError', (event) => {
+  try {
+    const key = 'bubllio-preload-reload-at'
+    const lastReload = Number(window.sessionStorage.getItem(key) ?? 0)
+    if (Date.now() - lastReload < 60_000) return
+    window.sessionStorage.setItem(key, String(Date.now()))
+  } catch {
+    return
+  }
+
+  event.preventDefault()
+  window.location.reload()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>

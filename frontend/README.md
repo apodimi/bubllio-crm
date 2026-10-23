@@ -174,6 +174,11 @@ for frontend routes, and proxy /api/ to Django before applying that fallback.
 Vite's development proxy is not part of the production bundle. Use HTTPS,
 forward Authorization headers and preserve API error responses.
 
+Serve `index.html` with `Cache-Control: no-cache` so a reload picks up the current
+hashed JavaScript files after a deployment. Hashed assets may be cached long term.
+If a previously open tab requests a removed page chunk, the client reloads once
+to fetch the current entry page.
+
 Keep frontend and API under the same public origin. Separate repositories do not
 require cross-origin browser requests. This application does not change Django's
 production settings; configure its hosts, secrets and deployment security separately.

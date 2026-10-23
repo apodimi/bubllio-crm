@@ -3,6 +3,23 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.10 — 2026-10-23
+
+### Fixed
+
+- the frontend entry page now revalidates after deployment so a cached page does
+  not keep referencing removed JavaScript files and open tabs recover from a
+  missing page chunk with one reload;
+- generated local design-tool cache no longer affects the frontend formatting
+  check.
+
+### Upgrade notes
+
+- this release has no database migrations and is eligible for an online update
+  from version 0.2.9;
+- after deployment, verify the sign-in page and Billing in a previously open tab,
+  then confirm a fresh page load serves the current JavaScript assets.
+
 ## 0.2.9 — 2026-10-21
 
 ### Added

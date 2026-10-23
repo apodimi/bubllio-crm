@@ -4,6 +4,25 @@ import { fixtureIds, login, mockApi, openAlpha, orgs } from './support/crm'
 
 test.beforeEach(async ({ page }) => mockApi(page))
 
+test('failed page chunk reloads once and returns to sign in', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
+
+  const reloaded = page.waitForEvent('framenavigated')
+  await page.evaluate(() => {
+    setTimeout(() => window.dispatchEvent(new Event('vite:preloadError', { cancelable: true })), 0)
+  })
+  await reloaded
+  await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
+
+  const retriedAgain = await page.evaluate(() => {
+    const event = new Event('vite:preloadError', { cancelable: true })
+    window.dispatchEvent(event)
+    return event.defaultPrevented
+  })
+  expect(retriedAgain).toBe(false)
+})
+
 test(
   'login, tenant switch, permissions and logout isolate data',
   { tag: '@smoke' },
