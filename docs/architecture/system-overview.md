@@ -3,23 +3,26 @@
 This page is the shortest architecture explanation that still lets a new
 contributor understand how a browser action becomes a database change.
 
-## The two applications
+## Runtime components
 
-The repository contains two applications with a deliberate boundary:
+The browser and API are separate applications. Email delivery and updates use
+separate workers and authority:
 
 ```text
-Browser
-  │ React UI, TanStack Router, TanStack Query, Axios
-  ▼
-Django REST API
-  │ authentication, membership, capabilities, serializers, services
-  ▼
-Database and email adapters
+Browser → React UI → Django REST API → CRM database
+                         │
+                         ├→ email outbox → RabbitMQ → Celery worker
+                         │        ↑
+                         │    Celery Beat recovery
+                         └→ independent Update Agent → fixed deployment adapter
 ```
 
 The frontend never imports Django code. Django never imports frontend code.
 They communicate through the versioned HTTP API under `/api/v1/`. This means a
 future mobile client, CLI, or community-built UI can use the same API.
+PostgreSQL is the production database; local development may use SQLite. The
+Update Agent keeps its own SQLite job state and deployment credentials outside
+Django. These are CRM components, not a Keycloak/Core integration.
 
 ## A typical authenticated request
 

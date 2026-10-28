@@ -52,6 +52,8 @@ workflows live in [`skills/`](../skills/).
 Read [System overview](architecture/system-overview.md) first. Continue only into
 the domain you are changing:
 
+- [Bubllio suite architecture](https://github.com/apodimi/bubllio-core/blob/main/docs/architecture/suite-architecture.md)
+  — current CRM boundary and planned Core integration.
 - [CRM domain](architecture/crm-domain.md)
 - [Authentication and roles](architecture/authentication-and-roles.md)
 - [Privacy and security](architecture/privacy-and-security.md)

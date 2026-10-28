@@ -48,7 +48,8 @@ picker. It is a normal tenant for the user's own companies and contacts, but it 
 `is_personal` and has a single owner. Personal
 workspaces cannot be deleted, invited to, or given additional members.
 Team/shared workspaces remain normal organizations: users see them after an
-accepted invitation or when they create one for themselves. A workspace
+accepted invitation or when an installation administrator creates one and
+assigns them ownership. A workspace
 awaiting its nominated owner is hidden from normal CRM endpoints. Membership
 roles control access after provisioning.
 

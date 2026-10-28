@@ -1,5 +1,9 @@
 # Bubllio CRM Agent Guide
 
+This repository belongs to the wider Bubllio workspace. When it is available,
+read `../AGENTS.md` for cross-project routing and shared workflow rules. This
+file remains authoritative for CRM implementation details.
+
 ## Project Context
 
 Bubllio CRM is a multi-tenant Django REST Framework backend. An `Organization`
@@ -87,6 +91,12 @@ Load the matching skill before performing one of these workflows:
   for safety and database portability.
 - `skills/audit-production-environment/SKILL.md`: produce an evidence-based
   production GO, NO-GO, or UNKNOWN verdict.
+- `skills/crm-onboarding-ux/SKILL.md`: revise first-run, invitation, and login
+  recovery while preserving Django's current authority.
+- `skills/crm-identity-transition/SKILL.md`: plan or review the future additive
+  Keycloak/Core integration without breaking existing CRM authentication.
+- `skills/crm-release-trace/SKILL.md`: verify a signed release against the
+  running deployment and diagnose stale behavior.
 
 Use only the skills relevant to the requested work. They guide implementation but
 do not broaden the user's requested scope or authorize unrelated changes.
