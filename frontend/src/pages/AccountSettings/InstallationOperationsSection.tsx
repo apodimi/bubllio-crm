@@ -1,4 +1,5 @@
 import { BackupStatusPanel } from '../../features/installation/components/BackupStatusPanel'
+import { BusinessTransferPanel } from '../../features/installation/components/BusinessTransferPanel'
 import { InstallationAuditLog } from '../../features/installation/components/InstallationAuditLog'
 import { ProductionReadinessCard } from '../../features/installation/components/ProductionReadinessCard'
 import { SystemInformationPanel } from '../../features/installation/components/SystemInformationPanel'
@@ -12,6 +13,7 @@ export function InstallationOperationsSection() {
       <SystemInformationPanel />
       <InstallationAuditLog />
       <BackupStatusPanel />
+      <BusinessTransferPanel />
     </>
   )
 }

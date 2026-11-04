@@ -76,6 +76,15 @@ class DataExportSerializer(serializers.Serializer):
     workspaces = serializers.ListField(child=serializers.DictField())
 
 
+class BusinessTransferSerializer(serializers.Serializer):
+    format = serializers.CharField()
+    format_version = serializers.IntegerField()
+    generated_at = serializers.DateTimeField()
+    users = serializers.ListField(child=serializers.DictField())
+    datasets = serializers.DictField(child=serializers.ListField(child=serializers.DictField()))
+    manifest = serializers.DictField(child=serializers.DictField())
+
+
 class InstallationSettingsSerializer(serializers.Serializer):
     smtp = EmailAccountSerializer(allow_null=True)
     configured = serializers.BooleanField()

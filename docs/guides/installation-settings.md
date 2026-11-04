@@ -78,6 +78,28 @@ review and portability, but it is not a complete database backup that Bubllio
 can restore automatically. Keep the external database backup and recovery-test
 process in place.
 
+### Preparing a CRM business-data transfer
+
+Use **Download CRM transfer** when moving customer records into a fresh CRM
+installation. The installation-admin-only endpoint
+`GET /api/v1/installation/business-transfer/` produces
+`bubllio-crm-business-transfer` format version 1. It includes organization and
+member references, non-secret organization settings, customer codes, companies,
+contacts, deals, tasks, collaborators and costs, service catalog items,
+subscriptions, charges, payments, and activity/timeline history. Each dataset
+has a count and SHA-256 digest for import validation. A transfer is refused while
+a workspace is awaiting owner provisioning or a business relation crosses
+organizations.
+
+The transfer contains customer information and member identifiers. Keep it in
+restricted, encrypted storage and remove temporary copies after the trial.
+Passwords, sessions, SMTP credentials, active invitation links, operational
+logs, and legacy automation state are excluded and need separate handling.
+Customer notes and other free text may still contain sensitive information.
+This file is not a database backup or live synchronization. Import is being
+developed separately; do not decommission the source installation based on a
+download alone.
+
 ## Software updates
 
 When a newer stable GitHub Release exists, installation administrators see a

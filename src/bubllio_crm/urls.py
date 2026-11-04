@@ -43,6 +43,7 @@ from onboarding.api.system_information import InstallationSystemInformationAPIVi
 from onboarding.api.installation_audit_log import InstallationAuditLogAPIView
 from onboarding.api.backup_status import InstallationBackupStatusAPIView
 from onboarding.api.data_export import InstallationDataExportAPIView
+from onboarding.api.business_transfer import InstallationBusinessTransferAPIView
 from access.api.invitations import InvitationAcceptAPIView, InvitationDetailAPIView
 from organizations.api.global_search import GlobalSearchAPIView
 from onboarding.api.installation_admins import InstallationAdminInvitationAcceptAPIView, InstallationAdminInvitationDetailAPIView
@@ -101,6 +102,11 @@ urlpatterns = [
         "api/v1/installation/data-export/",
         InstallationDataExportAPIView.as_view(),
         name="installation-data-export",
+    ),
+    path(
+        "api/v1/installation/business-transfer/",
+        InstallationBusinessTransferAPIView.as_view(),
+        name="installation-business-transfer",
     ),
     path("api/v1/invitations/<str:token>/", InvitationDetailAPIView.as_view(), name="invitation-detail"),
     path("api/v1/invitations/<str:token>/accept/", InvitationAcceptAPIView.as_view(), name="invitation-accept"),
