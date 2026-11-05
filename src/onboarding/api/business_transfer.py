@@ -27,11 +27,15 @@ class InstallationBusinessTransferAPIView(APIView):
             output.close()
             raise
 
-        WorkspaceAccessEvent.objects.create(
-            action=WorkspaceAccessEvent.Action.DOWNLOAD_DATA_EXPORT,
-            actor=request.user,
-            details={"format": FORMAT, "format_version": FORMAT_VERSION},
-        )
+        try:
+            WorkspaceAccessEvent.objects.create(
+                action=WorkspaceAccessEvent.Action.DOWNLOAD_DATA_EXPORT,
+                actor=request.user,
+                details={"format": FORMAT, "format_version": FORMAT_VERSION},
+            )
+        except Exception:
+            output.close()
+            raise
         timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
         response = FileResponse(
             output,

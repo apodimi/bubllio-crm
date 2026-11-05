@@ -190,3 +190,18 @@ class BusinessTransferTests(APITestCase):
 
         self.assertEqual(response.status_code, 409)
         self.assertIn("crosses organizations", response.data["detail"])
+
+    def test_nullable_business_relations_do_not_block_transfer(self):
+        company = Company.objects.create(
+            organization=self.organization, name="Customer without assignee"
+        )
+        self.client.force_authenticate(self.administrator)
+
+        response = self.client.get(reverse("installation-business-transfer"))
+
+        self.assertEqual(response.status_code, 200)
+        transfer = json.loads(b"".join(response.streaming_content))
+        response.close()
+        self.assertEqual(
+            transfer["datasets"]["companies"][0]["id"], str(company.pk)
+        )
