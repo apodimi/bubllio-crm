@@ -3,6 +3,32 @@
 All notable changes to Bubllio CRM are documented here. Versions follow Semantic
 Versioning and correspond to published GitHub Releases.
 
+## 0.2.11 — 2026-11-05
+
+### Added
+
+- installation administrators can download a versioned CRM business transfer
+  containing customers, contacts, deals, tasks, services, subscriptions,
+  charges, payments, and related history for a trial migration;
+- each dataset includes a count and SHA-256 digest, and the export preserves
+  business record IDs and dates.
+
+### Security and data integrity
+
+- the export uses an explicit field allowlist, rejects cross-organization
+  relationships and pending workspace provisioning, and writes the snapshot
+  to a temporary file before download;
+- account passwords, sessions, saved SMTP credentials, and invitation tokens
+  are excluded. Customer notes and free text may contain sensitive information.
+
+### Upgrade notes
+
+- this release has no database migrations and is eligible for an online update
+  from version 0.2.10;
+- after deployment, an installation administrator should open Account settings,
+  download the CRM transfer, and verify its dataset counts in a safe location.
+  Keep the source installation and normal database backups.
+
 ## 0.2.10 — 2026-10-23
 
 ### Fixed
