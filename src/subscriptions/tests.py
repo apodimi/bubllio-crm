@@ -382,7 +382,8 @@ class SubscriptionApiTests(APITestCase):
         self.assertEqual(update_response.data["effective_status"], "cancelled")
         self.assertEqual(Charge.objects.filter(subscription_id=response.data["id"]).count(), 1)
 
-    def test_cancellation_after_payment_keeps_access_until_period_end(self):
+    @patch("subscriptions.services.timezone.localdate", return_value=date(2026, 10, 13))
+    def test_cancellation_after_payment_keeps_access_until_period_end(self, _localdate):
         response = self.create_subscription()
         subscription = CustomerSubscription.objects.get(id=response.data["id"])
         current_charge = subscription.charges.get()
@@ -507,7 +508,8 @@ class SubscriptionApiTests(APITestCase):
         self.assertEqual(overview.data["collected_this_month"]["EUR"], 24)
         self.assertEqual(overview.data["monthly_recurring_revenue"]["EUR"], 100)
 
-    def test_pause_action_cancels_future_charge_and_resume_reopens_it(self):
+    @patch("subscriptions.services.timezone.localdate", return_value=date(2026, 10, 13))
+    def test_pause_action_cancels_future_charge_and_resume_reopens_it(self, _localdate):
         response = self.create_subscription()
         subscription = CustomerSubscription.objects.get(id=response.data["id"])
         charge = subscription.charges.get()

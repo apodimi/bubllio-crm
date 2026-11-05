@@ -91,10 +91,11 @@ def _validate_schema_and_tenants():
         for field in fields.values():
             if not field.is_relation or field.related_model not in business_models:
                 continue
+            related = model._base_manager.filter(**{f"{field.attname}__isnull": False})
             if field.related_model._meta.label_lower == "organizations.organization":
-                invalid = model._base_manager.exclude(**{field.attname: F("organization_id")})
+                invalid = related.exclude(**{field.attname: F("organization_id")})
             else:
-                invalid = model._base_manager.exclude(
+                invalid = related.exclude(
                     **{f"{field.name}__organization_id": F("organization_id")}
                 )
             if invalid.exists():

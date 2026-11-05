@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 from datetime import date, timedelta
 from decimal import Decimal
@@ -13,11 +14,17 @@ from companies.models import Company, CompanyTimelineEvent
 from contacts.models import Contact
 from deals.models import Deal
 from onboarding.services.business_transfer_schema import BUSINESS_DATASETS
+from onboarding.services.business_import import (
+    import_business_transfer,
+    load_business_transfer,
+)
 from organizations.models import (
     EmailAccount,
+    InstallationState,
     Organization,
     OrganizationMembership,
     OrganizationProvisioning,
+    OrganizationSettings,
 )
 from subscriptions.models import Charge, CustomerSubscription, Payment, ServiceCatalogItem
 
@@ -164,6 +171,18 @@ class BusinessTransferTests(APITestCase):
         self.assertNotIn("member-password", serialized)
         self.assertNotIn("never-export-this-password", serialized)
 
+        EmailAccount.objects.all().delete()
+        for _, model in reversed(BUSINESS_DATASETS):
+            model._base_manager.all().delete()
+        self.prepare_target()
+        counts = import_business_transfer(
+            load_business_transfer(io.StringIO(serialized)), trial_admin=self.administrator
+        )
+        self.assertEqual(counts["companies"], 2)
+        self.assertEqual(counts["payments"], 1)
+        self.assertEqual(Payment.objects.get(pk=payment.pk).charge_id, charge.pk)
+        self.assertEqual(Task.objects.get(pk=task.pk).deal_id, deal.pk)
+
     def test_pending_workspace_is_rejected_instead_of_becoming_active(self):
         OrganizationProvisioning.objects.create(
             organization=self.other_organization,
@@ -190,3 +209,13 @@ class BusinessTransferTests(APITestCase):
 
         self.assertEqual(response.status_code, 409)
         self.assertIn("crosses organizations", response.data["detail"])
+
+    def prepare_target(self):
+        bootstrap = Organization.objects.create(name="New installation", slug="new-installation")
+        OrganizationMembership.objects.create(
+            organization=bootstrap, user=self.administrator, role=OrganizationMembership.Role.OWNER
+        )
+        OrganizationSettings.objects.create(organization=bootstrap)
+        InstallationState.objects.update_or_create(
+            pk=1, defaults={"completed_at": timezone.now()}
+        )

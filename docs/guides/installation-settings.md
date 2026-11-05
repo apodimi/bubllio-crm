@@ -96,9 +96,27 @@ restricted, encrypted storage and remove temporary copies after the trial.
 Passwords, sessions, SMTP credentials, active invitation links, operational
 logs, and legacy automation state are excluded and need separate handling.
 Customer notes and other free text may still contain sensitive information.
-This file is not a database backup or live synchronization. Import is being
-developed separately; do not decommission the source installation based on a
-download alone.
+This file is not a database backup or live synchronization. Complete normal
+setup on the new installation first. Leave its setup workspace empty. Then
+validate the downloaded file and import it from the server, naming the setup
+administrator who will inspect the imported team workspaces:
+
+```bash
+uv run python src/manage.py import_business_transfer /path/to/transfer.json
+uv run python src/manage.py import_business_transfer /path/to/transfer.json --apply --trial-admin YOUR_ADMIN_USERNAME
+```
+
+The import requires only the empty setup workspace in the target. It preserves
+customer, deal, and related UUIDs and dates; database-generated integer IDs
+such as settings IDs may change. It grants the named setup
+administrator admin access to imported team workspaces for the trial. All
+referenced source users become inactive placeholders with unusable passwords;
+their memberships and assignments retain references but do not grant them
+sign-in. Imported personal workspaces require a separate owner reconciliation.
+The import does not configure Core access or reconcile member identities.
+Keep the old installation available until records and access are verified in
+the new one. The command parses the complete JSON file in memory; run a large
+trial on a host with sufficient RAM and disk space.
 
 ## Software updates
 
@@ -113,7 +131,8 @@ run migrations, or restart the server automatically.
 
 ## Features still planned
 
-- Importing a downloaded data export back into Bubllio.
+- Restoring the older, partial **Download data export** file. Use the CRM
+  business transfer format above for migration.
 - Recording personal-account profile and sign-in changes in the installation
   history.
 - Email alerts for failed or overdue backups and failed invitation delivery.
