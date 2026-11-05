@@ -132,7 +132,6 @@ class BusinessTransferTests(APITestCase):
         response = self.client.get(reverse("installation-business-transfer"))
         self.assertEqual(response.status_code, 200)
         transfer = json.loads(b"".join(response.streaming_content))
-        response.close()
         self.assertEqual(transfer["format"], "bubllio-crm-business-transfer")
         self.assertEqual(transfer["format_version"], 1)
         self.assertEqual(response["Cache-Control"], "private, no-store")
@@ -201,7 +200,6 @@ class BusinessTransferTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         transfer = json.loads(b"".join(response.streaming_content))
-        response.close()
         self.assertEqual(
             transfer["datasets"]["companies"][0]["id"], str(company.pk)
         )
