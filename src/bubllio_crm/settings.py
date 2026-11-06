@@ -13,8 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 from .database import get_database_config
 
@@ -125,6 +127,7 @@ SERVER_EMAIL = os.environ.get("DJANGO_SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "access.suite_auth.SuiteAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -132,6 +135,23 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+# Empty values keep the additive suite path disabled for existing installations.
+SUITE_OIDC_ISSUER = os.environ.get("SUITE_OIDC_ISSUER", "").rstrip("/")
+SUITE_OIDC_JWKS_URL = os.environ.get("SUITE_OIDC_JWKS_URL", "")
+SUITE_OIDC_AUDIENCE = os.environ.get("SUITE_OIDC_AUDIENCE", "")
+SUITE_CORE_API_URL = os.environ.get("SUITE_CORE_API_URL", "").rstrip("/")
+suite_values = (SUITE_OIDC_ISSUER, SUITE_OIDC_JWKS_URL, SUITE_OIDC_AUDIENCE, SUITE_CORE_API_URL)
+if any(suite_values) and not all(suite_values):
+    raise ImproperlyConfigured("Configure all SUITE_OIDC_* and SUITE_CORE_API_URL values together.")
+if all(suite_values) and not DEBUG:
+    for name, value in (
+        ("SUITE_OIDC_ISSUER", SUITE_OIDC_ISSUER),
+        ("SUITE_OIDC_JWKS_URL", SUITE_OIDC_JWKS_URL),
+        ("SUITE_CORE_API_URL", SUITE_CORE_API_URL),
+    ):
+        if urlsplit(value).scheme != "https" or not urlsplit(value).hostname:
+            raise ImproperlyConfigured(f"{name} must be an HTTPS URL in production.")
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Bubllio CRM API",

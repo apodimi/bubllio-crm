@@ -114,6 +114,8 @@ referenced source users become inactive placeholders with unusable passwords;
 their memberships and assignments retain references but do not grant them
 sign-in. Imported personal workspaces require a separate owner reconciliation.
 The import does not configure Core access or reconcile member identities.
+For an isolated Core sign-in trial, follow the
+[suite integration guide](suite-integration-trial.md) after import.
 Keep the old installation available until records and access are verified in
 the new one. The command parses the complete JSON file in memory; run a large
 trial on a host with sufficient RAM and disk space.

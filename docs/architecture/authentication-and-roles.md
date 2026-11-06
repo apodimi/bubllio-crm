@@ -17,6 +17,12 @@ exceptions. The Django admin still uses
 session authentication. REST endpoints are `/api/v1/auth/token/`, `/api/v1/auth/token/refresh/`,
 `/api/v1/auth/me/`, and `/api/v1/auth/logout/`.
 
+On `develop`, an optional suite trial also accepts Keycloak access tokens when
+all `SUITE_*` settings are configured. It requires immutable user and
+organization links, Core app access, and the existing CRM membership and
+capability checks. Unconfigured installations continue to use SimpleJWT alone.
+See [suite integration](../guides/suite-integration-trial.md) for its scope.
+
 Refresh tokens rotate and are blacklisted after rotation. Logout blacklists the
 submitted refresh token. The React frontend keeps both tokens in Zustand with
 same-tab `sessionStorage` persistence. Reloads retain the session; signing out

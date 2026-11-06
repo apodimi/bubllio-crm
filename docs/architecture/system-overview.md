@@ -22,16 +22,18 @@ They communicate through the versioned HTTP API under `/api/v1/`. This means a
 future mobile client, CLI, or community-built UI can use the same API.
 PostgreSQL is the production database; local development may use SQLite. The
 Update Agent keeps its own SQLite job state and deployment credentials outside
-Django. These are CRM components, not a Keycloak/Core integration.
+Django. The optional suite sign-in trial adds Keycloak and a backend call to
+Core for app entry; it does not move CRM domain records into Core.
 
 ## A typical authenticated request
 
 For `GET /api/v1/organizations/<id>/companies/`:
 
 1. The browser sends the request through Axios.
-2. Axios reads the current access token from the in-memory Zustand store and
-   adds `Authorization: Bearer <access-token>`.
-3. Django SimpleJWT authenticates the token and sets `request.user`.
+2. Axios attaches the legacy CRM token or current Keycloak token, according to
+   the active sign-in mode.
+3. Django authenticates the selected token. Suite tokens also require explicit
+   identity/tenant links and Core's live CRM access decision.
 4. The view resolves the organization using the URL ID and that user.
 5. The resolver checks membership and the required capability.
 6. The view queries only companies belonging to the resolved organization.
@@ -39,9 +41,9 @@ For `GET /api/v1/organizations/<id>/companies/`:
 8. The browser stores the response in TanStack Query under a key containing the
    organization ID.
 
-If the access token is expired, Axios makes one refresh request using the
-refresh token, updates the Zustand tokens, and retries the original request.
-If refresh fails, the store is cleared and the user must sign in again.
+For legacy sessions, Axios refreshes an expired CRM token and retries once.
+For suite sessions, Keycloak refreshes its token before the request. If refresh
+fails, the user must sign in again.
 
 ## Domain ownership
 

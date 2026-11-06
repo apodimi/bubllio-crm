@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { Button, Stack, Typography } from '@mui/material'
 import { RootLayout, WorkspaceLayout } from '../components/layout/AppLayout'
-import { useAuthStore } from '../features/auth'
+import { isSuiteSession, useAuthStore } from '../features/auth'
 import { useTranslation } from 'react-i18next'
 import { parseCompanySearch } from '../features/companies/companyListConfig'
 import { parseContactSearch } from '../features/contacts/contactListConfig'
@@ -33,10 +33,11 @@ const root = createRootRoute({
 const home = createRoute({
   getParentRoute: () => root,
   path: '/',
-  component: lazyRouteComponent(
-    () => import('../pages/Organizations/OrganizationsPage'),
-    'OrganizationsPage',
-  ),
+  validateSearch: (search: Record<string, unknown>): { organization_id?: string } => ({
+    organization_id:
+      typeof search.organization_id === 'string' ? search.organization_id : undefined,
+  }),
+  component: lazyRouteComponent(() => import('../pages/Suite/SuiteHomePage'), 'SuiteHomePage'),
 })
 const login = createRoute({
   getParentRoute: () => root,
@@ -90,7 +91,7 @@ const workspace = createRoute({
   path: '/organizations/$organizationId',
   component: WorkspaceLayout,
   beforeLoad: () => {
-    if (!useAuthStore.getState().accessToken) throw redirect({ to: '/' })
+    if (!isSuiteSession() && !useAuthStore.getState().accessToken) throw redirect({ to: '/' })
   },
 })
 const overview = createRoute({

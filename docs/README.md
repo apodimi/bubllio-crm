@@ -53,9 +53,10 @@ Read [System overview](architecture/system-overview.md) first. Continue only int
 the domain you are changing:
 
 - [Bubllio suite architecture](https://github.com/apodimi/bubllio-core/blob/main/docs/architecture/suite-architecture.md)
-  — current CRM boundary and planned Core integration.
+  — Core's application access boundary and rollout status.
 - [CRM domain](architecture/crm-domain.md)
 - [Authentication and roles](architecture/authentication-and-roles.md)
+- [Suite integration trial](guides/suite-integration-trial.md)
 - [Privacy and security](architecture/privacy-and-security.md)
 - [Email delivery](architecture/email-adapters.md)
 

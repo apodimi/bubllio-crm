@@ -30,6 +30,9 @@ export function RootLayout() {
   const setup = useSetupStatus()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const suiteLaunch = useRouterState({
+    select: (state) => Boolean(state.location.search.organization_id),
+  })
 
   if (setup.isPending) return <Loading />
   if (setup.isError) return <Failure error={setup.error} retry={() => void setup.refetch()} />
@@ -45,6 +48,9 @@ export function RootLayout() {
       </Suspense>
     )
   }
+  if (auth.loading) return <Loading />
+  if (auth.error) return <Failure error={auth.error} retry={auth.retry} />
+  if (suiteLaunch && pathname === '/') return <Outlet />
   if (
     pathname.startsWith('/invite/') ||
     pathname.startsWith('/installation-admin-invite/') ||

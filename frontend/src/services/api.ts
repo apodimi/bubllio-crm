@@ -2,6 +2,7 @@ import axios from 'axios'
 import type { AxiosRequestConfig } from 'axios'
 
 import { useAuthStore } from '../features/auth/store/authStore'
+import { isSuiteSession, suiteAccessToken } from '../features/auth/suiteSession'
 
 export class ApiError extends Error {
   status: number
@@ -50,7 +51,12 @@ function messageFor(status: number, body: unknown) {
 
 let refreshing: Promise<string> | null = null
 
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(async (config) => {
+  if (isSuiteSession()) {
+    config.headers.Authorization = 'Bearer ' + (await suiteAccessToken())
+    return config
+  }
+
   const token = useAuthStore.getState().accessToken
   if (token) config.headers.Authorization = 'Bearer ' + token
   return config
@@ -62,7 +68,8 @@ apiClient.interceptors.response.use(
     if (!axios.isAxiosError(error) || !error.response) throw error
     const original = error.config as NonNullable<typeof error.config> & { _retry?: boolean }
     const isAuthRoute = original.url?.startsWith('/auth/token/')
-    if (error.response.status !== 401 || original._retry || isAuthRoute) throw error
+    if (isSuiteSession() || error.response.status !== 401 || original._retry || isAuthRoute)
+      throw error
 
     const refresh = useAuthStore.getState().refreshToken
     if (!refresh) {

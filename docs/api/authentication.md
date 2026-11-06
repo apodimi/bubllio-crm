@@ -11,6 +11,7 @@ debugging a browser login.
 | POST | `/api/v1/auth/token/` | none | exchange username/password for access and refresh tokens |
 | POST | `/api/v1/auth/token/refresh/` | refresh token in JSON | rotate the refresh token and issue a new access token |
 | GET | `/api/v1/auth/me/` | access Bearer token | return the current user and visible organizations |
+| GET | `/api/v1/auth/suite/resolve/?organization_id=<core-uuid>` | suite access Bearer token | resolve an explicitly mapped and granted Core organization to its CRM UUID |
 | GET/PATCH | `/api/v1/auth/me/profile/` | access Bearer token | read or complete the personal onboarding profile |
 | GET/PATCH | `/api/v1/auth/me/settings/` | access Bearer token | read or update email and profile settings |
 | GET | `/api/v1/auth/me/export/` | access Bearer token | download the authenticated user's personal account export |
@@ -37,6 +38,25 @@ debugging a browser login.
 
 The Django admin continues to use session authentication at `/admin/`. The API
 does not use browser sessions for normal REST requests.
+
+## Additive Core sign-in trial
+
+When all `SUITE_*` API settings are configured, the API also accepts Keycloak
+access tokens with the exact configured issuer and `bubllio-crm-api` audience.
+The token's immutable subject must be explicitly linked to an active CRM user;
+each Core organization must be explicitly linked to a CRM organization. Tenant
+requests also require a local CRM membership and a fresh `allowed: true` answer
+from Core's versioned app-access endpoint using the original bearer token. Core
+denial, missing mappings, invalid responses, and outage do not expose tenant
+data. The organization UUID in a launcher URL is only a navigation hint.
+
+For suite sessions, `/auth/me/`, `/organizations/`, and global search include
+only organizations allowed by Core. The suite trial does not accept CRM password,
+account-deletion, installation-administration, or CRM invitation operations;
+Keycloak and Core own those flows. Existing SimpleJWT authentication and refresh
+remain available for legacy CRM users. See the
+[suite integration guide](../guides/suite-integration-trial.md) for setup and
+verification.
 
 The setup endpoint is a separate bootstrap path, not public registration. Its
 GET response is only `{ "available": true|false }` and never reveals the token.

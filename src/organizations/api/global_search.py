@@ -5,6 +5,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from access.permissions import Capability, roles_with_capability
+from access.suite_auth import suite_organizations
 from organizations.models import Organization
 from organizations.services.global_search import SEARCH_TYPES, search_crm
 
@@ -56,6 +57,7 @@ class GlobalSearchAPIView(APIView):
             memberships__role__in=roles_with_capability(Capability.VIEW_CRM),
             provisioning__isnull=True,
         ).distinct()
+        organizations = suite_organizations(request, organizations)
         organization_id = params.get("organization")
         if organization_id:
             organization = get_object_or_404(organizations, id=organization_id)

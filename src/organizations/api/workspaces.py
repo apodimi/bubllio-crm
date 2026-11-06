@@ -10,6 +10,7 @@ from drf_spectacular.utils import extend_schema
 
 from ..models import InstallationState, Organization
 from access.permissions import Capability, can_create_workspace, get_organization_for_user
+from access.suite_auth import suite_organizations
 from ..serializers import OrganizationSerializer
 from ..services.personal_workspace import ensure_personal_workspace
 from ..services.provisioning import create_workspace
@@ -60,6 +61,7 @@ class OrganizationListCreateAPIView(APIView):
         organizations = Organization.objects.filter(
             memberships__user=request.user, provisioning__isnull=True
         )
+        organizations = suite_organizations(request, organizations.distinct())
         serializer = OrganizationSerializer(
             organizations.distinct(),
             many=True,

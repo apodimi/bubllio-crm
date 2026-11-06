@@ -24,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { AppIcon } from '../common/AppIcon'
+import { useAuth } from '../../features/auth'
 
 type AccountMenuProps = {
   organizationId?: string
@@ -154,6 +155,7 @@ function AccountMainMenu({
   onLogout,
 }: AccountMainMenuProps) {
   const { t } = useTranslation()
+  const { mode } = useAuth()
 
   return (
     <>
@@ -167,13 +169,15 @@ function AccountMainMenu({
             : t('navigation.workspaceMember')}
         </Typography>
       </MenuItem>
-      <MenuItem component={Link} to="/account/settings" onClick={onClose}>
-        <ListItemIcon>
-          <AppIcon icon={userCogIcon} size={18} />
-        </ListItemIcon>
-        {t('navigation.accountSettings')}
-      </MenuItem>
-      {isSuperuser ? (
+      {mode === 'legacy' && (
+        <MenuItem component={Link} to="/account/settings" onClick={onClose}>
+          <ListItemIcon>
+            <AppIcon icon={userCogIcon} size={18} />
+          </ListItemIcon>
+          {t('navigation.accountSettings')}
+        </MenuItem>
+      )}
+      {mode === 'legacy' && isSuperuser ? (
         <>
           <ListSubheader
             disableSticky
@@ -197,19 +201,21 @@ function AccountMainMenu({
           >
             {t('navigation.workspace')}
           </ListSubheader>
-          <Link
-            to="/organizations/$organizationId/members"
-            params={{ organizationId }}
-            onClick={onClose}
-            style={{ color: 'inherit', textDecoration: 'none' }}
-          >
-            <MenuItem>
-              <ListItemIcon>
-                <AppIcon icon={userPlusIcon} size={18} />
-              </ListItemIcon>
-              {t('navigation.peopleAndPermissions')}
-            </MenuItem>
-          </Link>
+          {mode === 'legacy' && (
+            <Link
+              to="/organizations/$organizationId/members"
+              params={{ organizationId }}
+              onClick={onClose}
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              <MenuItem>
+                <ListItemIcon>
+                  <AppIcon icon={userPlusIcon} size={18} />
+                </ListItemIcon>
+                {t('navigation.peopleAndPermissions')}
+              </MenuItem>
+            </Link>
+          )}
           <Link
             to="/organizations/$organizationId/settings"
             params={{ organizationId }}

@@ -102,6 +102,11 @@ export function LoginPage() {
             <Button variant="contained" type="submit" size="large" disabled={pending}>
               {pending ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
+            {auth.suiteAvailable && (
+              <Button variant="outlined" onClick={() => void auth.signInToSuite()}>
+                {t('auth.suiteSignIn')}
+              </Button>
+            )}
             <Typography
               component={Link}
               to="/reset-password"

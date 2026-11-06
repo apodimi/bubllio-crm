@@ -1,6 +1,9 @@
 import { apiClient, request, type TokenPair } from '../../../services/api'
 import { currentUserContract, tokenPairContract } from '../../../types/api-contract/schemas'
 import type { Organization } from '../../../types/organization.types'
+import { z } from 'zod'
+
+const suiteResolution = z.object({ organization_id: z.string().uuid() })
 
 export interface CurrentUser {
   id: number
@@ -18,6 +21,11 @@ export const authService = {
       schema: tokenPairContract,
     }),
   currentUser: () => request<CurrentUser>('/auth/me/', { schema: currentUserContract }),
+  resolveSuiteOrganization: (organizationId: string, signal?: AbortSignal) =>
+    request('/auth/suite/resolve/?organization_id=' + encodeURIComponent(organizationId), {
+      signal,
+      schema: suiteResolution,
+    }),
   logout: (refresh: string) => request('/auth/logout/', { body: { refresh } }),
   accountSettings: (signal?: AbortSignal) =>
     request<{
