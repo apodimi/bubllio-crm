@@ -10,24 +10,16 @@ Authentication answers “who is making this request?”. Authorization answers
 “what may this user do inside this organization?”. They are separate checks and
 both are required.
 
-The API uses JSON Web Tokens through DRF SimpleJWT. Protected API endpoints
-require an authenticated user and accept a Bearer access token. Setup,
-invitation preview/acceptance, and password-reset endpoints are intentional
-exceptions. The Django admin still uses
-session authentication. REST endpoints are `/api/v1/auth/token/`, `/api/v1/auth/token/refresh/`,
-`/api/v1/auth/me/`, and `/api/v1/auth/logout/`.
+On `develop`, the API requires a Keycloak token and Core's CRM access decision
+for tenant data. It maps immutable identity and organization IDs to local CRM
+records, then applies CRM roles and queryset filtering. Core/Keycloak must be
+configured before the API starts. CRM credential, setup, invitation, and admin
+routes are closed in this mode. See [suite integration](../guides/suite-integration-trial.md).
 
-On `develop`, an optional suite trial also accepts Keycloak access tokens when
-all `SUITE_*` settings are configured. It requires immutable user and
-organization links, Core app access, and the existing CRM membership and
-capability checks. Unconfigured installations continue to use SimpleJWT alone.
-See [suite integration](../guides/suite-integration-trial.md) for its scope.
-
-Refresh tokens rotate and are blacklisted after rotation. Logout blacklists the
-submitted refresh token. The React frontend keeps both tokens in Zustand with
-same-tab `sessionStorage` persistence. Reloads retain the session; signing out
-clears it. Browser-side JavaScript can read `sessionStorage`, so XSS prevention
-remains important.
+The live `main` release still uses DRF SimpleJWT, Django passwords, CRM setup,
+and CRM invitations. Its refresh tokens rotate and are blacklisted; the React
+client stores them in same-tab `sessionStorage`. The rest of this page describes
+that legacy membership and administration behavior unless stated otherwise.
 
 ## Membership model
 

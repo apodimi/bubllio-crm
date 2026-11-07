@@ -16,7 +16,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
 import { AppIcon } from '../../../components/common/AppIcon'
-import { useAuthStore } from '../../auth'
+import { useAuth } from '../../auth'
 import { useCompanyAssignees } from '../../companies'
 import { useContacts } from '../../contacts'
 import { useDeals } from '../../deals'
@@ -89,7 +89,7 @@ export function TaskDrawer({
   const contacts = useContacts(organizationId, { archived: 'active' })
   const deals = useDeals(organizationId)
   const assignees = useCompanyAssignees(organizationId)
-  const currentUser = useAuthStore((state) => state.user)
+  const { user: currentUser } = useAuth()
   const currentUserId = currentUser?.id ?? null
   const ownerOptions =
     assignees.data ?? (currentUser ? [{ id: currentUser.id, name: currentUser.username }] : [])

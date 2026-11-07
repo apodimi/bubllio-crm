@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { Button, Stack, Typography } from '@mui/material'
 import { RootLayout, WorkspaceLayout } from '../components/layout/AppLayout'
-import { isSuiteSession, useAuthStore } from '../features/auth'
+import { isSuiteSession, suiteRequired, useAuthStore } from '../features/auth'
 import { useTranslation } from 'react-i18next'
 import { parseCompanySearch } from '../features/companies/companyListConfig'
 import { parseContactSearch } from '../features/contacts/contactListConfig'
@@ -46,14 +46,20 @@ const login = createRoute({
     throw redirect({ to: '/', replace: true })
   },
 })
+function legacyOnly() {
+  if (suiteRequired()) throw redirect({ to: '/', replace: true })
+}
+
 const invite = createRoute({
   getParentRoute: () => root,
   path: '/invite/$token',
+  beforeLoad: legacyOnly,
   component: lazyRouteComponent(() => import('../pages/Invite/InvitePage'), 'InvitePage'),
 })
 const installationAdminInvite = createRoute({
   getParentRoute: () => root,
   path: '/installation-admin-invite/$token',
+  beforeLoad: legacyOnly,
   component: lazyRouteComponent(
     () => import('../pages/Invite/InvitePage'),
     'InstallationAdminInvitePage',
@@ -62,6 +68,7 @@ const installationAdminInvite = createRoute({
 const passwordReset = createRoute({
   getParentRoute: () => root,
   path: '/reset-password',
+  beforeLoad: legacyOnly,
   component: lazyRouteComponent(
     () => import('../pages/ResetPassword/ResetPasswordPage'),
     'ResetPasswordPage',
@@ -70,6 +77,7 @@ const passwordReset = createRoute({
 const passwordResetConfirm = createRoute({
   getParentRoute: () => root,
   path: '/reset-password/$uid/$token',
+  beforeLoad: legacyOnly,
   component: lazyRouteComponent(
     () => import('../pages/ResetPassword/ResetPasswordPage'),
     'ResetPasswordPage',
@@ -79,6 +87,7 @@ const accountSettings = createRoute({
   getParentRoute: () => root,
   path: '/account/settings',
   beforeLoad: () => {
+    legacyOnly()
     if (!useAuthStore.getState().accessToken) throw redirect({ to: '/' })
   },
   component: lazyRouteComponent(

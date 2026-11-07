@@ -96,26 +96,26 @@ restricted, encrypted storage and remove temporary copies after the trial.
 Passwords, sessions, SMTP credentials, active invitation links, operational
 logs, and legacy automation state are excluded and need separate handling.
 Customer notes and other free text may still contain sensitive information.
-This file is not a database backup or live synchronization. Complete normal
-setup on the new installation first. Leave its setup workspace empty. Then
-validate the downloaded file and import it from the server, naming the setup
-administrator who will inspect the imported team workspaces:
+This file is not a database backup or live synchronization. On Core-required
+`develop`, use the [suite bootstrap](suite-integration-trial.md) to create an
+empty passwordless staging workspace. On legacy `main`, complete normal CRM
+setup and leave its setup workspace empty. Then validate the file and import it
+from the server, naming the target staging user:
 
 ```bash
 uv run python src/manage.py import_business_transfer /path/to/transfer.json
 uv run python src/manage.py import_business_transfer /path/to/transfer.json --apply --trial-admin YOUR_ADMIN_USERNAME
 ```
 
-The import requires only the empty setup workspace in the target. It preserves
+The import requires only the empty staging workspace in the target. It preserves
 customer, deal, and related UUIDs and dates; database-generated integer IDs
-such as settings IDs may change. It grants the named setup
-administrator admin access to imported team workspaces for the trial. All
+such as settings IDs may change. It grants the named staging
+user admin access to imported team workspaces for the trial. All
 referenced source users become inactive placeholders with unusable passwords;
 their memberships and assignments retain references but do not grant them
 sign-in. Imported personal workspaces require a separate owner reconciliation.
-The import does not configure Core access or reconcile member identities.
-For an isolated Core sign-in trial, follow the
-[suite integration guide](suite-integration-trial.md) after import.
+The import does not configure Core access or reconcile member identities;
+follow the suite guide for immutable mappings and grants after import.
 Keep the old installation available until records and access are verified in
 the new one. The command parses the complete JSON file in memory; run a large
 trial on a host with sufficient RAM and disk space.

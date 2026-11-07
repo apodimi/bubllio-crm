@@ -48,6 +48,9 @@ SECRET_KEY = os.environ.get(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool("DJANGO_DEBUG", True)
+CORE_REQUIRED = env_bool("CORE_REQUIRED", True)
+if not CORE_REQUIRED and not DEBUG:
+    raise ImproperlyConfigured("CORE_REQUIRED cannot be disabled in production.")
 
 # Loopback names are needed by the container-local health check; the backend is
 # not published by the production Compose definition.
@@ -128,7 +131,7 @@ SERVER_EMAIL = os.environ.get("DJANGO_SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "access.suite_auth.SuiteAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        *([] if CORE_REQUIRED else ["rest_framework_simplejwt.authentication.JWTAuthentication"]),
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -136,14 +139,21 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-# Empty values keep the additive suite path disabled for existing installations.
+# A Core-required CRM cannot start without the exact identity and access endpoints.
 SUITE_OIDC_ISSUER = os.environ.get("SUITE_OIDC_ISSUER", "").rstrip("/")
 SUITE_OIDC_JWKS_URL = os.environ.get("SUITE_OIDC_JWKS_URL", "")
 SUITE_OIDC_AUDIENCE = os.environ.get("SUITE_OIDC_AUDIENCE", "")
+SUITE_OIDC_CLIENT_ID = os.environ.get("SUITE_OIDC_CLIENT_ID", "bubllio-crm-web")
 SUITE_CORE_API_URL = os.environ.get("SUITE_CORE_API_URL", "").rstrip("/")
 suite_values = (SUITE_OIDC_ISSUER, SUITE_OIDC_JWKS_URL, SUITE_OIDC_AUDIENCE, SUITE_CORE_API_URL)
 if any(suite_values) and not all(suite_values):
     raise ImproperlyConfigured("Configure all SUITE_OIDC_* and SUITE_CORE_API_URL values together.")
+if CORE_REQUIRED and not all(suite_values):
+    raise ImproperlyConfigured("Core-required CRM needs all SUITE_OIDC_* and SUITE_CORE_API_URL values.")
+if CORE_REQUIRED:
+    identity_base, separator, realm = SUITE_OIDC_ISSUER.rpartition("/realms/")
+    if not separator or not identity_base or not realm or "/" in realm or not SUITE_OIDC_CLIENT_ID:
+        raise ImproperlyConfigured("SUITE_OIDC_ISSUER must end in /realms/<realm> with a client ID.")
 if all(suite_values) and not DEBUG:
     for name, value in (
         ("SUITE_OIDC_ISSUER", SUITE_OIDC_ISSUER),
@@ -211,6 +221,7 @@ CELERY_BEAT_SCHEDULE = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'access.core_required.CoreRequiredMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

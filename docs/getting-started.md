@@ -1,6 +1,9 @@
 # Getting Started
 
-This guide explains how to run Bubllio CRM API locally.
+For the Core-required `develop` branch, configure Core/Keycloak and follow the
+[suite integration guide](guides/suite-integration-trial.md) before starting the
+API. The setup, invitation, and password instructions below describe the live
+legacy `main` release or explicit local compatibility tests only.
 
 ## Requirements
 

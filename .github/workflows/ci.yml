@@ -46,6 +46,11 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://bubllio:bubllio@127.0.0.1:5432/bubllio_test
+      CORE_REQUIRED: "false"
+      SUITE_OIDC_ISSUER: https://identity.example.test/realms/bubllio
+      SUITE_OIDC_JWKS_URL: https://identity.example.test/realms/bubllio/protocol/openid-connect/certs
+      SUITE_OIDC_AUDIENCE: bubllio-crm-api
+      SUITE_CORE_API_URL: https://core.example.test
     steps:
       - uses: actions/checkout@v4
       - name: Generate ephemeral CI encryption key
@@ -79,6 +84,7 @@ jobs:
       - run: uv run python src/manage.py test bubllio_crm organizations access onboarding companies contacts deals subscriptions accounts activities automations delivery
       - name: Verify production security settings
         env:
+          CORE_REQUIRED: "true"
           DJANGO_DEBUG: "false"
           DJANGO_SECRET_KEY: ci-only-production-check-secret-with-more-than-fifty-characters
           DJANGO_ALLOWED_HOSTS: crm.example.com

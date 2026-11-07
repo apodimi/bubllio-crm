@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from bubllio_crm.health import health_check
 
-from accounts.auth_views import CurrentUserAPIView, LogoutAPIView, SuiteResolveAPIView
+from accounts.auth_views import CurrentUserAPIView, LogoutAPIView, SuiteConfigAPIView, SuiteResolveAPIView
 from accounts.views import (
     CurrentAccountSettingsAPIView,
     CurrentUserProfileAPIView,
@@ -118,6 +118,7 @@ urlpatterns = [
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/v1/auth/me/", CurrentUserAPIView.as_view(), name="current-user"),
     path("api/v1/auth/suite/resolve/", SuiteResolveAPIView.as_view(), name="suite-resolve"),
+    path("api/v1/auth/suite/config/", SuiteConfigAPIView.as_view(), name="suite-config"),
     path("api/v1/auth/me/profile/", CurrentUserProfileAPIView.as_view(), name="current-user-profile"),
     path("api/v1/auth/me/settings/", CurrentAccountSettingsAPIView.as_view(), name="current-account-settings"),
     path("api/v1/auth/me/password/", PasswordChangeAPIView.as_view(), name="password-change"),

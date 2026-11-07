@@ -9,6 +9,13 @@ import { isSuiteSession, signInToSuite, signOutOfSuite, suiteAvailable } from '.
 
 interface Auth {
   username: string | null
+  user: {
+    id: number
+    username: string
+    email: string
+    can_create_workspaces?: boolean
+    is_superuser: boolean
+  } | null
   mode: 'legacy' | 'suite'
   loading: boolean
   error: Error | null
@@ -22,7 +29,7 @@ interface Auth {
 const Context = createContext<Auth | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const legacyUsername = useAuthStore((state) => state.user?.username ?? null)
+  const legacyUser = useAuthStore((state) => state.user)
   const setSession = useAuthStore((state) => state.setSession)
   const clearSession = useAuthStore((state) => state.clearSession)
   const mode = isSuiteSession() ? 'suite' : 'legacy'
@@ -32,7 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     enabled: mode === 'suite',
     retry: false,
   })
-  const username = mode === 'suite' ? (suiteUser.data?.username ?? null) : legacyUsername
+  const user = mode === 'suite' ? (suiteUser.data ?? null) : legacyUser
+  const username = user?.username ?? null
 
   const logout = async () => {
     if (mode === 'suite') {
@@ -73,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <Context.Provider
       value={{
         username,
+        user,
         mode,
         loading: mode === 'suite' && suiteUser.isPending,
         error: mode === 'suite' && suiteUser.isError ? suiteUser.error : null,

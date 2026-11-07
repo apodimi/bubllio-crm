@@ -3,8 +3,7 @@ import { BottomNavigation, BottomNavigationAction, Box, Drawer, Paper } from '@m
 import { Outlet, useNavigate, useParams, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { useAuth } from '../../features/auth'
-import { useAuthStore } from '../../features/auth/store/authStore'
+import { suiteRequired, useAuth } from '../../features/auth'
 import { useActivityInbox } from '../../features/activity-inbox'
 import { useOrganization, useOrganizations, WorkspaceContext } from '../../features/organizations'
 import { useSetupStatus } from '../../features/setup/hooks/useSetup'
@@ -26,6 +25,25 @@ const SetupPage = lazy(() =>
 )
 
 export function RootLayout() {
+  return suiteRequired() ? <CoreRootLayout /> : <LegacyRootLayout />
+}
+
+function CoreRootLayout() {
+  const auth = useAuth()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const suiteLaunch = useRouterState({
+    select: (state) => Boolean(state.location.search.organization_id),
+  })
+
+  if (auth.loading) return <Loading />
+  if (auth.error) return <Failure error={auth.error} retry={auth.retry} />
+  if (!auth.username)
+    return <Failure error={new Error('Suite profile is unavailable')} retry={auth.retry} />
+  if (suiteLaunch && pathname === '/') return <Outlet />
+  return <Shell />
+}
+
+function LegacyRootLayout() {
   const auth = useAuth()
   const setup = useSetupStatus()
   const navigate = useNavigate()
@@ -69,9 +87,7 @@ export function RootLayout() {
 function Shell() {
   const { t } = useTranslation()
   const auth = useAuth()
-  const isInstallationAdmin = useAuthStore(
-    (state) => state.user?.can_create_workspaces ?? state.user?.is_superuser ?? false,
-  )
+  const isInstallationAdmin = auth.user?.can_create_workspaces ?? auth.user?.is_superuser ?? false
   const [mobileOpen, setMobileOpen] = useState(false)
   const [desktopNavigationExpanded, setDesktopNavigationExpanded] = useState(true)
   const params = useParams({ strict: false })

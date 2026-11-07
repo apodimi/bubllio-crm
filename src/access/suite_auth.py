@@ -1,4 +1,4 @@
-"""Additive Keycloak authentication and per-tenant Core access enforcement."""
+"""Validate Keycloak sessions and enforce each tenant's live Core access grant."""
 
 import re
 import json
@@ -18,6 +18,7 @@ from .models import SuiteOrganizationLink, SuiteUserLink
 
 TENANT_PATH = re.compile(r"^/api/v1/organizations/([0-9a-fA-F-]{36})/")
 SUITE_GLOBAL_PATHS = {
+    "/api/v1/auth/suite/config/",
     "/api/v1/auth/me/",
     "/api/v1/auth/suite/resolve/",
     "/api/v1/organizations/",
@@ -108,13 +109,19 @@ class SuiteAuthentication(BaseAuthentication):
             return None
         parts = get_authorization_header(request).split()
         if len(parts) != 2 or parts[0].lower() != b"bearer":
+            if parts and settings.CORE_REQUIRED:
+                raise AuthenticationFailed("A suite Bearer token is required.")
             return None
         try:
             token = parts[1].decode("ascii")
             unverified = jwt.decode(token, options={"verify_signature": False})
         except (UnicodeDecodeError, jwt.PyJWTError):
+            if settings.CORE_REQUIRED:
+                raise AuthenticationFailed("Invalid suite access token.")
             return None  # Let SimpleJWT handle its own tokens and errors.
         if unverified.get("iss") != settings.SUITE_OIDC_ISSUER:
+            if settings.CORE_REQUIRED:
+                raise AuthenticationFailed("Invalid suite token issuer.")
             return None
         try:
             key = jwt.PyJWKClient(settings.SUITE_OIDC_JWKS_URL, timeout=3).get_signing_key_from_jwt(token)

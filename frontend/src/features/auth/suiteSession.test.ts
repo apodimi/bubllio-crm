@@ -72,3 +72,56 @@ it('stops an authenticated request when the suite token refresh fails', async ()
 
   await expect(session.suiteAccessToken()).rejects.toThrow('expired')
 })
+
+it('requires runtime Core identity configuration and ignores a stored CRM token', async () => {
+  vi.stubEnv('VITE_SUITE_REQUIRED', 'true')
+  const fetchConfig = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      url: 'https://identity.example.test',
+      realm: 'bubllio',
+      clientId: 'bubllio-crm-web',
+    }),
+  })
+  vi.stubGlobal('fetch', fetchConfig)
+  const session = await import('./suiteSession')
+  const { useAuthStore } = await import('./store/authStore')
+  useAuthStore.setState({ accessToken: 'old-crm-token', refreshToken: 'old-refresh-token' })
+
+  await session.initializeSuiteSession()
+
+  expect(fetchConfig).toHaveBeenCalledWith('/api/v1/auth/suite/config/', expect.any(Object))
+  expect(adapter.init).toHaveBeenCalledWith(
+    expect.objectContaining({ onLoad: 'login-required', pkceMethod: 'S256' }),
+  )
+  expect(useAuthStore.getState().accessToken).toBeNull()
+  expect(session.isSuiteSession()).toBe(true)
+})
+
+it('does not enter CRM when required Core configuration is unavailable', async () => {
+  vi.stubEnv('VITE_SUITE_REQUIRED', 'true')
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+  const session = await import('./suiteSession')
+
+  await expect(session.initializeSuiteSession()).rejects.toThrow('unavailable')
+  expect(adapter.init).not.toHaveBeenCalled()
+})
+
+it('rejects an insecure runtime identity URL before starting Keycloak', async () => {
+  vi.stubEnv('VITE_SUITE_REQUIRED', 'true')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        url: 'http://identity.example.test',
+        realm: 'bubllio',
+        clientId: 'bubllio-crm-web',
+      }),
+    }),
+  )
+  const session = await import('./suiteSession')
+
+  await expect(session.initializeSuiteSession()).rejects.toThrow('HTTPS')
+  expect(adapter.init).not.toHaveBeenCalled()
+})

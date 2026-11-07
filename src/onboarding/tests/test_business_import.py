@@ -3,13 +3,16 @@ import io
 import json
 import tempfile
 from decimal import Decimal
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from companies.models import Company
+from access.models import SuiteUserLink
 from deals.models import Deal
 from onboarding.services.business_transfer_schema import BUSINESS_DATASETS
 from onboarding.services.business_transfer import build_business_transfer
@@ -140,6 +143,74 @@ class BusinessImportTests(APITestCase):
             )
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(OrganizationMembership.objects.count(), 1)
+
+    def test_core_required_import_accepts_only_passwordless_suite_user(self):
+        company = Company.objects.create(organization=self.organization, name="Core customer")
+        transfer = build_business_transfer()
+        for _, model in reversed(BUSINESS_DATASETS):
+            model._base_manager.all().delete()
+        self.prepare_target()
+        self.administrator.is_staff = False
+        self.administrator.is_superuser = False
+        self.administrator.set_unusable_password()
+        self.administrator.save()
+        SuiteUserLink.objects.create(
+            user=self.administrator,
+            issuer="https://identity.example.test/realms/bubllio",
+            subject="operator-sub",
+        )
+
+        with override_settings(CORE_REQUIRED=True):
+            counts = import_business_transfer(transfer, trial_admin=self.administrator)
+
+        self.assertEqual(counts["companies"], 1)
+        self.assertEqual(Company.objects.get(pk=company.pk).name, "Core customer")
+
+    @override_settings(
+        CORE_REQUIRED=True,
+        SUITE_OIDC_ISSUER="https://identity.example.test/realms/bubllio",
+    )
+    def test_fresh_core_bootstrap_imports_deals_and_preserves_member_assignments(self):
+        company = Company.objects.create(
+            organization=self.organization, assigned_to=self.member, name="Customer"
+        )
+        deal = Deal.objects.create(
+            organization=self.organization, company=company, assigned_to=self.member,
+            title="Renewal", value=Decimal("120.00"),
+        )
+        transfer = build_business_transfer()
+        for _, model in reversed(BUSINESS_DATASETS):
+            model._base_manager.all().delete()
+        User.objects.all().delete()
+        InstallationState.objects.all().delete()
+
+        output = io.StringIO()
+        call_command(
+            "bootstrap_suite_crm", subject="operator-sub",
+            workspace_slug="migration-staging", stdout=output,
+        )
+        operator = SuiteUserLink.objects.get(subject="operator-sub").user
+        counts = import_business_transfer(transfer, trial_admin=operator)
+
+        self.assertEqual(counts["companies"], 1)
+        self.assertEqual(counts["deals"], 1)
+        self.assertEqual(Deal.objects.get(pk=deal.pk).company_id, company.pk)
+        imported_member = Deal.objects.get(pk=deal.pk).assigned_to
+        self.assertFalse(imported_member.is_active)
+        self.assertFalse(imported_member.has_usable_password())
+        self.assertTrue(OrganizationMembership.objects.filter(
+            organization_id=self.organization.pk, user=operator, role="admin"
+        ).exists())
+
+        call_command(
+            "provision_suite_member", subject="seller-sub", user_id=imported_member.pk,
+            crm_organization_id=self.organization.pk, core_organization_id=uuid4(),
+            role="member", stdout=io.StringIO(),
+        )
+        imported_member.refresh_from_db()
+        self.assertTrue(imported_member.is_active)
+        self.assertEqual(SuiteUserLink.objects.get(user=imported_member).subject, "seller-sub")
+        self.assertEqual(Deal.objects.get(pk=deal.pk).assigned_to_id, imported_member.pk)
 
     def test_normal_setup_settings_id_collision_and_source_owner(self):
         source_owner = OrganizationMembership.objects.create(

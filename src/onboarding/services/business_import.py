@@ -2,12 +2,14 @@
 
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management.color import no_style
 from django.db import connection, transaction
 
 from organizations.models import InstallationState, Organization, OrganizationMembership, OrganizationSettings
+from access.models import SuiteUserLink
 
 from .business_transfer_fields import BUSINESS_FIELDS
 from .business_transfer_schema import BUSINESS_DATASETS
@@ -19,7 +21,15 @@ def import_business_transfer(transfer, *, trial_admin):
     validate_business_transfer(transfer)
     user_model = get_user_model()
     with transaction.atomic():
-        if not trial_admin.is_active or not trial_admin.is_superuser:
+        if settings.CORE_REQUIRED:
+            if (
+                not trial_admin.is_active
+                or trial_admin.is_superuser
+                or trial_admin.has_usable_password()
+                or not SuiteUserLink.objects.filter(user=trial_admin).exists()
+            ):
+                raise BusinessImportError("The transfer user must be an active passwordless suite identity")
+        elif not trial_admin.is_active or not trial_admin.is_superuser:
             raise BusinessImportError("The trial administrator must be an active installation admin")
         if not InstallationState.objects.filter(completed_at__isnull=False).exists():
             raise BusinessImportError("Complete the normal installation setup before importing")

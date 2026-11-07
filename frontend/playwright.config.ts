@@ -17,5 +17,6 @@ export default defineConfig({
     command: `npm run dev -- --port ${port}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
+    env: { VITE_SUITE_REQUIRED: 'false' },
   },
 })

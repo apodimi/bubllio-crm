@@ -130,6 +130,11 @@ jobs:
             --env DATABASE_URL="postgresql://bubllio:release-smoke-password@${postgres}:5432/bubllio" \
             --env DJANGO_DEBUG=false \
             --env DJANGO_SECRET_KEY=release-smoke-secret-with-more-than-fifty-characters \
+            --env CORE_REQUIRED=true \
+            --env SUITE_OIDC_ISSUER=https://identity.example.test/realms/bubllio \
+            --env SUITE_OIDC_JWKS_URL=https://identity.example.test/realms/bubllio/protocol/openid-connect/certs \
+            --env SUITE_OIDC_AUDIENCE=bubllio-crm-api \
+            --env SUITE_CORE_API_URL=https://core.example.test \
             --env DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost \
             --env DJANGO_CSRF_TRUSTED_ORIGINS=http://127.0.0.1:18000 \
             --env DJANGO_SECURE_SSL_REDIRECT=false \

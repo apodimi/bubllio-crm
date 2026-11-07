@@ -20,6 +20,7 @@ import AddRounded from '@mui/icons-material/AddRounded'
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded'
 import { organizationKeys, useOrganizations } from '../../features/organizations'
 import { useAuthStore } from '../../features/auth/store/authStore'
+import { suiteRequired, useAuth } from '../../features/auth'
 import { authService } from '../../features/auth/services/authService'
 import {
   pendingWorkspaceKey,
@@ -31,19 +32,19 @@ import { useTranslation } from 'react-i18next'
 
 export function OrganizationsPage() {
   const { t } = useTranslation()
+  const auth = useAuth()
   const query = useOrganizations()
-  const canCreate = useAuthStore(
-    (state) => state.user?.can_create_workspaces ?? state.user?.is_superuser ?? false,
-  )
+  const canCreate = auth.user?.can_create_workspaces ?? auth.user?.is_superuser ?? false
   const currentUser = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authService.currentUser,
     refetchOnMount: 'always',
+    enabled: !suiteRequired(),
   })
   useEffect(() => {
-    if (currentUser.data) useAuthStore.setState({ user: currentUser.data })
+    if (!suiteRequired() && currentUser.data) useAuthStore.setState({ user: currentUser.data })
   }, [currentUser.data])
-  const pending = usePendingWorkspaces(true)
+  const pending = usePendingWorkspaces(!suiteRequired())
   const queryClient = useQueryClient()
   const [create, setCreate] = useState(false)
   const [cancelPendingId, setCancelPendingId] = useState<string | null>(null)

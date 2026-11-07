@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosRequestConfig } from 'axios'
 
+import { apiBase } from '../config/apiBase'
 import { useAuthStore } from '../features/auth/store/authStore'
 import { isSuiteSession, suiteAccessToken } from '../features/auth/suiteSession'
 
@@ -23,12 +24,7 @@ interface RefreshResponse {
   refresh?: string
 }
 
-export function apiBase(value = import.meta.env.VITE_API_BASE_PATH || '/api/v1') {
-  if (!value.startsWith('/') || value.startsWith('//') || /[?#\\]/.test(value)) {
-    throw new Error('VITE_API_BASE_PATH must be a same-origin path.')
-  }
-  return value.replace(/\/$/, '')
-}
+export { apiBase }
 
 export const apiClient = axios.create({
   baseURL: apiBase(),

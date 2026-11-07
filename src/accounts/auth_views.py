@@ -1,7 +1,9 @@
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -12,6 +14,16 @@ from access.models import SuiteOrganizationLink
 from rest_framework.exceptions import NotFound, PermissionDenied
 from organizations.serializers import OrganizationSerializer
 from .serializers import CurrentUserSerializer, LogoutSerializer
+
+
+class SuiteResolveSerializer(serializers.Serializer):
+    organization_id = serializers.UUIDField()
+
+
+class SuiteConfigSerializer(serializers.Serializer):
+    url = serializers.URLField()
+    realm = serializers.CharField()
+    clientId = serializers.CharField()
 
 
 class CurrentUserAPIView(APIView):
@@ -62,6 +74,7 @@ class LogoutAPIView(APIView):
 
 
 class SuiteResolveAPIView(APIView):
+    serializer_class = SuiteResolveSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -83,3 +96,17 @@ class SuiteResolveAPIView(APIView):
             raise NotFound()
         check_core_access(request.auth, core_id)
         return Response({"organization_id": link.organization_id})
+
+
+class SuiteConfigAPIView(APIView):
+    serializer_class = SuiteConfigSerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.conf import settings
+
+        if not settings.CORE_REQUIRED:
+            raise NotFound()
+        url, _, realm = settings.SUITE_OIDC_ISSUER.rpartition("/realms/")
+        return Response({"url": url, "realm": realm, "clientId": settings.SUITE_OIDC_CLIENT_ID})
