@@ -1,5 +1,14 @@
 # Bubllio CRM pilot roadmap
 
+**Κατάσταση 2026-11-07:** Το customer timeline, το global search, η πρώτη
+έκδοση My work/saved filters και το deal profile υπάρχουν στον κώδικα.
+Το CSV import για νέους pilot πελάτες παραμένει ανοιχτό. Το JSON business
+export/import για μεταφορά υπάρχουσας εγκατάστασης είναι διαφορετική λειτουργία:
+βρίσκεται στο `develop` μαζί με υποχρεωτική σύνδεση Core/Keycloak, αλλά δεν
+έχει ακόμη δοκιμαστεί με πραγματικό export και κοινή εγκατάσταση. Το live
+`main` διατηρεί την παλιά σύνδεση. Δες τον
+[οδηγό δοκιμής](../guides/suite-integration-trial.md) για τη μεταφορά.
+
 Το παρόν roadmap περιγράφει τι χρειάζεται το Bubllio για να δοκιμαστεί από
 πραγματικούς πελάτες. Δεν είναι λίστα πιθανών ιδεών. Είναι η συμφωνημένη σειρά
 με την οποία ολοκληρώνουμε τα βασικά καθημερινά workflows ενός CRM.
@@ -38,6 +47,10 @@
 
 ### 1. Ενιαίο customer και deal timeline
 
+**Υλοποιήθηκε η πρώτη έκδοση:** company timeline με γεγονότα, notes και
+συνδεδεμένες ενέργειες. Πριν το pilot χρειάζεται έλεγχος πληρότητας των
+γεγονότων και του ιστορικού μετά από πραγματική μεταφορά δεδομένων.
+
 Χρονολογική προβολή αλλαγών, notes, completed tasks, contacts, deals και
 services/payments. Το timeline πρέπει να διαχωρίζει system events από ανθρώπινες
 ενέργειες και να μην αποθηκεύει ευαίσθητες παλιές τιμές χωρίς λόγο.
@@ -47,6 +60,9 @@ services/payments. Το timeline πρέπει να διαχωρίζει system e
 
 ### 2. Global search
 
+**Υλοποιήθηκε:** αναζήτηση με server-side έλεγχο των επιτρεπόμενων workspaces.
+Στο νέο CRM ο έλεγχος περιλαμβάνει και ενεργή απόφαση πρόσβασης του Core.
+
 Αναζήτηση σε companies, customer codes, contacts, email, τηλέφωνο και deals,
 πάντα μέσα στα επιτρεπόμενα workspaces του χρήστη.
 
@@ -54,6 +70,9 @@ services/payments. Το timeline πρέπει να διαχωρίζει system e
 σελίδες.
 
 ### 3. CSV import
+
+**Ανοιχτό:** το business JSON transfer δεν αντικαθιστά το CSV import με preview,
+mapping στηλών και αναφορά σφαλμάτων για νέο pilot πελάτη.
 
 Import companies και contacts με preview, mapping στηλών, validation, duplicate
 checks, error report και αναγνωρίσιμο import batch.
@@ -113,7 +132,7 @@ workflow είναι σημαντικότερο. Το scope δεν αλλάζει
 
 ## Definition of Done
 
-Κάθε feature θεωρείται ολοκληρωμένο μόνο όταν διαθέτει:
+Κάθε feature θεωρείται ολοκληρωμένο για pilot μόνο όταν διαθέτει:
 
 - σύντομο business problem και user flow,
 - σαφή in-scope και out-of-scope συμπεριφορά,
